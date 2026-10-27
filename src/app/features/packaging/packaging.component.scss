@@ -1,0 +1,102 @@
+:host {
+  display: block;
+}
+
+.page-head {
+  margin-bottom: 18px;
+}
+
+.picker {
+  margin-bottom: 16px;
+}
+
+.picker .field {
+  max-width: 420px;
+}
+
+.card {
+  margin-bottom: 16px;
+}
+
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.template-list {
+  display: grid;
+  gap: 8px;
+}
+
+.template {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 11px 13px;
+}
+
+.template .muted {
+  font-size: 11px;
+  margin-top: 3px;
+}
+
+.template-right {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  white-space: nowrap;
+}
+
+.name-field {
+  max-width: 420px;
+  margin-bottom: 15px;
+}
+
+.size-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.size-cell {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 9px;
+  text-align: center;
+}
+
+.size-cell label {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.size-cell input {
+  text-align: center;
+  padding: 8px 3px;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.notice.error {
+  background: light-dark(#fbeaea, #3a2020);
+  border-color: light-dark(#e9b1b1, #5a2e2e);
+  color: light-dark(#8c3030, #f0b4b4);
+}
+
+@media (max-width: 560px) {
+  .size-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

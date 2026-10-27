@@ -1,0 +1,185 @@
+<div class="page-head">
+  <div>
+    <h1>Order History</h1>
+    <div class="subtitle">
+      Orders grouped by month (newest first). Read-only archive.
+    </div>
+  </div>
+</div>
+
+<!-- View history by month -->
+<div class="card selector-card">
+  <h2>View history by month</h2>
+  <p class="subtitle">Choose a year and month to open its order history.</p>
+
+  <div class="selector-row">
+    <div class="field">
+      <label for="year">Year</label>
+      <select id="year" [value]="selYear()" (change)="onYear($any($event.target).value)">
+        @for (y of years(); track y) {
+          <option [value]="y">{{ y }}</option>
+        }
+      </select>
+    </div>
+    <div class="field">
+      <label for="month">Month</label>
+      <select id="month" [value]="selMonth()" (change)="onMonth($any($event.target).value)">
+        @for (m of months; track m; let i = $index) {
+          <option [value]="i">{{ m }}</option>
+        }
+      </select>
+    </div>
+    <button class="btn primary apply" (click)="applySelection()">View selected month history ↗</button>
+  </div>
+
+  <div class="search-wrap">
+    <input
+      class="search"
+      placeholder="Search order ID, customer, date or product…"
+      [value]="search()"
+      (input)="search.set($any($event.target).value)"
+    />
+  </div>
+</div>
+
+@if (loading()) {
+  <div class="card empty">Loading order history…</div>
+} @else if (error()) {
+  <div class="notice error">{{ error() }}</div>
+} @else {
+  <!-- Current month -->
+  <div class="card month-card">
+    <div class="card-head">
+      <div>
+        <h2>Current Month Orders — {{ currentGroup().label }}</h2>
+        <div class="subtitle">Newest date first · read-only</div>
+      </div>
+      <span class="pill gold">{{ currentGroup().rows.length }} order(s)</span>
+    </div>
+    <ng-container
+      *ngTemplateOutlet="historyTable; context: { rows: currentGroup().rows }"
+    ></ng-container>
+  </div>
+
+  <!-- Previous month -->
+  <div class="card month-card">
+    <div class="card-head">
+      <div>
+        <h2>Previous Month Orders — {{ previousGroup().label }}</h2>
+        <div class="subtitle">Newest date first · read-only</div>
+      </div>
+      <span class="pill gray">{{ previousGroup().rows.length }} order(s)</span>
+    </div>
+    <ng-container
+      *ngTemplateOutlet="historyTable; context: { rows: previousGroup().rows }"
+    ></ng-container>
+  </div>
+
+  <div class="notice footer-note">
+    Older orders remain available via the year/month selector above. History entries are
+    read-only; each table shows the orders received in that month.
+  </div>
+}
+
+<!-- Shared table template -->
+<ng-template #historyTable let-rows="rows">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ORDER ID</th>
+          <th>DATE</th>
+          <th>CUSTOMER</th>
+          <th>ASSIGNED TO</th>
+          <th>CURRENT STATUS</th>
+          <th>ACTIONS</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows; track row.order.id) {
+          <tr>
+            <td>
+              <strong>{{ row.order.id }}</strong>
+              <div class="muted">Product order</div>
+            </td>
+            <td>{{ row.order.date }}</td>
+            <td>
+              {{ row.order.customer }}
+              @if (row.station) {
+                <div class="muted">Station: {{ row.station }}</div>
+              }
+            </td>
+            <td>{{ row.assignedTo }}</td>
+            <td>
+              <span class="pill" [class]="'pill ' + statusClass(row.order.status)">
+                {{ row.order.status }}
+              </span>
+            </td>
+            <td><button class="btn small" (click)="open(row.order)">Details</button></td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="6" class="empty">No orders for this month.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</ng-template>
+
+@if (selected(); as o) {
+  <div class="modal-backdrop" (click)="close()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-head">
+        <h2>Order {{ o.id }}</h2>
+        <button class="icon-btn" (click)="close()" aria-label="Close">✕</button>
+      </div>
+      <div class="split">
+        <div>
+          <div class="muted label">Customer</div>
+          <strong>{{ o.customer }}</strong>
+        </div>
+        <div>
+          <div class="muted label">Date received</div>
+          <strong>{{ o.date }}</strong>
+        </div>
+        <div>
+          <div class="muted label">Status</div>
+          <span class="pill" [class]="'pill ' + statusClass(o.status)">{{ o.status }}</span>
+        </div>
+        <div>
+          <div class="muted label">Order lines</div>
+          <strong>{{ o.items.length }}</strong>
+        </div>
+      </div>
+      <div class="table-wrap detail-table">
+        <table>
+          <thead>
+            <tr>
+              <th>PRODUCT</th>
+              <th>ORDER TYPE</th>
+              <th>SIZE DISTRIBUTION</th>
+              <th>PAIRS</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (it of o.items; track $index) {
+              <tr>
+                <td>
+                  <strong>{{ it.productName }}</strong>
+                  <div class="muted">{{ it.code }}</div>
+                </td>
+                <td>{{ typeLabel(it) }}</td>
+                <td>{{ distribution(it) }}</td>
+                <td>{{ it.total }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" (click)="close()">Close</button>
+      </div>
+    </div>
+  </div>
+}

@@ -1,0 +1,108 @@
+<div class="modal-backdrop" (click)="cancel()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-head">
+      <h2>{{ isEdit() ? 'Edit product' : 'Add product' }}</h2>
+      <button class="icon-btn" (click)="cancel()" aria-label="Close">✕</button>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="save()" novalidate>
+      <div class="form-grid">
+        <div class="field">
+          <label for="p-name">Product name *</label>
+          <input id="p-name" formControlName="name" placeholder="Aero Lite Runner" />
+          @if (form.controls.name.touched && form.controls.name.invalid) {
+            <small class="err">Name is required.</small>
+          }
+        </div>
+        <div class="field">
+          <label for="p-code">Product code *</label>
+          <input id="p-code" formControlName="code" placeholder="BT-106" />
+          @if (form.controls.code.touched && form.controls.code.invalid) {
+            <small class="err">Code is required.</small>
+          }
+        </div>
+        <div class="field">
+          <label for="p-brand">Brand *</label>
+          <select id="p-brand" formControlName="brand">
+            @for (b of brands(); track b.id) {
+              <option [value]="b.name">{{ b.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <label for="p-mrp">MRP (₹) *</label>
+          <input id="p-mrp" type="number" min="1" formControlName="mrp" />
+          @if (form.controls.mrp.touched && form.controls.mrp.invalid) {
+            <small class="err">Enter a valid MRP.</small>
+          }
+        </div>
+
+        <div class="field full">
+          <label for="p-sizes">Sizes <span class="muted">(comma separated)</span></label>
+          <input id="p-sizes" formControlName="sizes" placeholder="5, 6, 7, 8, 9, 10" />
+        </div>
+
+        <div class="field full">
+          <label>Category-wise display prices (₹)</label>
+          <div class="price-grid">
+            <div class="field">
+              <label for="p-a">Category A</label>
+              <input id="p-a" type="number" min="0" formControlName="priceA" />
+            </div>
+            <div class="field">
+              <label for="p-b">Category B</label>
+              <input id="p-b" type="number" min="0" formControlName="priceB" />
+            </div>
+            <div class="field">
+              <label for="p-c">Category C</label>
+              <input id="p-c" type="number" min="0" formControlName="priceC" />
+            </div>
+          </div>
+          <span class="help">A blank/zero price means that customer category cannot order the product.</span>
+        </div>
+
+        <div class="field full">
+          <label for="p-photo">Product photos</label>
+          <input id="p-photo" type="file" accept="image/*" multiple (change)="onFiles($event)" />
+          <span class="help">In this demo, uploaded images are held in the current session only.</span>
+          @if (images().length) {
+            <div class="photo-list">
+              @for (img of images(); track $index) {
+                <div class="photo-item">
+                  <div class="photo-thumb">
+                    @if (img.src) {
+                      <img [src]="img.src" alt="" />
+                    } @else {
+                      <span>🖼</span>
+                    }
+                  </div>
+                  <div class="photo-meta">
+                    <strong>{{ img.name }}</strong>
+                    <div class="muted">{{ img.active ? 'Active photo' : 'Archived photo' }}</div>
+                  </div>
+                  <button type="button" class="btn small" (click)="toggleImage($index)">
+                    {{ img.active ? 'Archive' : 'Restore' }}
+                  </button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="field full">
+          <label class="checkline">
+            <input type="checkbox" formControlName="active" />
+            Product active and visible for ordering (subject to active photos)
+          </label>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn" (click)="cancel()">Cancel</button>
+        <button type="submit" class="btn primary" [disabled]="saving()">
+          {{ saving() ? 'Saving…' : 'Save product' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

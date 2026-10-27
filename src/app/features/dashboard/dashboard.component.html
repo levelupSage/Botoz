@@ -1,0 +1,23 @@
+<div class="page-head">
+  <div>
+    <h1>Dashboard</h1>
+    <div class="muted">Daily order and dispatch summary.</div>
+  </div>
+</div>
+
+@if (loading()) {
+  <div class="card empty">Loading dashboard…</div>
+} @else if (error()) {
+  <div class="notice error">{{ error() }}</div>
+} @else {
+  <div class="grid stats">
+    @for (s of stats(); track s.label) {
+      <div class="card stat">
+        <div class="stat-icon">{{ s.icon }}</div>
+        <div class="muted stat-label">{{ s.label }}</div>
+        <div class="stat-num">{{ s.value }}</div>
+        <div class="stat-foot">{{ s.foot }}</div>
+      </div>
+    }
+  </div>
+}

@@ -1,0 +1,92 @@
+<div class="page-head">
+  <div>
+    <h1>Packaging</h1>
+    <div class="muted">Define carton templates so customers can order whole cartons.</div>
+  </div>
+</div>
+
+<div class="card picker">
+  <div class="field">
+    <label for="product">Product</label>
+    <select id="product" (change)="selectProduct($any($event.target).value)">
+      <option value="0">Select a product…</option>
+      @for (p of products(); track p.id) {
+        <option [value]="p.id">{{ p.name }} · {{ p.code }}</option>
+      }
+    </select>
+  </div>
+</div>
+
+@if (loading()) {
+  <div class="card empty">Loading…</div>
+} @else if (error()) {
+  <div class="notice error">{{ error() }}</div>
+} @else if (selectedProduct(); as product) {
+  <!-- Existing templates -->
+  <div class="card">
+    <div class="card-head">
+      <h2>Existing templates</h2>
+      <span class="pill gray">{{ existingPackings().length }}</span>
+    </div>
+    @if (!existingPackings().length) {
+      <div class="empty">No carton templates yet for this product.</div>
+    } @else {
+      <div class="template-list">
+        @for (k of existingPackings(); track k.id) {
+          <div class="template">
+            <div>
+              <strong>{{ k.name }}</strong>
+              <div class="muted">{{ rowsText(k) }}</div>
+            </div>
+            <div class="template-right">
+              <span class="pill gold">{{ packingTotal(k) }} pairs/carton</span>
+              <button class="btn small danger" (click)="removeTemplate(k)">Remove</button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- New template -->
+  <div class="card">
+    <div class="card-head">
+      <h2>Add a template</h2>
+      <span class="pill gold">{{ draftTotal() }} pairs/carton</span>
+    </div>
+
+    <div class="field name-field">
+      <label for="tpl-name">Template name</label>
+      <input
+        id="tpl-name"
+        [value]="draftName()"
+        (input)="draftName.set($any($event.target).value)"
+        placeholder="e.g. 5×8 Regular"
+      />
+    </div>
+
+    <div class="size-grid">
+      @for (r of draftRows(); track r.size) {
+        <div class="size-cell">
+          <label [attr.for]="'pairs-' + r.size">Size {{ r.size }}</label>
+          <input
+            [id]="'pairs-' + r.size"
+            type="number"
+            min="0"
+            step="1"
+            [value]="r.pairs"
+            (input)="setDraftPairs(r.size, $any($event.target).value)"
+          />
+        </div>
+      }
+    </div>
+
+    <div class="actions">
+      <button class="btn primary" [disabled]="saving()" (click)="saveTemplate()">
+        {{ saving() ? 'Saving…' : 'Save template' }}
+      </button>
+    </div>
+  </div>
+} @else {
+  <div class="card empty">Select a product to manage its carton templates.</div>
+}

@@ -1,0 +1,78 @@
+<div class="page-head">
+  <div>
+    <h1>{{ heading() }}</h1>
+    <div class="muted">
+      Check your selected sizes, cartons and quantities before confirming.
+    </div>
+  </div>
+  <button class="btn" (click)="browse()">＋ Add products</button>
+</div>
+
+@if (confirmedId(); as id) {
+  <div class="card confirm">
+    <div class="tick">✓</div>
+    <h2>Order submitted successfully</h2>
+    <div class="muted">Order number</div>
+    <div class="order-id">{{ id }}</div>
+    <div class="notice">
+      Your order is confirmed. Product quantities and carton selections have been saved; no
+      monetary total is displayed.
+    </div>
+    <button class="btn primary" (click)="done()">Done</button>
+  </div>
+} @else if (!items().length) {
+  <div class="card empty">
+    <div class="big-ico">🧺</div>
+    <h2>Your basket is empty</h2>
+    <div class="sub">Browse products and add sizes or cartons to get started.</div>
+    <button class="btn primary" (click)="browse()">Browse products</button>
+  </div>
+} @else {
+  <div class="card">
+    <div class="card-head">
+      <h2>Selected products</h2>
+      <span class="pill gold">{{ items().length }} line(s)</span>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>PRODUCT</th>
+            <th>ORDER TYPE</th>
+            <th>SIZE DISTRIBUTION</th>
+            <th>QUANTITY</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (it of items(); track $index) {
+            <tr>
+              <td>
+                <strong>{{ it.productName }}</strong>
+                <div class="muted">{{ it.code }}</div>
+              </td>
+              <td>{{ typeLabel(it) }}</td>
+              <td>{{ distribution(it) }}</td>
+              <td>{{ it.total }} pairs</td>
+              <td>
+                <button class="btn small danger" (click)="remove($index)">Remove</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="notice">
+      No subtotal or order total is displayed. Confirming submits the order immediately.
+    </div>
+
+    <div class="actions">
+      <button class="btn" (click)="browse()">Continue shopping</button>
+      <button class="btn primary" [disabled]="submitting()" (click)="confirm()">
+        {{ submitting() ? 'Submitting…' : 'Confirm order' }}
+      </button>
+    </div>
+  </div>
+}

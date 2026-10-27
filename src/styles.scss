@@ -1,0 +1,472 @@
+/* ==========================================================================
+   BOTOZ — Global theme & design tokens
+   Bootstrap 5 is themed to the BOTOZ gold/dark brand, then our custom tokens
+   and component helpers layer on top.
+   ========================================================================== */
+
+// 1) Brand overrides, 2) selected Bootstrap layers, 3) our tokens & helpers.
+// Importing only what we use (grid, reboot, forms, buttons, utilities, modal)
+// keeps the bundle lean while still giving Bootstrap's layout + components.
+@import 'theme/bootstrap-theme';
+
+@import 'bootstrap/scss/functions';
+@import 'bootstrap/scss/variables';
+@import 'bootstrap/scss/variables-dark';
+@import 'bootstrap/scss/maps';
+@import 'bootstrap/scss/mixins';
+@import 'bootstrap/scss/root';
+@import 'bootstrap/scss/reboot';
+@import 'bootstrap/scss/type';
+@import 'bootstrap/scss/images';
+@import 'bootstrap/scss/containers';
+@import 'bootstrap/scss/grid';
+@import 'bootstrap/scss/tables';
+@import 'bootstrap/scss/forms';
+@import 'bootstrap/scss/buttons';
+@import 'bootstrap/scss/card';
+@import 'bootstrap/scss/badge';
+@import 'bootstrap/scss/modal';
+@import 'bootstrap/scss/close';
+@import 'bootstrap/scss/helpers';
+
+// Utilities API (spacing, flex, display, text) — the bulk of what we use.
+@import 'bootstrap/scss/utilities';
+@import 'bootstrap/scss/utilities/api';
+
+:root {
+  /* Force dark everywhere so the app matches the prototype's dark look and
+     stays consistent regardless of OS/browser preference. Because the scheme
+     is fixed to dark, every `light-dark(light, dark)` in the app resolves to
+     its dark branch automatically. */
+  color-scheme: dark;
+
+  /* Surfaces (dark) */
+  --bg: #101114;
+  --panel: #191b20;
+  --panel2: #22252b;
+  --text: #f5f5f6;
+  --muted: #a3a7b0;
+  --line: #30333a;
+
+  /* Brand */
+  --gold: #c8a45d;
+  --gold2: #e4c77f;
+  --green: #27835f;
+  --red: #bf5454;
+  --blue: #5279b8;
+
+  /* Sidebar (always dark) */
+  --sidebar-bg: #141518;
+  --sidebar-line: #2b2c30;
+
+  --radius: 14px;
+  --radius-sm: 9px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.45 Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+}
+
+h1 {
+  font-size: 27px;
+  letter-spacing: -0.8px;
+  margin: 0 0 5px;
+}
+
+h2 {
+  font-size: 16px;
+  margin: 0;
+}
+
+h3 {
+  font-size: 14px;
+  margin: 0 0 4px;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+/* ---- Buttons --------------------------------------------------------- */
+/* Custom BOTOZ buttons layered on top of Bootstrap's .btn (these win). */
+.btn {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 9px 13px;
+  background: var(--panel);
+  color: var(--text);
+  font-weight: 650;
+  white-space: nowrap;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.08s ease,
+    box-shadow 0.15s ease;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--gold);
+  background: var(--panel2);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn.primary {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: #17140d;
+}
+
+.btn.primary:hover:not(:disabled) {
+  background: var(--gold2);
+  border-color: var(--gold2);
+  box-shadow: 0 4px 14px rgba(200, 164, 93, 0.25);
+}
+
+.btn.dark {
+  background: #25262a;
+  color: #fff;
+  border-color: #25262a;
+}
+
+.btn.dark:hover:not(:disabled) {
+  background: #303136;
+  border-color: #303136;
+}
+
+.btn.small {
+  padding: 6px 9px;
+  font-size: 12px;
+}
+
+.btn.danger {
+  color: var(--red);
+}
+
+.btn.danger:hover:not(:disabled) {
+  border-color: var(--red);
+  background: rgba(191, 84, 84, 0.12);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ---- Cards ----------------------------------------------------------- */
+.card {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: var(--radius);
+  padding: 17px;
+  min-width: 0;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+/* ---- Pills ----------------------------------------------------------- */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 20px;
+  background: light-dark(#e5f4ed, #1e3b30);
+  color: light-dark(#24704f, #8fd3b4);
+  font-size: 10px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.pill.gold {
+  background: light-dark(#f7efdc, #3a3020);
+  color: var(--gold2);
+}
+
+.pill.gray {
+  background: var(--panel2);
+  color: var(--muted);
+}
+
+.pill.blue {
+  background: light-dark(#eaf0fb, #202e48);
+  color: light-dark(#3b5e9b, #9db8ec);
+}
+
+/* ---- Forms ----------------------------------------------------------- */
+input,
+select,
+textarea {
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 10px 11px;
+  width: 100%;
+  outline: none;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px #c5a15a22;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.field label {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+/* ---- Utilities ------------------------------------------------------- */
+.grid {
+  display: grid;
+  gap: 15px;
+}
+
+.notice {
+  padding: 12px 14px;
+  background: light-dark(#f7f1e3, #30291b);
+  border: 1px solid light-dark(#e9d9b1, #4b3c20);
+  color: light-dark(#6c5424, #e3ca8d);
+  border-radius: 10px;
+  font-size: 12px;
+}
+
+.empty {
+  padding: 32px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ---- Shared page/layout helpers (match prototype) -------------------- */
+.page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.subtitle {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-bottom: 16px;
+  align-items: center;
+}
+
+.search {
+  min-width: 180px;
+  flex: 1;
+  max-width: 380px;
+}
+
+/* ---- Tables (match prototype) --------------------------------------- */
+.table-wrap {
+  overflow: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+th {
+  text-align: left;
+  font-weight: 650;
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.3px;
+  padding: 11px 9px;
+  background: var(--panel2);
+  white-space: nowrap;
+}
+
+td {
+  padding: 12px 9px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+tr:last-child td {
+  border-bottom: 0;
+}
+
+/* ---- Error notice variant ------------------------------------------- */
+.notice.error {
+  background: light-dark(#fbeaea, #3a2020);
+  border-color: light-dark(#e9b1b1, #5a2e2e);
+  color: light-dark(#8c3030, #f0b4b4);
+}
+
+/* ---- Checkline (checkbox + label) ----------------------------------- */
+.checkline {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.checkline input {
+  width: auto;
+}
+
+/* ==========================================================================
+   UX polish — tasteful motion & feedback (on top of themed Bootstrap)
+   ========================================================================== */
+
+/* Table rows get a subtle hover highlight for scannability. */
+tbody tr {
+  transition: background 0.12s ease;
+}
+
+tbody tr:hover td {
+  background: color-mix(in srgb, var(--panel2) 55%, transparent);
+}
+
+/* Interactive cards (product tiles, brand tiles) lift slightly on hover. */
+.card.interactive,
+button.card {
+  cursor: pointer;
+}
+
+.card.interactive:hover,
+button.card:hover {
+  border-color: var(--gold);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+}
+
+/* Smooth focus ring using the brand gold (keeps a11y visible outlines). */
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+/* Modal entrance animation. */
+.modal-backdrop {
+  animation: botoz-fade 0.15s ease;
+}
+
+.modal-backdrop > .modal {
+  animation: botoz-rise 0.18s ease;
+}
+
+@keyframes botoz-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes botoz-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Respect users who prefer reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  .card,
+  .btn,
+  .modal-backdrop,
+  .modal-backdrop > .modal {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Toast slide-in. */
+.toast {
+  animation: botoz-rise 0.2s ease;
+}
+
+/* ==========================================================================
+   Modal override — our custom modals reuse the `.modal` / `.modal-backdrop`
+   class names, which collide with Bootstrap's modal component (Bootstrap sets
+   `.modal { display:none }` and tints `.modal-backdrop`). We neutralise only
+   what Bootstrap imposes; component SCSS still controls size/padding/position.
+   ========================================================================== */
+.modal-backdrop {
+  /* Bootstrap: opacity:0.5 fade + its own bg. Ours renders immediately. */
+  opacity: 1;
+  z-index: 1060;
+}
+
+/* A `.modal` that lives inside our custom backdrop must stay visible. */
+.modal-backdrop > .modal {
+  display: block !important;
+}

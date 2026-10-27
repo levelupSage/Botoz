@@ -1,0 +1,41 @@
+<div class="landing">
+  <!-- Top bar -->
+  <header class="landing-top">
+    <div class="brand">
+      <span class="brand-mark"><img src="botoz-logo.png" alt="BOTOZ" /></span>
+    </div>
+    <nav class="landing-nav">
+      <a routerLink="/login" class="btn primary">Sign in</a>
+    </nav>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero">
+    <span class="eyebrow">Footwear B2B Suite · V15</span>
+    <h1>Wholesale footwear ordering,<br />built for your dealers.</h1>
+    <p class="lede">
+      BOTOZ gives your sales team and retail customers one clean workspace to browse the catalogue,
+      place size or carton orders, and track dispatch — with per-customer pricing baked in.
+    </p>
+    <div class="hero-actions">
+      <a routerLink="/login" class="btn primary lg">Get started</a>
+      <a href="#features" class="btn lg">See features</a>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section id="features" class="features">
+    @for (f of features; track f.title) {
+      <article class="feature card">
+        <div class="feature-icon">{{ f.icon }}</div>
+        <h3>{{ f.title }}</h3>
+        <p class="muted">{{ f.text }}</p>
+      </article>
+    }
+  </section>
+
+  <footer class="landing-foot">
+    <span>© {{ year }} BOTOZ · Footwear B2B Suite</span>
+    <span class="muted">Demo data · not production connected</span>
+  </footer>
+</div>

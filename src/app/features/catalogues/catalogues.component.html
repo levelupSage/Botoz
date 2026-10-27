@@ -1,0 +1,63 @@
+<div class="page-head no-print">
+  <div>
+    <h1>Catalogues</h1>
+    <div class="muted">Generate a printable product catalogue for a brand.</div>
+  </div>
+  <button class="btn primary" (click)="print()">🖨 Print catalogue</button>
+</div>
+
+<div class="toolbar no-print">
+  <select
+    class="brand-select"
+    [value]="brandFilter()"
+    (change)="brandFilter.set($any($event.target).value)"
+  >
+    @for (b of brandOptions(); track b) {
+      <option [value]="b">{{ b }}</option>
+    }
+  </select>
+  <label class="checkline">
+    <input
+      type="checkbox"
+      [checked]="includePrice()"
+      (change)="includePrice.set($any($event.target).checked)"
+    />
+    Include MRP
+  </label>
+</div>
+
+@if (loading()) {
+  <div class="card empty">Loading…</div>
+} @else if (error()) {
+  <div class="notice error">{{ error() }}</div>
+} @else {
+  <div class="catalogue-sheet">
+    <div class="sheet-head">
+      <h2>BOTOZ Catalogue</h2>
+      <span>{{ brandFilter() === 'All' ? 'All brands' : brandFilter() }}</span>
+    </div>
+
+    <div class="catalogue-grid">
+      @for (p of items(); track p.id) {
+        <article class="cat-item">
+          <div class="cat-art">
+            @if (imageSrc(p)) {
+              <img [src]="imageSrc(p)" [alt]="p.name" />
+            } @else {
+              <div class="cat-placeholder">👟</div>
+            }
+          </div>
+          <div class="cat-info">
+            <strong>{{ p.name }}</strong>
+            <div class="cat-meta">{{ p.code }} · {{ p.brand }}</div>
+            @if (includePrice()) {
+              <div class="cat-price">MRP {{ money(p.mrp) }}</div>
+            }
+          </div>
+        </article>
+      } @empty {
+        <div class="empty">No active products for this brand.</div>
+      }
+    </div>
+  </div>
+}

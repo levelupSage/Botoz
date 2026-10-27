@@ -1,0 +1,53 @@
+<div class="page-head">
+  <div>
+    <h1>Account</h1>
+    <div class="muted">Your profile and recent order activity.</div>
+  </div>
+  <button class="btn" (click)="viewOrders()">View all orders</button>
+</div>
+
+@if (customer(); as c) {
+  <div class="grid two">
+    <div class="card">
+      <h2>Profile</h2>
+      <dl class="profile">
+        <dt>Name</dt>
+        <dd>{{ c.name }}</dd>
+        <dt>Account code</dt>
+        <dd>{{ c.code }}</dd>
+        <dt>Pricing category</dt>
+        <dd><span class="pill gold">Category {{ c.category }}</span></dd>
+        <dt>Phone</dt>
+        <dd>{{ c.phone || '—' }}</dd>
+        <dt>Email</dt>
+        <dd>{{ c.email || '—' }}</dd>
+        <dt>Address</dt>
+        <dd>{{ c.address || '—' }}</dd>
+      </dl>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Recent orders</h2>
+        <span class="pill gray">{{ recentOrders().length }}</span>
+      </div>
+      @if (!recentOrders().length) {
+        <div class="empty">No orders yet.</div>
+      } @else {
+        <div class="order-list">
+          @for (o of recentOrders(); track o.id) {
+            <div class="order-row">
+              <div>
+                <strong>{{ o.id }}</strong>
+                <div class="muted">{{ o.date }} · {{ o.items.length }} line(s)</div>
+              </div>
+              <span class="pill">{{ o.status }}</span>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+} @else {
+  <div class="card empty">Account details unavailable.</div>
+}

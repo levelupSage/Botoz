@@ -1,0 +1,79 @@
+<div class="modal-backdrop" (click)="cancel()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-head">
+      <h2>Order · {{ product().name }}</h2>
+      <button class="icon-btn" (click)="cancel()" aria-label="Close">✕</button>
+    </div>
+
+    <div class="muted summary">
+      {{ product().code }} · MRP {{ money(product().mrp) }} · Customer display price
+      {{ priceText() }}
+    </div>
+
+    <div class="tabs">
+      <button class="tab" [class.active]="mode() === 'size'" (click)="setMode('size')">
+        Size-wise
+      </button>
+      <button
+        class="tab"
+        [class.active]="mode() === 'carton'"
+        [disabled]="!packings().length"
+        (click)="setMode('carton')"
+      >
+        Carton-wise
+      </button>
+    </div>
+
+    @if (mode() === 'size') {
+      <div class="size-grid">
+        @for (size of product().sizes; track size) {
+          <div class="size-cell">
+            <label [attr.for]="'size-' + size">Size {{ size }}</label>
+            <input
+              [id]="'size-' + size"
+              type="number"
+              min="0"
+              step="1"
+              [value]="sizeQty()[size]"
+              (input)="updateSize(size, $any($event.target).value)"
+            />
+          </div>
+        }
+      </div>
+    } @else {
+      @if (!packings().length) {
+        <div class="empty">No active carton packing templates for this product.</div>
+      } @else {
+        <div class="field">
+          <label for="pack">Packing template</label>
+          <select id="pack" (change)="onPackingChange($any($event.target).value)">
+            @for (k of packings(); track k.id) {
+              <option [value]="k.id">{{ k.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="field carton-count">
+          <label for="cartons">Number of cartons</label>
+          <input
+            id="cartons"
+            type="number"
+            min="1"
+            step="1"
+            [value]="cartonCount()"
+            (input)="onCartonChange($any($event.target).value)"
+          />
+        </div>
+        <div class="notice preview">{{ cartonPreview() }}</div>
+      }
+    }
+
+    <div class="notice">
+      Choose actual quantities. There is no monetary subtotal in customer order review.
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn" (click)="cancel()">Cancel</button>
+      <button class="btn primary" (click)="add()">{{ addLabel() }}</button>
+    </div>
+  </div>
+</div>

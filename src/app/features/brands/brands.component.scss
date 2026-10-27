@@ -1,0 +1,64 @@
+:host {
+  display: block;
+}
+
+.page-head {
+  margin-bottom: 18px;
+}
+
+.add-card {
+  margin-bottom: 16px;
+}
+
+.add-row {
+  display: flex;
+  gap: 9px;
+  align-items: stretch;
+}
+
+.add-row input {
+  flex: 1;
+  max-width: 420px;
+}
+
+.err {
+  color: var(--red);
+  font-size: 11px;
+}
+
+.table-wrap {
+  overflow: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+th {
+  text-align: left;
+  font-weight: 650;
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.3px;
+  padding: 11px 9px;
+  background: var(--panel2);
+  white-space: nowrap;
+}
+
+td {
+  padding: 12px 9px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+tr:last-child td {
+  border-bottom: 0;
+}
+
+.notice.error {
+  background: light-dark(#fbeaea, #3a2020);
+  border-color: light-dark(#e9b1b1, #5a2e2e);
+  color: light-dark(#8c3030, #f0b4b4);
+}

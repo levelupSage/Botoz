@@ -1,0 +1,107 @@
+:host {
+  display: block;
+}
+
+.page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.brand-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 18px;
+}
+
+.brand-card {
+  text-align: left;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.brand-card:hover {
+  border-color: var(--gold);
+}
+
+.brand-logo {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--gold);
+  color: var(--gold2);
+  display: grid;
+  place-items: center;
+  font-weight: 950;
+  font-size: 18px;
+  border-radius: 11px;
+  margin-bottom: 12px;
+}
+
+.count {
+  font-size: 11px;
+  margin-top: 5px;
+}
+
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.feat-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.feat-item {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  text-align: left;
+  border: 1px solid var(--line);
+  background: var(--panel2);
+  border-radius: 11px;
+  padding: 11px;
+  cursor: pointer;
+}
+
+.feat-item:hover {
+  border-color: var(--gold);
+}
+
+.feat-art {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: light-dark(#e8e9ed, #272a30);
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  flex: none;
+}
+
+.feat-info {
+  min-width: 0;
+}
+
+.feat-info .muted {
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+@media (max-width: 900px) {
+  .brand-grid,
+  .feat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .brand-grid,
+  .feat-grid {
+    grid-template-columns: 1fr;
+  }
+}

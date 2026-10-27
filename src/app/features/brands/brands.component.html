@@ -1,0 +1,66 @@
+<div class="page-head">
+  <div>
+    <h1>Brands</h1>
+    <div class="muted">Manage the brands available across the catalogue.</div>
+  </div>
+</div>
+
+<div class="card add-card">
+  <form [formGroup]="form" (ngSubmit)="add()" novalidate>
+    <div class="field">
+      <label for="brand-name">New brand name</label>
+      <div class="add-row">
+        <input id="brand-name" formControlName="name" placeholder="e.g. BOTOZ Premium" />
+        <button type="submit" class="btn primary" [disabled]="saving()">
+          {{ saving() ? 'Adding…' : '＋ Add' }}
+        </button>
+      </div>
+      @if (form.controls.name.touched && form.controls.name.invalid) {
+        <small class="err">Brand name is required.</small>
+      }
+    </div>
+  </form>
+</div>
+
+@if (loading()) {
+  <div class="card empty">Loading brands…</div>
+} @else if (error()) {
+  <div class="notice error">{{ error() }}</div>
+} @else {
+  <div class="card">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>BRAND</th>
+            <th>PRODUCTS</th>
+            <th>STATUS</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows(); track row.brand.id) {
+            <tr>
+              <td><strong>{{ row.brand.name }}</strong></td>
+              <td>{{ row.productCount }}</td>
+              <td>
+                <span class="pill" [class.gray]="!row.brand.active">
+                  {{ row.brand.active ? 'Active' : 'Inactive' }}
+                </span>
+              </td>
+              <td>
+                <button class="btn small" (click)="toggle(row.brand)">
+                  {{ row.brand.active ? 'Deactivate' : 'Activate' }}
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="4" class="empty">No brands yet.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+}

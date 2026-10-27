@@ -1,0 +1,151 @@
+:host {
+  display: block;
+}
+
+.page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.toolbar {
+  display: flex;
+  gap: 9px;
+  margin-bottom: 16px;
+}
+
+.search {
+  min-width: 180px;
+  flex: 1;
+  max-width: 420px;
+}
+
+.table-wrap {
+  overflow: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+th {
+  text-align: left;
+  font-weight: 650;
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.3px;
+  padding: 11px 9px;
+  background: var(--panel2);
+  white-space: nowrap;
+}
+
+td {
+  padding: 12px 9px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+tr:last-child td {
+  border-bottom: 0;
+}
+
+.notice {
+  margin-top: 14px;
+}
+
+.notice.error {
+  background: light-dark(#fbeaea, #3a2020);
+  border-color: light-dark(#e9b1b1, #5a2e2e);
+  color: light-dark(#8c3030, #f0b4b4);
+}
+
+/* ---- Detail modal ---------------------------------------------------- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: #0009;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  z-index: 50;
+}
+
+.modal {
+  width: min(760px, 100%);
+  max-height: 92vh;
+  overflow: auto;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  padding: 21px;
+  box-shadow: 0 25px 80px #0005;
+}
+
+.modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 17px;
+  gap: 12px;
+}
+
+.modal-head h2 {
+  font-size: 20px;
+}
+
+.icon-btn {
+  border: 0;
+  background: var(--panel2);
+  color: var(--text);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+}
+
+.split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.split .label {
+  font-size: 11px;
+}
+
+.detail-table {
+  margin-top: 4px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 19px;
+}
+
+/* ---- Live customer baskets (staff) ---------------------------------- */
+.live-baskets {
+  margin-bottom: 16px;
+}
+
+.live-basket {
+  padding: 11px 0;
+  border-top: 1px solid var(--line);
+}
+
+.live-basket:first-of-type {
+  border-top: 0;
+}
+
+.live-basket-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 9px;
+  align-items: center;
+  margin-bottom: 7px;
+}

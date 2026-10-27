@@ -1,0 +1,122 @@
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: #0009;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  z-index: 50;
+}
+
+.modal {
+  width: min(720px, 100%);
+  max-height: 92vh;
+  overflow: auto;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  padding: 21px;
+  box-shadow: 0 25px 80px #0005;
+}
+
+.modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 17px;
+  gap: 12px;
+}
+
+.modal-head h2 {
+  font-size: 20px;
+}
+
+.icon-btn {
+  border: 0;
+  background: var(--panel2);
+  color: var(--text);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px;
+}
+
+.field.full {
+  grid-column: 1 / -1;
+}
+
+.price-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.help {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.err {
+  color: var(--red);
+  font-size: 11px;
+}
+
+/* ---- Photos ---------------------------------------------------------- */
+.photo-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.photo-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 9px 11px;
+}
+
+.photo-thumb {
+  width: 60px;
+  height: 48px;
+  background: var(--panel2);
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  flex: none;
+}
+
+.photo-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.photo-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 19px;
+}
+
+@media (max-width: 560px) {
+  .form-grid,
+  .price-grid {
+    grid-template-columns: 1fr;
+  }
+  .field.full {
+    grid-column: auto;
+  }
+}

@@ -1,0 +1,178 @@
+<div class="page-head">
+  <div>
+    <h1>{{ heading() }}</h1>
+    <div class="muted">
+      @if (isCustomer()) {
+        Browse footwear and order by size or configured carton.
+      } @else if (isStaffOrdering()) {
+        Select products for this customer order, then review and confirm.
+      } @else {
+        Manage product details, photos, MRP and A/B/C category display prices.
+      }
+    </div>
+  </div>
+  <div class="head-actions">
+    @if (orderingMode()) {
+      <button class="btn" (click)="goToBasket()">Open basket</button>
+    }
+    @if (isStaff() && !isStaffOrdering()) {
+      <button class="btn" (click)="openPicker()">＋ Create order</button>
+    }
+    @if (canManage() && !isStaffOrdering()) {
+      <button class="btn primary" (click)="openAdd()">＋ Add product</button>
+    }
+  </div>
+</div>
+
+@if (isStaff() && !isStaffOrdering()) {
+  <div class="notice staff-order">
+    <span>Create an order on behalf of a customer:</span>
+    <select class="staff-select" (change)="startStaffOrder($any($event.target).value)">
+      <option value="0">Select customer…</option>
+      @for (c of orderableCustomers(); track c.id) {
+        <option [value]="c.id">{{ c.name }} · Category {{ c.category }}</option>
+      }
+    </select>
+  </div>
+} @else if (isStaffOrdering()) {
+  <div class="notice staff-order active">
+    <span>Ordering for <strong>{{ activeCustomer()?.name }}</strong> (Category
+      {{ activeCustomer()?.category }})</span>
+    <button class="btn small" (click)="stopStaffOrder()">Cancel order</button>
+  </div>
+}
+
+<div class="toolbar">
+  <input
+    class="search"
+    placeholder="Search product, code, brand…"
+    [value]="search()"
+    (input)="search.set($any($event.target).value)"
+  />
+  <select
+    class="brand-select"
+    [value]="brandFilter()"
+    (change)="brandFilter.set($any($event.target).value)"
+  >
+    @for (b of brandOptions(); track b) {
+      <option [value]="b">{{ b }}</option>
+    }
+  </select>
+  @if (orderingMode() && activeCustomer()) {
+    <span class="pill gold">Category {{ activeCustomer()?.category }}</span>
+  }
+</div>
+
+@if (!orderingMode()) {
+  <div class="status-tabs">
+    <button class="status-tab" [class.active]="statusFilter() === 'All'" (click)="statusFilter.set('All')">
+      All products
+    </button>
+    <button
+      class="status-tab active-tab"
+      [class.active]="statusFilter() === 'Active'"
+      (click)="statusFilter.set('Active')"
+    >
+      Active ({{ counts().active }})
+    </button>
+    <button
+      class="status-tab archived-tab"
+      [class.active]="statusFilter() === 'Archived'"
+      (click)="statusFilter.set('Archived')"
+    >
+      Archived ({{ counts().archived }})
+    </button>
+  </div>
+  <div class="result-count muted">{{ filtered().length }} products found</div>
+}
+
+@if (loading()) {
+  <div class="card empty">Loading products…</div>
+} @else if (error()) {
+  <div class="notice error">{{ error() }}</div>
+} @else {
+  <div class="grid product-grid">
+    @for (p of filtered(); track p.id) {
+      <article class="card product">
+        <div class="product-art">
+          @if (imageSrc(p)) {
+            <img [src]="imageSrc(p)" [alt]="p.name" />
+          } @else {
+            <div class="shoe-placeholder">👟</div>
+          }
+          <span class="product-chip pill" [class.gray]="!p.active">{{ statusLabel(p) }}</span>
+        </div>
+        <div class="product-info">
+          <h3>{{ p.name }}</h3>
+          <div class="product-code muted">{{ p.code }} · {{ p.brand }}</div>
+          <div class="product-bottom">
+            <div class="price">
+              MRP {{ money(p.mrp) }}
+              <small>{{ priceLabel(p) }}</small>
+            </div>
+            @if (showOrderButton()) {
+              <button class="btn small primary" (click)="openOrder(p)">Order</button>
+            } @else {
+              <button class="btn small" (click)="openEdit(p)">Edit</button>
+            }
+          </div>
+
+          @if (canManage() && !orderingMode()) {
+            <div class="product-actions">
+              <button class="btn small" (click)="openEdit(p)">A/B/C prices</button>
+              <button class="btn small" (click)="openEdit(p)">Photos ({{ photoCount(p) }})</button>
+              <button
+                class="btn small"
+                [class.danger]="p.active"
+                (click)="toggleArchive(p)"
+              >
+                {{ p.active ? 'Archive' : 'Restore' }}
+              </button>
+            </div>
+          }
+        </div>
+      </article>
+    } @empty {
+      <div class="card empty">No products match this filter.</div>
+    }
+  </div>
+}
+
+@if (orderProduct(); as product) {
+  <app-order-modal [product]="product" (added)="onAdded()" (cancelled)="closeOrder()" />
+}
+
+@if (editProduct() !== undefined) {
+  <app-product-modal
+    [product]="editProduct() ?? null"
+    (saved)="onProductSaved()"
+    (cancelled)="closeEdit()"
+  />
+}
+
+@if (pickerOpen()) {
+  <div class="modal-backdrop" (click)="closePicker()">
+    <div class="modal picker-modal" (click)="$event.stopPropagation()">
+      <div class="modal-head">
+        <h2>Create order · choose a customer</h2>
+        <button class="icon-btn" (click)="closePicker()" aria-label="Close">✕</button>
+      </div>
+      <input
+        class="search picker-search"
+        placeholder="Search customer name, code or phone…"
+        [value]="pickerSearch()"
+        (input)="pickerSearch.set($any($event.target).value)"
+      />
+      <div class="picker-results">
+        @for (c of pickerResults(); track c.id) {
+          <button class="picker-item" (click)="chooseCustomer(c.id)">
+            <strong>{{ c.name }}</strong>
+            <span>{{ c.loginId ?? c.code }} · Category {{ c.category }} · {{ c.phone }}</span>
+          </button>
+        } @empty {
+          <div class="empty">No active customers match.</div>
+        }
+      </div>
+    </div>
+  </div>
+}

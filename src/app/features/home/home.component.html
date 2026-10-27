@@ -1,0 +1,43 @@
+<div class="page-head">
+  <div>
+    <h1>Welcome, {{ customer()?.name }}</h1>
+    <div class="muted">Browse brands, choose products and place a wholesale order.</div>
+  </div>
+  <button class="btn primary" (click)="browseAll()">View all products</button>
+</div>
+
+@if (loading()) {
+  <div class="card empty">Loading…</div>
+} @else {
+  <div class="grid brand-grid">
+    @for (tile of brandTiles(); track tile.brand.id) {
+      <button class="card brand-card" (click)="browseBrand(tile.brand)">
+        <div class="brand-logo">{{ tile.brand.name.charAt(0) }}</div>
+        <strong>{{ tile.brand.name }}</strong>
+        <div class="muted count">{{ tile.available }} products available</div>
+      </button>
+    }
+  </div>
+
+  <div class="card featured">
+    <div class="card-head">
+      <h2>★ Featured articles</h2>
+      <button class="btn small" (click)="browseAll()">Browse all →</button>
+    </div>
+    @if (!featured().length) {
+      <div class="empty">No products currently available for your account.</div>
+    } @else {
+      <div class="grid feat-grid">
+        @for (p of featured(); track p.id) {
+          <button class="feat-item" (click)="browseAll()">
+            <div class="feat-art">👟</div>
+            <div class="feat-info">
+              <strong>{{ p.name }}</strong>
+              <div class="muted">{{ p.code }} · {{ p.brand }}</div>
+            </div>
+          </button>
+        }
+      </div>
+    }
+  </div>
+}
