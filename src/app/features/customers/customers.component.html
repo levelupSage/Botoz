@@ -121,18 +121,21 @@
             }
           </div>
           <div class="field">
-            <label for="c-pass">4-digit login password *</label>
+            <label for="c-pass">{{ mockMode ? '4-digit login password *' : 'Login password *' }}</label>
             <input
               id="c-pass"
               type="password"
-              inputmode="numeric"
-              maxlength="4"
+              autocomplete="new-password"
+              [attr.inputmode]="mockMode ? 'numeric' : 'text'"
+              [maxlength]="mockMode ? 4 : 72"
               formControlName="loginPassword"
-              placeholder="4 digits"
+              [placeholder]="mockMode ? '4 digits' : 'Choose a strong password'"
             />
-            <span class="help">Only Admin or Super Admin can set or change this password.</span>
+            <span class="help">
+              {{ mockMode ? 'Set a 4-digit demo password.' : 'Use 8+ characters with uppercase, lowercase, number, and symbol. The API requires a password on each save.' }}
+            </span>
             @if (form.controls.loginPassword.touched && form.controls.loginPassword.invalid) {
-              <small class="err">Enter a 4-digit password.</small>
+              <small class="err">{{ mockMode ? 'Enter a 4-digit password.' : 'Enter a strong password that meets the requirements.' }}</small>
             }
           </div>
 
@@ -243,31 +246,33 @@
           </div>
         </div>
 
-        <!-- Per-product overrides -->
-        <div class="section">
-          <h3>Per-product price overrides</h3>
-          <p class="help">
-            Leave blank to use the category {{ form.controls.category.value }} price.
-          </p>
-          <div class="override-list">
-            @for (p of products(); track p.id) {
-              <div class="override-row">
-                <div class="override-name">
-                  <strong>{{ p.name }}</strong>
-                  <span class="muted">{{ p.code }} · Cat {{ form.controls.category.value }}
-                    {{ p.categoryPrices[form.controls.category.value] }}</span>
+        @if (supportsProductPriceOverrides) {
+          <!-- Per-product overrides are hidden when the connected API lacks support. -->
+          <div class="section">
+            <h3>Per-product price overrides</h3>
+            <p class="help">
+              Leave blank to use the category {{ form.controls.category.value }} price.
+            </p>
+            <div class="override-list">
+              @for (p of products(); track p.id) {
+                <div class="override-row">
+                  <div class="override-name">
+                    <strong>{{ p.name }}</strong>
+                    <span class="muted">{{ p.code }} · Cat {{ form.controls.category.value }}
+                      {{ p.categoryPrices[form.controls.category.value] }}</span>
+                  </div>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="—"
+                    [value]="overrideValue(p.id)"
+                    (input)="setOverride(p.id, $any($event.target).value)"
+                  />
                 </div>
-                <input
-                  type="number"
-                  min="0"
-                  placeholder="—"
-                  [value]="overrideValue(p.id)"
-                  (input)="setOverride(p.id, $any($event.target).value)"
-                />
-              </div>
-            }
+              }
+            </div>
           </div>
-        </div>
+        }
 
         <div class="modal-actions">
           <button type="button" class="btn" (click)="close()">Cancel</button>

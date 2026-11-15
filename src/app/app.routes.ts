@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, guestGuard } from './core/guards/auth.guard';
+import { authGuard, guestGuard, roleGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   // ---- Public ---------------------------------------------------------
@@ -23,62 +23,96 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./layout/shell/shell.component').then((m) => m.ShellComponent),
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
+      {
+        path: '',
+        pathMatch: 'full',
+        loadComponent: () =>
+          import('./layout/shell/app-home-redirect.component').then((m) => m.AppHomeRedirectComponent),
+      },
       {
         path: 'dashboard',
+        canActivate: [roleGuard],
+        data: { roles: ['Super Admin', 'Admin', 'Backend User'] },
         loadComponent: () =>
           import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
       },
       {
         path: 'products',
+        canActivate: [roleGuard],
+        data: { roles: ['Super Admin', 'Admin', 'Backend User', 'Customer'] },
         loadComponent: () =>
           import('./features/products/products.component').then((m) => m.ProductsComponent),
       },
       {
         path: 'packaging',
+        canActivate: [roleGuard],
+        data: { roles: ['Super Admin', 'Admin', 'Backend User'] },
         loadComponent: () =>
           import('./features/packaging/packaging.component').then((m) => m.PackagingComponent),
       },
       {
         path: 'orders',
+        canActivate: [roleGuard],
+        data: { roles: ['Super Admin', 'Admin', 'Backend User', 'Customer'] },
         loadComponent: () =>
           import('./features/orders/orders.component').then((m) => m.OrdersComponent),
       },
       {
         path: 'customers',
+        canActivate: [roleGuard],
+        data: { roles: ['Super Admin', 'Admin'] },
         loadComponent: () =>
           import('./features/customers/customers.component').then((m) => m.CustomersComponent),
       },
       {
         path: 'brands',
+        canActivate: [roleGuard],
+        data: { roles: ['Super Admin', 'Admin'] },
         loadComponent: () =>
           import('./features/brands/brands.component').then((m) => m.BrandsComponent),
       },
       {
         path: 'catalogues',
+        canActivate: [roleGuard],
+        data: { roles: ['Super Admin', 'Admin', 'Backend User'] },
         loadComponent: () =>
           import('./features/catalogues/catalogues.component').then((m) => m.CataloguesComponent),
       },
       {
         path: 'order-history',
+        canActivate: [roleGuard],
+        data: { roles: ['Super Admin', 'Admin'] },
         loadComponent: () =>
           import('./features/order-history/order-history.component').then(
             (m) => m.OrderHistoryComponent,
           ),
       },
+      {
+        path: 'user-accounts',
+        canActivate: [roleGuard],
+        data: { roles: ['Super Admin', 'Admin'] },
+        loadComponent: () =>
+          import('./features/auth/register.component').then((m) => m.RegisterComponent),
+      },
       // Customer-facing sections
       {
         path: 'home',
+        canActivate: [roleGuard],
+        data: { roles: ['Customer'] },
         loadComponent: () =>
           import('./features/home/home.component').then((m) => m.HomeComponent),
       },
       {
         path: 'basket',
+        canActivate: [roleGuard],
+        data: { roles: ['Customer', 'Super Admin', 'Admin', 'Backend User'] },
         loadComponent: () =>
           import('./features/basket/basket.component').then((m) => m.BasketComponent),
       },
       {
         path: 'account',
+        canActivate: [roleGuard],
+        data: { roles: ['Customer'] },
         loadComponent: () =>
           import('./features/account/account.component').then((m) => m.AccountComponent),
       },

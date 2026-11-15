@@ -74,6 +74,12 @@ export class CatalogService {
       .pipe(tap((saved) => this.mergeInto(this._products, saved)));
   }
 
+  setProductArchived(id: number, archived: boolean): Observable<Product> {
+    return this.data.setProductArchived(id, archived).pipe(
+      tap((saved) => this.mergeInto(this._products, saved)),
+    );
+  }
+
   saveCustomer(customer: Customer): Observable<Customer> {
     return this.data
       .saveCustomer(customer)

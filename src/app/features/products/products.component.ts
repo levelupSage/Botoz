@@ -8,7 +8,7 @@ import { activeImageSrc, hasActiveImage, isOrderableFor, money, priceFor } from 
 import { OrderModalComponent } from './order-modal.component';
 import { ProductModalComponent } from './product-modal.component';
 
-type StatusFilter = 'All' | 'Active' | 'Archived';
+type StatusFilter = 'All' | 'Active' | 'Archived' | 'Deactivated';
 
 /**
  * Products catalogue. Behaviour mirrors the prototype:
@@ -105,8 +105,9 @@ export class ProductsComponent implements OnInit {
     const all = this.catalog.products();
     return {
       all: all.length,
-      active: all.filter((p) => p.active).length,
-      archived: all.filter((p) => !p.active).length,
+      active: all.filter((p) => p.active && !p.archived).length,
+      archived: all.filter((p) => p.archived).length,
+      deactivated: all.filter((p) => !p.active && !p.archived).length,
     };
   });
 
@@ -125,10 +126,13 @@ export class ProductsComponent implements OnInit {
         }
       } else {
         // Staff catalogue: apply the status tab.
-        if (status === 'Active' && !p.active) {
+        if (status === 'Active' && (!p.active || p.archived)) {
           return false;
         }
-        if (status === 'Archived' && p.active) {
+        if (status === 'Archived' && !p.archived) {
+          return false;
+        }
+        if (status === 'Deactivated' && (p.active || p.archived)) {
           return false;
         }
       }
@@ -172,7 +176,8 @@ export class ProductsComponent implements OnInit {
   }
 
   statusLabel(product: Product): string {
-    return product.active ? 'ACTIVE' : 'HIDDEN / ARCHIVED';
+    if (product.archived) return 'ARCHIVED';
+    return product.active ? 'ACTIVE' : 'DEACTIVATED';
   }
 
   showOrderButton(): boolean {
@@ -227,12 +232,15 @@ export class ProductsComponent implements OnInit {
   }
 
   toggleArchive(product: Product): void {
-    const updated: Product = { ...product, active: !product.active };
-    this.catalog.saveProduct(updated).subscribe({
+    this.dataArchive(product).subscribe({
       next: (saved) =>
-        this.toast.show(saved.active ? 'Product restored' : 'Product archived'),
+        this.toast.show(saved.archived ? 'Product archived' : 'Product restored'),
       error: () => this.toast.show('Could not update the product.'),
     });
+  }
+
+  private dataArchive(product: Product) {
+    return this.catalog.setProductArchived(product.id, !product.archived);
   }
 
   photoCount(product: Product): number {

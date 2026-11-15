@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { map, Observable, switchMap } from 'rxjs';
+import { map, Observable } from 'rxjs';
 import { DataService } from '../data/data.service';
 import { Customer, Order, OrderItem } from '../models';
 import { AppStateService } from './app-state.service';
@@ -25,29 +25,28 @@ export class OrderService {
     const snapshot: OrderItem[] = JSON.parse(JSON.stringify(items));
     const createdBy = this.auth.user()?.role ?? 'Customer';
 
-    return this.data.nextOrderId().pipe(
-      switchMap((id) => {
-        const order: Order = {
-          id,
-          customerId: customer.id,
-          customer: customer.name,
-          date: new Date().toLocaleDateString('en-GB', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric',
-          }),
-          status: 'Confirmed',
-          createdBy,
-          items: snapshot,
-        };
-        return this.data.createOrder(order);
+    const order: Order = {
+      // The API generates the order number; the mock assigns one on save.
+      id: '',
+      customerId: customer.id,
+      customer: customer.name,
+      date: new Date().toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
       }),
-      map((order) => {
+      status: 'Confirmed',
+      createdBy,
+      items: snapshot,
+    };
+
+    return this.data.createOrder(order).pipe(
+      map((saved) => {
         this.basket.clear(customer.id);
         if (this.appState.isStaff()) {
           this.appState.clearStaffOrderCustomer();
         }
-        return order;
+        return saved;
       }),
     );
   }

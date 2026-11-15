@@ -1,41 +1,91 @@
-<div class="landing">
-  <!-- Top bar -->
-  <header class="landing-top">
-    <div class="brand">
-      <span class="brand-mark"><img src="botoz-logo.png" alt="BOTOZ" /></span>
-    </div>
-    <nav class="landing-nav">
-      <a routerLink="/login" class="btn primary">Sign in</a>
+<main class="landing">
+  <header class="site-header">
+    <a class="brand" routerLink="/" aria-label="BOTOZ home">
+      <span class="brand-mark"><img src="botoz-logo.png" alt="" /></span>
+      <span class="brand-name">BOTOZ <small>FOOTWEAR B2B</small></span>
+    </a>
+    <nav class="site-nav" aria-label="Main navigation">
+      <a href="#platform">Platform</a>
+      <a href="#workflow">How it works</a>
     </nav>
+    <a routerLink="/login" class="header-signin">Sign in <span aria-hidden="true">↗</span></a>
   </header>
 
-  <!-- Hero -->
-  <section class="hero">
-    <span class="eyebrow">Footwear B2B Suite · V15</span>
-    <h1>Wholesale footwear ordering,<br />built for your dealers.</h1>
-    <p class="lede">
-      BOTOZ gives your sales team and retail customers one clean workspace to browse the catalogue,
-      place size or carton orders, and track dispatch — with per-customer pricing baked in.
-    </p>
-    <div class="hero-actions">
-      <a routerLink="/login" class="btn primary lg">Get started</a>
-      <a href="#features" class="btn lg">See features</a>
+  <section class="hero" id="platform">
+    <div class="hero-copy">
+      <div class="eyebrow"><span class="eyebrow-dot"></span> FOOTWEAR B2B SUITE · V15</div>
+      <h1>Wholesale ordering,<br /><em>with a better fit.</em></h1>
+      <p class="hero-lede">A focused workspace for footwear brands, sales teams, and retail partners. Keep products, customer pricing, and orders moving together.</p>
+      <div class="hero-actions">
+        <a routerLink="/login" class="button button-primary">Open your workspace <span aria-hidden="true">→</span></a>
+        <a href="#workflow" class="text-link">Explore the workflow <span aria-hidden="true">↓</span></a>
+      </div>
+      <div class="hero-points">
+        <span><b>✓</b> Customer-specific pricing</span>
+        <span><b>✓</b> Size and carton orders</span>
+      </div>
+    </div>
+
+    <div class="hero-visual" aria-label="Preview of the BOTOZ footwear ordering workspace">
+      <div class="visual-glow"></div>
+      <div class="workspace-preview">
+        <div class="preview-topbar">
+          <span class="preview-logo"><img src="botoz-logo.png" alt="" /></span>
+          <div class="preview-crumb"><span>Workspace</span><b>Product catalogue</b></div>
+          <span class="preview-avatar">A</span>
+        </div>
+        <div class="preview-layout">
+          <aside class="preview-sidebar">
+            <span class="side-active"><i></i> Products</span>
+            <span><i></i> Orders</span>
+            <span><i></i> Customers</span>
+            <span><i></i> Catalogues</span>
+          </aside>
+          <div class="preview-content">
+            <div class="preview-heading"><div><small>COLLECTION · 2026</small><h2>Everyday essentials</h2></div><span class="preview-filter">All products⌄</span></div>
+            <div class="preview-stats">
+              <div><small>Active styles</small><strong>24 <i>+4</i></strong></div>
+              <div><small>Price tiers</small><strong>A / B / C</strong></div>
+            </div>
+            <div class="preview-products">
+              <article class="shoe-card shoe-one"><span class="shoe-art" aria-hidden="true"><svg viewBox="0 0 100 70"><path d="M16 14c9 7 14 17 22 25l14 8 24 4c8 2 13 7 12 12H13c-6 0-8-5-5-10l12-13-8-16z"/><path class="sole" d="M9 54c13 4 52 5 78 1 3 2 3 5 1 8H13c-5 0-7-4-4-9z"/><path class="detail" d="m35 32 13 8m-8-13 13 8m-7-14 13 8"/></svg></span><small>BT-106 · BOTOZ</small><b>Aero Lite Runner</b><strong>₹1,499</strong></article>
+              <article class="shoe-card shoe-two"><span class="shoe-art" aria-hidden="true"><svg viewBox="0 0 100 70"><path d="M16 14c9 7 14 17 22 25l14 8 24 4c8 2 13 7 12 12H13c-6 0-8-5-5-10l12-13-8-16z"/><path class="sole" d="M9 54c13 4 52 5 78 1 3 2 3 5 1 8H13c-5 0-7-4-4-9z"/><path class="detail" d="m35 32 13 8m-8-13 13 8m-7-14 13 8"/></svg></span><small>BT-102 · BOTOZ</small><b>Cloud Walk</b><strong>₹1,299</strong></article>
+              <article class="shoe-card shoe-three"><span class="shoe-art" aria-hidden="true"><svg viewBox="0 0 100 70"><path d="M16 14c9 7 14 17 22 25l14 8 24 4c8 2 13 7 12 12H13c-6 0-8-5-5-10l12-13-8-16z"/><path class="sole" d="M9 54c13 4 52 5 78 1 3 2 3 5 1 8H13c-5 0-7-4-4-9z"/><path class="detail" d="m35 32 13 8m-8-13 13 8m-7-14 13 8"/></svg></span><small>AF-220 · AMBEY</small><b>Classic Comfort</b><strong>₹899</strong></article>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="float-order"><span class="float-check">✓</span><span><b>Order ready</b><small>Size-wise · 12 pairs</small></span><strong>₹8,940</strong></div>
+      <div class="visual-caption"><span></span> BUILT AROUND THE WAY FOOTWEAR SELLS</div>
     </div>
   </section>
 
-  <!-- Features -->
-  <section id="features" class="features">
-    @for (f of features; track f.title) {
-      <article class="feature card">
-        <div class="feature-icon">{{ f.icon }}</div>
-        <h3>{{ f.title }}</h3>
-        <p class="muted">{{ f.text }}</p>
-      </article>
-    }
+  <section class="feature-section" aria-labelledby="feature-title">
+    <div class="section-intro"><span class="eyebrow">A BETTER WHOLESALE ROUTINE</span><h2 id="feature-title">The details that keep<br />business moving.</h2></div>
+    <div class="features">
+      @for (feature of features; track feature.title) {
+        <article class="feature-card">
+          <span class="feature-number">{{ feature.icon }}</span>
+          <h3>{{ feature.title }}</h3>
+          <p>{{ feature.text }}</p>
+          <span class="feature-arrow" aria-hidden="true">↗</span>
+        </article>
+      }
+    </div>
   </section>
 
-  <footer class="landing-foot">
-    <span>© {{ year }} BOTOZ · Footwear B2B Suite</span>
-    <span class="muted">Demo data · not production connected</span>
+  <section class="workflow" id="workflow">
+    <div class="workflow-heading"><span class="eyebrow">SIMPLE BY DESIGN</span><h2>From catalogue<br />to confirmed order.</h2><p>Keep every step in one connected workspace, with the right customer and price in view.</p><a routerLink="/login" class="button button-outline">Sign in to continue <span aria-hidden="true">→</span></a></div>
+    <div class="steps">
+      @for (step of steps; track step.number) {
+        <article class="step"><span class="step-number">{{ step.number }}</span><div><h3>{{ step.title }}</h3><p>{{ step.text }}</p></div></article>
+      }
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <a class="footer-brand" routerLink="/"><img src="botoz-logo.png" alt="BOTOZ" /> <span>BOTOZ <small>FOOTWEAR B2B SUITE</small></span></a>
+    <span>© {{ year }} BOTOZ. Built for better business.</span>
+    <a routerLink="/login">Workspace sign in <span aria-hidden="true">↗</span></a>
   </footer>
-</div>
+</main>

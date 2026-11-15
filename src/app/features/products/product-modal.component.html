@@ -80,9 +80,11 @@
                     <strong>{{ img.name }}</strong>
                     <div class="muted">{{ img.active ? 'Active photo' : 'Archived photo' }}</div>
                   </div>
-                  <button type="button" class="btn small" (click)="toggleImage($index)">
-                    {{ img.active ? 'Archive' : 'Restore' }}
-                  </button>
+                  @if (supportsPhotoArchive) {
+                    <button type="button" class="btn small" (click)="toggleImage($index)">
+                      {{ img.active ? 'Archive' : 'Restore' }}
+                    </button>
+                  }
                 </div>
               }
             </div>

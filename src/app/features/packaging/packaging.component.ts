@@ -123,6 +123,8 @@ export class PackagingComponent implements OnInit {
     const updated: Product = {
       ...product,
       packings: (product.packings ?? []).filter((k) => k.id !== packing.id),
+      packingGroupIds: (product.packingGroupIds ?? product.packings.map((k) => k.id)).filter((id) => id !== packing.id),
+      enabledPackingGroupIds: (product.enabledPackingGroupIds ?? product.packings.filter((k) => k.active !== false).map((k) => k.id)).filter((id) => id !== packing.id),
     };
     this.catalog.saveProduct(updated).subscribe({
       next: () => this.toast.show('Template removed'),

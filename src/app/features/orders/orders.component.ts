@@ -32,9 +32,13 @@ export class OrdersComponent implements OnInit {
   private readonly catalog = inject(CatalogService);
 
   readonly loading = signal(true);
+  readonly supportsOrderStatusUpdate = this.data.supportsOrderStatusUpdate;
   readonly error = signal<string | null>(null);
   readonly search = signal('');
   readonly selected = signal<Order | null>(null);
+  readonly statusDraft = signal<OrderStatus>('Confirmed');
+  readonly savingStatus = signal(false);
+  readonly statusError = signal<string | null>(null);
 
   private readonly orders = signal<Order[]>([]);
 
@@ -97,6 +101,8 @@ export class OrdersComponent implements OnInit {
 
   statusClass(status: OrderStatus): string {
     switch (status) {
+      case 'Delivered':
+        return 'gold';
       case 'Dispatched':
         return 'gold';
       case 'Processing':
@@ -118,13 +124,37 @@ export class OrdersComponent implements OnInit {
 
   open(order: Order): void {
     this.selected.set(order);
+    this.statusDraft.set(order.status);
+    this.statusError.set(null);
   }
 
   close(): void {
     this.selected.set(null);
   }
 
+  saveStatus(): void {
+    const order = this.selected();
+    if (!order || this.isCustomer() || !this.supportsOrderStatusUpdate || this.savingStatus()) {
+      return;
+    }
+
+    this.statusError.set(null);
+    this.savingStatus.set(true);
+    this.data.updateOrderStatus(order.id, this.statusDraft()).subscribe({
+      next: (updated) => {
+        this.orders.update((orders) => orders.map((item) => item.id === updated.id ? updated : item));
+        this.selected.set(updated);
+        this.savingStatus.set(false);
+      },
+      error: () => {
+        this.savingStatus.set(false);
+        this.statusError.set('Could not update the order status. Please try again.');
+      },
+    });
+  }
+
   newOrder(): void {
-    this.router.navigate(['/app', this.isCustomer() ? 'products' : 'customers']);
+    // Staff begin with the product order flow, where they can pick a customer.
+    this.router.navigate(['/app', 'products']);
   }
 }

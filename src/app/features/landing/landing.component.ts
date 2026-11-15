@@ -12,25 +12,14 @@ export class LandingComponent {
   readonly year = new Date().getFullYear();
 
   readonly features = [
-    {
-      icon: '▧',
-      title: 'Catalogue & pricing',
-      text: 'Manage products, photos, MRP and A/B/C wholesale price tiers in one place.',
-    },
-    {
-      icon: '≡',
-      title: 'Size & carton ordering',
-      text: 'Customers order size-wise or by configured carton packings — no guesswork.',
-    },
-    {
-      icon: '◷',
-      title: 'Order lifecycle',
-      text: 'Track every order from confirmed through processing to dispatched.',
-    },
-    {
-      icon: '♙',
-      title: 'Customer accounts',
-      text: 'Per-customer pricing, baskets and order history kept separate and clean.',
-    },
+    { icon: '01', title: 'One clear catalogue', text: 'Keep product details, photos, sizes, and wholesale price tiers together.' },
+    { icon: '02', title: 'Orders that add up', text: 'Build size-wise or carton orders with customer-specific prices.' },
+    { icon: '03', title: 'A smoother workflow', text: 'Give teams one place to manage customers, orders, and dispatch progress.' },
+  ];
+
+  readonly steps = [
+    { number: '01', title: 'Choose a customer', text: 'Use the right account and pricing tier.' },
+    { number: '02', title: 'Build the order', text: 'Select products, sizes, and carton quantities.' },
+    { number: '03', title: 'Track progress', text: 'Keep order updates visible to your team.' },
   ];
 }

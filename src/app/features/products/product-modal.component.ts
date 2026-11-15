@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Product, ProductImage } from '../../core/models';
+import { DataService } from '../../core/data/data.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { ToastService } from '../../core/services/toast.service';
 
@@ -28,6 +29,7 @@ export class ProductModalComponent {
   private readonly fb = inject(FormBuilder);
   private readonly catalog = inject(CatalogService);
   private readonly toast = inject(ToastService);
+  private readonly data = inject(DataService);
 
   /** Product to edit, or null to add a new one. */
   readonly product = input<Product | null>(null);
@@ -36,6 +38,7 @@ export class ProductModalComponent {
 
   readonly saving = signal(false);
   readonly brands = this.catalog.brands;
+  readonly supportsPhotoArchive = this.data.supportsPhotoArchive;
 
   /** Newly added photos (data URLs) + existing ones, editable here. */
   readonly images = signal<ProductImage[]>([]);

@@ -82,6 +82,13 @@
     >
       Archived ({{ counts().archived }})
     </button>
+    <button
+      class="status-tab"
+      [class.active]="statusFilter() === 'Deactivated'"
+      (click)="statusFilter.set('Deactivated')"
+    >
+      Deactivated ({{ counts().deactivated }})
+    </button>
   </div>
   <div class="result-count muted">{{ filtered().length }} products found</div>
 }
@@ -100,7 +107,7 @@
           } @else {
             <div class="shoe-placeholder">👟</div>
           }
-          <span class="product-chip pill" [class.gray]="!p.active">{{ statusLabel(p) }}</span>
+          <span class="product-chip pill" [class.gray]="!p.active || p.archived">{{ statusLabel(p) }}</span>
         </div>
         <div class="product-info">
           <h3>{{ p.name }}</h3>
@@ -123,10 +130,10 @@
               <button class="btn small" (click)="openEdit(p)">Photos ({{ photoCount(p) }})</button>
               <button
                 class="btn small"
-                [class.danger]="p.active"
+                [class.danger]="!p.archived"
                 (click)="toggleArchive(p)"
               >
-                {{ p.active ? 'Archive' : 'Restore' }}
+                {{ p.archived ? 'Restore' : 'Archive' }}
               </button>
             </div>
           }

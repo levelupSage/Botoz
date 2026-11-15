@@ -50,7 +50,8 @@ export class AppStateService {
         return ['Home', 'Products', 'Basket', 'Orders', 'Account'];
       case 'Backend User':
         return ['Dashboard', 'Orders', 'Products', 'Packaging', 'Catalogues'];
-      default:
+      case 'Admin':
+      case 'Super Admin':
         return [
           'Dashboard',
           'Products',
@@ -60,7 +61,13 @@ export class AppStateService {
           'Brands',
           'Catalogues',
           'Order History',
+          'User Accounts',
         ];
+      default:
+        return [];
     }
   });
+
+  /** First valid section to open after login for each role. */
+  readonly defaultRoute = computed(() => this.role() === 'Customer' ? '/app/home' : '/app/dashboard');
 }

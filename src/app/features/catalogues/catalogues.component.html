@@ -1,7 +1,7 @@
 <div class="page-head no-print">
   <div>
     <h1>Catalogues</h1>
-    <div class="muted">Generate a printable product catalogue for a brand.</div>
+    <div class="muted">Prepare a standard brand catalogue or a customer-specific price list.</div>
   </div>
   <button class="btn primary" (click)="print()">🖨 Print catalogue</button>
 </div>
@@ -16,14 +16,46 @@
       <option [value]="b">{{ b }}</option>
     }
   </select>
-  <label class="checkline">
-    <input
-      type="checkbox"
-      [checked]="includePrice()"
-      (change)="includePrice.set($any($event.target).checked)"
-    />
-    Include MRP
+  <label class="field catalogue-type">
+    <span>Catalogue type</span>
+    <select [value]="catalogueType()" (change)="catalogueType.set($any($event.target).value)">
+      <option value="standard">Standard catalogue</option>
+      <option value="customer">Customer-specific catalogue</option>
+    </select>
   </label>
+  @if (catalogueType() === 'customer') {
+    <label class="field customer-select">
+      <span>Customer</span>
+      <select [value]="customerId()" (change)="selectCustomer($any($event.target).value)">
+        <option value="0">Choose customer…</option>
+        @for (customer of customerOptions(); track customer.id) {
+          <option [value]="customer.id">{{ customer.name }} · Category {{ customer.category }}</option>
+        }
+      </select>
+    </label>
+  }
+  <div class="catalogue-options">
+    <label class="checkline">
+      <input type="checkbox" [checked]="includeCode()" (change)="includeCode.set($any($event.target).checked)" />
+      Product code
+    </label>
+    @if (catalogueType() === 'standard') {
+      <label class="checkline">
+        <input type="checkbox" [checked]="includeMrp()" (change)="includeMrp.set($any($event.target).checked)" />
+        MRP
+      </label>
+    }
+    <label class="checkline">
+      <input type="checkbox" [checked]="includeSizes()" (change)="includeSizes.set($any($event.target).checked)" />
+      Available sizes
+    </label>
+    @if (catalogueType() === 'customer') {
+      <label class="checkline">
+        <input type="checkbox" [checked]="includePrice()" (change)="includePrice.set($any($event.target).checked)" />
+        Customer display price
+      </label>
+    }
+  </div>
 </div>
 
 @if (loading()) {
@@ -34,7 +66,12 @@
   <div class="catalogue-sheet">
     <div class="sheet-head">
       <h2>BOTOZ Catalogue</h2>
-      <span>{{ brandFilter() === 'All' ? 'All brands' : brandFilter() }}</span>
+      <span>
+        {{ brandFilter() === 'All' ? 'All brands' : brandFilter() }}
+        @if (catalogueType() === 'customer' && selectedCustomer()) {
+          · {{ selectedCustomer()?.name }}
+        }
+      </span>
     </div>
 
     <div class="catalogue-grid">
@@ -49,14 +86,29 @@
           </div>
           <div class="cat-info">
             <strong>{{ p.name }}</strong>
-            <div class="cat-meta">{{ p.code }} · {{ p.brand }}</div>
-            @if (includePrice()) {
-              <div class="cat-price">MRP {{ money(p.mrp) }}</div>
+            @if (includeCode()) {
+              <div class="cat-meta">{{ p.code }} · {{ p.brand }}</div>
+            } @else {
+              <div class="cat-meta">{{ p.brand }}</div>
+            }
+            @if (includeSizes()) {
+              <div class="cat-meta">Sizes {{ p.sizes.join(', ') }}</div>
+            }
+            @if ((catalogueType() === 'standard' && includeMrp()) || (catalogueType() === 'customer' && includePrice())) {
+              <div class="cat-price">
+                {{ catalogueType() === 'standard' ? 'MRP' : 'Display price' }} {{ displayPrice(p) }}
+              </div>
             }
           </div>
         </article>
       } @empty {
-        <div class="empty">No active products for this brand.</div>
+        <div class="empty">
+          @if (catalogueType() === 'customer' && !selectedCustomer()) {
+            Select a customer to preview its catalogue.
+          } @else {
+            No active products are available for these catalogue settings.
+          }
+        </div>
       }
     </div>
   </div>

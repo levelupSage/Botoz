@@ -24,6 +24,7 @@ const ICONS: Record<string, string> = {
   Basket: '🧺',
   Account: '◎',
   'Order History': '◷',
+  'User Accounts': '⊕',
 };
 
 /** Convert a nav label to its route slug (e.g. "Order History" -> "order-history"). */

@@ -1,57 +1,63 @@
-<div class="login-wrap">
-  <div class="login-card card">
-    <a routerLink="/" class="brand">
-      <span class="brand-mark"><img src="botoz-logo.png" alt="BOTOZ" /></span>
-    </a>
+<main class="auth-page">
+  <section class="auth-layout">
+    <aside class="auth-story">
+      <a routerLink="/" class="brand" aria-label="BOTOZ home">
+        <span class="brand-mark"><img src="botoz-logo.png" alt="BOTOZ" /></span>
+        <span>BOTOZ <small>FOOTWEAR B2B · V15</small></span>
+      </a>
+      <div class="story-copy">
+        <span class="eyebrow">Wholesale, made simpler</span>
+        <h1>Your footwear business,<br /><em>all in one place.</em></h1>
+        <p>Browse collections, build accurate size-wise orders, and keep every customer relationship moving.</p>
+      </div>
+      <div class="story-foot"><span class="status-dot"></span> Secure workspace access</div>
+    </aside>
 
-    <h1>Sign in</h1>
-    <p class="muted sub">Welcome back. Enter your credentials to continue.</p>
+    <section class="auth-panel">
+      <div class="auth-form-wrap">
+        <a routerLink="/" class="mobile-brand"><img src="botoz-logo.png" alt="BOTOZ" /></a>
+        <span class="eyebrow">Welcome back</span>
+        <h2>Sign in to your account</h2>
+        <p class="muted subtitle">Enter your work login details to continue.</p>
 
-    @if (error()) {
-      <div class="notice error" role="alert">{{ error() }}</div>
-    }
+        @if (error()) { <div class="notice error" role="alert">{{ error() }}</div> }
 
-    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-      <div class="field">
-        <label for="email">Email</label>
-        <input
-          id="email"
-          type="email"
-          formControlName="email"
-          autocomplete="username"
-          placeholder="you@example.com"
-        />
-        @if (form.controls.email.touched && form.controls.email.invalid) {
-          <small class="err">Enter a valid email address.</small>
+        <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+          <div class="field">
+            <label for="email">Username or email</label>
+            <input id="email" type="text" formControlName="email" autocomplete="username" placeholder="Login ID or email" />
+            @if (form.controls.email.touched && form.controls.email.invalid) { <small class="err">Enter your login ID or email.</small> }
+          </div>
+          <div class="field">
+            <label for="password">Password</label>
+            <div class="password-field">
+              <input id="password" [type]="showPassword() ? 'text' : 'password'" formControlName="password" autocomplete="current-password" placeholder="Enter your password" />
+              <button type="button" class="reveal" (click)="togglePassword()" [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'">{{ showPassword() ? 'Hide' : 'Show' }}</button>
+            </div>
+            @if (form.controls.password.touched && form.controls.password.invalid) { <small class="err">Password is required.</small> }
+          </div>
+          <button type="submit" class="btn primary full submit" [disabled]="loading()">
+            {{ loading() ? 'Signing in…' : 'Sign in' }} <span aria-hidden="true">→</span>
+          </button>
+        </form>
+
+        <div class="account-note">
+          <span class="note-icon">i</span>
+          <p>Need a team account? Ask your workspace administrator to create one. Account creation is restricted to authorized admins.</p>
+        </div>
+
+        @if (useMockApi) {
+          <div class="demo">
+            <span class="muted">Demo accounts <strong>· password: botoz</strong></span>
+            <div class="demo-chips">
+              <button type="button" class="chip" (click)="useDemo('admin@botoz.demo')">Admin</button>
+              <button type="button" class="chip" (click)="useDemo('orders@botoz.demo')">Backend</button>
+              <button type="button" class="chip" (click)="useDemo('sharma@example.com')">Customer</button>
+            </div>
+          </div>
         }
+        <a routerLink="/" class="back-link">← Back to BOTOZ</a>
       </div>
-
-      <div class="field">
-        <label for="password">Password</label>
-        <input
-          id="password"
-          type="password"
-          formControlName="password"
-          autocomplete="current-password"
-          placeholder="••••••••"
-        />
-        @if (form.controls.password.touched && form.controls.password.invalid) {
-          <small class="err">Password is required.</small>
-        }
-      </div>
-
-      <button type="submit" class="btn primary full" [disabled]="loading()">
-        {{ loading() ? 'Signing in…' : 'Sign in' }}
-      </button>
-    </form>
-
-    <div class="demo">
-      <span class="muted">Demo accounts (password: <strong>botoz</strong>)</span>
-      <div class="demo-chips">
-        <button type="button" class="chip" (click)="useDemo('admin@botoz.demo')">Admin</button>
-        <button type="button" class="chip" (click)="useDemo('orders@botoz.demo')">Backend</button>
-        <button type="button" class="chip" (click)="useDemo('sharma@example.com')">Customer</button>
-      </div>
-    </div>
-  </div>
-</div>
+    </section>
+  </section>
+</main>

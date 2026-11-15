@@ -24,6 +24,7 @@ export interface Customer {
   whatsapp?: string;
   /** Station groups customers located at the same place. */
   station?: string;
+  stationId?: number;
   /** Contact person name. */
   contact?: string;
   /** Weekday the weekly payment reminder is sent. */

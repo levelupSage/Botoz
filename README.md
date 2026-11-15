@@ -1,114 +1,50 @@
-# BOTOZ — Footwear B2B Suite (Angular)
+# BOTOZ — Footwear B2B Suite
 
-Production-ready Angular rewrite of the BOTOZ V15 prototype. **Phase 1** delivers the
-foundation: authentication, a swappable data layer, routing with role-based navigation,
-and the app shell. Feature pages (Products, Orders, etc.) are wired as routes and will be
-filled in across later phases.
+Angular 20 implementation of the BOTOZ V15 prototype. The app now uses the BOTOZ REST API by default (`https://botoz.onrender.com`) through an API adapter; the local mock remains available for UI development.
 
-- **Angular:** 20.2 · standalone components · signals · SCSS · TypeScript strict
-- **Data:** in-memory + `localStorage` mock today, swappable for a real REST API later
-
----
-
-## Getting started
+## Run locally
 
 ```bash
-cd botoz-app
-npm install          # first time only
-npm start            # dev server at http://localhost:4200
-npm run build        # production build -> dist/botoz-app
-npm test             # unit tests (Karma/Jasmine)
+npm install
+npm start
 ```
 
-### Demo logins
+Sign in with an account provisioned by the API. The API must allow browser requests from `http://localhost:4200` (CORS). For local mock data, set `useMockApi: true` in `src/environments/environment.ts`; the demo password is `botoz`.
 
-The landing page (`/`) links to **Sign in** (`/login`). All demo accounts use the
-password **`botoz`**:
+## API integration currently wired
 
-| Role         | Email                | Lands on   |
-| ------------ | -------------------- | ---------- |
-| Admin        | `admin@botoz.demo`   | Dashboard  |
-| Backend User | `orders@botoz.demo`  | Dashboard  |
-| Customer     | `sharma@example.com` | Dashboard  |
+- Login, bearer authorization, and one-time access-token refresh/retry
+- Paged brand, product, customer, staff, and order reads
+- Brand create/rename/activate
+- Product create/update, packing-group assignment and carton quantities, photo upload, and archive/restore
+- Customer detail read and create/update, station lookup/create, brand discounts, and active status
+- Order create and API-generated order IDs
+- Response mapping from API DTOs into the existing Angular domain models
 
-The login page also has one-click chips to fill each demo account.
+`ApiDataService` implements the `DataService` contract. API URL and mock selection live in `src/environments/environment.ts`. `MockDataService` remains selectable there.
 
-> To reset all local data, clear the site's `localStorage` (keys are prefixed `botoz.`).
+## Known API gaps and assumptions
 
----
+- The OpenAPI spec has no order-status update operation. The status editor is hidden in API mode; the feature remains available in mock mode.
+- Per-product customer price overrides and photo archive/restore are not in the API contract, so those controls are hidden in API mode. Product photo upload is supported.
+- Customer edit requests require a password every time according to the published request schema. The form follows that requirement.
+- `UserDTO` does not expose a customer ID. Customer login currently assumes the authenticated user ID equals the customer ID; confirm this with the backend.
+- The API request requires `adminRatePerPair`, but the UI has no such field. Order creation currently sends `0`; confirm the intended business rule before relying on that rate.
+- Product sizes are represented through shared packing groups in the API. Adding sizes creates a size-only group; removing a size already in a shared group is blocked to avoid changing other products.
+- The spec does not define the brand response DTO. Brand mapping assumes the usual `id`, `name`, and `active` fields.
+- Customer-facing basket persistence, customer-specific API access rules, brand size locks, staff editing, and the dynamic menu options are not fully connected yet.
+
+The API's `/api/admin/...` routes must authorize the intended roles server-side. Angular route guards are only a user-interface convenience, not an authorization boundary.
 
 ## Project structure
 
-```
+```text
 src/app/
-  core/
-    models/      Domain interfaces + enums (Brand, Product, Customer, Order, Staff, Auth)
-    data/        DataService (abstract) + MockDataService + seed-data
-    services/    AuthService (session), AppStateService (role-based nav)
-    guards/      authGuard (require login), guestGuard (keep logged-in out of /login)
-  features/
-    landing/     Public marketing page
-    auth/        Login (reactive form, validation, error handling)
-    dashboard/   Daily order/dispatch summary (proves the data pipeline)
-    placeholder/ Temporary stand-in for not-yet-built sections
-  layout/
-    shell/       Authenticated layout: sidebar + topbar around <router-outlet>
-```
-
-### Routing
-
-- `/` — public landing
-- `/login` — login (blocked when already authenticated)
-- `/app/**` — authenticated shell (guarded); children: `dashboard`, `products`,
-  `packaging`, `orders`, `customers`, `brands`, `catalogues`, plus customer views
-  `home`, `basket`, `account`
-
-Navigation items shown in the sidebar are derived from the signed-in role
-(`AppStateService.navItems`).
-
----
-
-## Swapping the mock for a real API
-
-Every component and feature depends on the **abstract** `DataService`
-(`core/data/data.service.ts`) — never on a concrete class. Going live is a two-step change
-with **no component edits**:
-
-1. Create `core/data/api-data.service.ts` that extends `DataService` and talks to your
-   backend via `HttpClient`:
-
-   ```ts
-   @Injectable()
-   export class ApiDataService extends DataService {
-     private http = inject(HttpClient);
-     private base = environment.apiUrl;
-
-     getProducts(): Observable<Product[]> {
-       return this.http.get<Product[]>(`${this.base}/products`);
-     }
-     // ...implement the rest of the abstract methods
-   }
-   ```
-
-2. Change the single provider line in `src/app/app.config.ts`:
-
-   ```ts
-   // from:
-   { provide: DataService, useClass: MockDataService },
-   // to:
-   { provide: DataService, useClass: ApiDataService },
-   ```
-
-`HttpClient` is already provided. Add an auth interceptor to attach the token from
-`AuthService.token()` when your backend needs it.
-
----
-
-## Conventions
-
-- Standalone components with `ChangeDetectionStrategy.OnPush`.
-- State via signals; derived values via `computed`.
-- Async data via RxJS `Observable` from `DataService` (keeps the API swap seamless).
-- All user-facing text escapes naturally through Angular bindings (no `innerHTML`).
-- SCSS design tokens live in `src/styles.scss` (gold/dark theme, light-dark() aware).
+  core/data/          DataService, API adapter, local mock, seed data
+  core/interceptors/  Bearer token + refresh handling
+  core/models/        UI domain types and enums
+  core/services/      Session, catalog, basket, order, app state, toast
+  core/guards/        Authentication and role-aware route guards
+  features/           Standalone pages by business area
+  layout/shell/       Authenticated navigation and routed content
 ```

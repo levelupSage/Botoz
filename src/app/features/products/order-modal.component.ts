@@ -162,6 +162,7 @@ export class OrderModalComponent {
       mode: 'carton',
       packingName: pack.name,
       cartons: n,
+      packingGroupId: pack.id,
       rows,
       total: rows.reduce((sum, r) => sum + r.qty, 0),
       priceSnapshot: price,

@@ -7,6 +7,8 @@ import {
   Customer,
   LoginCredentials,
   LoginResult,
+  RegisterAccountRequest,
+  RegistrationMenuOption,
   Order,
   OrderStatus,
   Product,
@@ -39,6 +41,10 @@ const LATENCY_MS = 150;
  */
 @Injectable()
 export class MockDataService extends DataService {
+  readonly supportsOrderStatusUpdate = true;
+  readonly supportsProductPriceOverrides = true;
+  readonly supportsPhotoArchive = true;
+
   constructor() {
     super();
     this.seedIfEmpty();
@@ -76,6 +82,14 @@ export class MockDataService extends DataService {
     return throwError(() => new Error('Invalid email or password.')).pipe(delay(LATENCY_MS));
   }
 
+  getRegistrationMenuOptions(): Observable<RegistrationMenuOption[]> {
+    return of([]);
+  }
+
+  registerAccount(_request: RegisterAccountRequest): Observable<void> {
+    return throwError(() => new Error('Account registration is available only when the API is enabled.'));
+  }
+
   // ---- Reads ----------------------------------------------------------
   getBrands(): Observable<Brand[]> {
     return of(this.read<Brand[]>(KEYS.brands, [])).pipe(delay(LATENCY_MS));
@@ -87,6 +101,13 @@ export class MockDataService extends DataService {
 
   getCustomers(): Observable<Customer[]> {
     return of(this.read<Customer[]>(KEYS.customers, [])).pipe(delay(LATENCY_MS));
+  }
+
+  getCustomer(id: number): Observable<Customer> {
+    const customer = this.read<Customer[]>(KEYS.customers, []).find((item) => item.id === id);
+    return customer
+      ? of(customer).pipe(delay(LATENCY_MS))
+      : throwError(() => new Error('Customer not found.')).pipe(delay(LATENCY_MS));
   }
 
   getStaff(): Observable<Staff[]> {
@@ -112,6 +133,15 @@ export class MockDataService extends DataService {
     return of(saved).pipe(delay(LATENCY_MS));
   }
 
+  setProductArchived(id: number, archived: boolean): Observable<Product> {
+    const products = this.read<Product[]>(KEYS.products, []);
+    const product = products.find((item) => item.id === id);
+    if (!product) return throwError(() => new Error('Product not found.')).pipe(delay(LATENCY_MS));
+    product.archived = archived;
+    this.write(KEYS.products, products);
+    return of(product).pipe(delay(LATENCY_MS));
+  }
+
   saveCustomer(customer: Customer): Observable<Customer> {
     const customers = this.read<Customer[]>(KEYS.customers, []);
     const saved = this.upsert(customers, customer, (c) => c.id, (max) => max + 1);
@@ -121,9 +151,15 @@ export class MockDataService extends DataService {
 
   createOrder(order: Order): Observable<Order> {
     const orders = this.read<Order[]>(KEYS.orders, []);
-    orders.unshift(order);
+    const saved = order.id
+      ? order
+      : { ...order, id: `BT-${this.read<number>(KEYS.nextOrderSeq, SEED.nextOrderSeq)}` };
+    if (!order.id) {
+      this.write(KEYS.nextOrderSeq, this.read<number>(KEYS.nextOrderSeq, SEED.nextOrderSeq) + 1);
+    }
+    orders.unshift(saved);
     this.write(KEYS.orders, orders);
-    return of(order).pipe(delay(LATENCY_MS));
+    return of(saved).pipe(delay(LATENCY_MS));
   }
 
   updateOrderStatus(orderId: string, status: OrderStatus): Observable<Order> {

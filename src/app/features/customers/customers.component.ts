@@ -2,9 +2,11 @@ import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } 
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Customer, PriceTier } from '../../core/models';
+import { DataService } from '../../core/data/data.service';
 import { AppStateService } from '../../core/services/app-state.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { ToastService } from '../../core/services/toast.service';
+import { environment } from '../../../environments/environment';
 
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -23,6 +25,7 @@ const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Satur
 })
 export class CustomersComponent implements OnInit {
   private readonly catalog = inject(CatalogService);
+  private readonly data = inject(DataService);
   private readonly appState = inject(AppStateService);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
@@ -39,6 +42,9 @@ export class CustomersComponent implements OnInit {
   readonly editing = signal<Customer | null>(null);
   readonly modalOpen = signal(false);
   readonly saving = signal(false);
+  readonly loadingDetails = signal(false);
+  readonly supportsProductPriceOverrides = this.data.supportsProductPriceOverrides;
+  readonly mockMode = environment.useMockApi;
 
   readonly tiers: PriceTier[] = ['A', 'B', 'C'];
   readonly weekdays = WEEKDAYS;
@@ -52,7 +58,15 @@ export class CustomersComponent implements OnInit {
   readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required]],
     loginId: ['', [Validators.required]],
-    loginPassword: ['', [Validators.required, Validators.pattern(/^\d{4}$/)]],
+    loginPassword: [
+      '',
+      [
+        Validators.required,
+        Validators.pattern(environment.useMockApi
+          ? /^\d{4}$/
+          : /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,72}$/),
+      ],
+    ],
     station: ['', [Validators.required]],
     category: ['A' as PriceTier, [Validators.required]],
     whatsapp: ['', [Validators.required]],
@@ -141,6 +155,20 @@ export class CustomersComponent implements OnInit {
 
   openEdit(customer: Customer): void {
     this.refreshStations();
+    this.loadingDetails.set(true);
+    this.data.getCustomer(customer.id).subscribe({
+      next: (details) => {
+        this.loadingDetails.set(false);
+        this.populateEdit(details);
+      },
+      error: () => {
+        this.loadingDetails.set(false);
+        this.toast.show('Could not load customer details.');
+      },
+    });
+  }
+
+  private populateEdit(customer: Customer): void {
     this.editing.set(customer);
     this.generatedId.set(customer.customerId ?? 'CUS-' + String(customer.id).padStart(4, '0'));
     this.form.setValue({
@@ -237,6 +265,7 @@ export class CustomersComponent implements OnInit {
       loginId: raw.loginId.trim(),
       loginPassword: raw.loginPassword,
       station: raw.station,
+      stationId: existing?.stationId,
       phone: raw.phone.trim() || raw.whatsapp.trim(),
       whatsapp: raw.whatsapp.trim(),
       email: raw.email.trim(),
@@ -257,9 +286,9 @@ export class CustomersComponent implements OnInit {
         this.refreshStations();
         this.toast.show(existing ? 'Customer updated' : 'Customer added');
       },
-      error: () => {
+      error: (err: unknown) => {
         this.saving.set(false);
-        this.toast.show('Could not save the customer.');
+        this.toast.show(err instanceof Error ? err.message : 'Could not save the customer.');
       },
     });
   }

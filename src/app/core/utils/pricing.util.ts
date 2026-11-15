@@ -42,7 +42,7 @@ export function isOrderableFor(
   product: Product | null | undefined,
   customer: Customer | null | undefined,
 ): boolean {
-  if (!product || !customer || !customer.active || !product.active) {
+  if (!product || !customer || !customer.active || !product.active || product.archived) {
     return false;
   }
   if (!hasActiveImage(product)) {

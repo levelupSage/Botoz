@@ -181,6 +181,48 @@
   margin-top: 10px;
 }
 
+/* Customer picker uses the shared modal frame from styles.scss. */
+.picker-modal {
+  width: min(520px, calc(100vw - 32px));
+}
+
+.picker-search {
+  display: block;
+  width: 100%;
+  max-width: none;
+  margin-bottom: 12px;
+}
+
+.picker-results {
+  display: grid;
+  gap: 8px;
+  max-height: min(55dvh, 420px);
+  overflow-y: auto;
+}
+
+.picker-item {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  padding: 12px 13px;
+  color: var(--text);
+  text-align: left;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.picker-item:hover,
+.picker-item:focus-visible {
+  border-color: var(--gold);
+  background: color-mix(in srgb, var(--panel2) 82%, var(--gold));
+}
+
+.picker-item span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
 @media (max-width: 1050px) {
   .product-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

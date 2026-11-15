@@ -51,10 +51,11 @@
       <router-outlet />
     </section>
 
-    <nav class="mobile-nav">
+    <nav class="mobile-nav" aria-label="Mobile workspace navigation">
       @for (item of nav(); track item.path) {
         <a [routerLink]="item.path" routerLinkActive="active">
-          <span>{{ item.icon }}</span>{{ item.label }}
+          <span class="mobile-icon" aria-hidden="true">{{ item.icon }}</span>
+          <span class="mobile-label">{{ item.label }}</span>
         </a>
       }
     </nav>

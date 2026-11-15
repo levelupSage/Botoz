@@ -5,7 +5,7 @@ export type UserRole = 'Super Admin' | 'Admin' | 'Backend User' | 'Customer';
 export type PriceTier = 'A' | 'B' | 'C';
 
 /** Lifecycle status of an order. */
-export type OrderStatus = 'Pending' | 'Confirmed' | 'Processing' | 'Dispatched';
+export type OrderStatus = 'Pending' | 'Confirmed' | 'Processing' | 'Dispatched' | 'Delivered';
 
 /** How an order line was placed. */
 export type OrderMode = 'size' | 'carton';

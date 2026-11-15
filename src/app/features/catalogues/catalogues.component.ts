@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
-import { Product } from '../../core/models';
+import { Customer, Product } from '../../core/models';
 import { CatalogService } from '../../core/services/catalog.service';
-import { activeImageSrc, money } from '../../core/utils/pricing.util';
+import { activeImageSrc, isOrderableFor, money, priceFor } from '../../core/utils/pricing.util';
 
 /**
  * Catalogues: pick a brand (or all), optionally show MRP, and print a
@@ -21,18 +21,31 @@ export class CataloguesComponent implements OnInit {
   readonly error = this.catalog.error;
 
   readonly brandFilter = signal<string>('All');
-  readonly includePrice = signal<boolean>(true);
+  readonly catalogueType = signal<'standard' | 'customer'>('standard');
+  readonly customerId = signal<number>(0);
+  readonly includeCode = signal(true);
+  readonly includeMrp = signal(true);
+  readonly includeSizes = signal(true);
+  readonly includePrice = signal(false);
 
   readonly brandOptions = computed(() => ['All', ...this.catalog.activeBrands().map((b) => b.name)]);
+  readonly customerOptions = this.catalog.activeCustomers;
+  readonly selectedCustomer = computed<Customer | null>(
+    () => this.catalog.customerById(this.customerId()) ?? null,
+  );
 
   readonly items = computed<Product[]>(() => {
     const filter = this.brandFilter();
     return this.catalog
       .products()
-      .filter((p) => p.active && (filter === 'All' || p.brand === filter));
+      .filter(
+        (p) =>
+          p.active &&
+          !p.archived &&
+          (filter === 'All' || p.brand === filter) &&
+          (this.catalogueType() !== 'customer' || isOrderableFor(p, this.selectedCustomer())),
+      );
   });
-
-  readonly money = money;
 
   ngOnInit(): void {
     this.catalog.load();
@@ -40,6 +53,17 @@ export class CataloguesComponent implements OnInit {
 
   imageSrc(product: Product): string | null {
     return activeImageSrc(product);
+  }
+
+  displayPrice(product: Product): string {
+    const customer = this.selectedCustomer();
+    return this.catalogueType() === 'customer'
+      ? money(priceFor(product, customer))
+      : money(product.mrp);
+  }
+
+  selectCustomer(value: string): void {
+    this.customerId.set(Number(value));
   }
 
   print(): void {

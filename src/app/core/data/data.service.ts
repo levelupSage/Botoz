@@ -4,6 +4,8 @@ import {
   Customer,
   LoginCredentials,
   LoginResult,
+  RegisterAccountRequest,
+  RegistrationMenuOption,
   Order,
   OrderStatus,
   Product,
@@ -14,9 +16,8 @@ import {
  * Abstract data layer for the whole app.
  *
  * Components and feature services depend ONLY on this abstraction (via DI),
- * never on a concrete implementation. Today it is backed by
- * `MockDataService` (in-memory + localStorage). To go live, provide an
- * `ApiDataService` that talks to a REST backend — no component changes needed.
+ * never on a concrete implementation. The provider selects `ApiDataService`
+ * by default; `MockDataService` remains available for local UI development.
  *
  * Upsert convention: pass an entity with `id === 0` to create (a new id is
  * assigned and returned), or an existing id to update in place.
@@ -24,8 +25,14 @@ import {
  * See `app.config.ts` for the provider wiring.
  */
 export abstract class DataService {
+  abstract readonly supportsOrderStatusUpdate: boolean;
+  abstract readonly supportsProductPriceOverrides: boolean;
+  abstract readonly supportsPhotoArchive: boolean;
+
   // ---- Auth -----------------------------------------------------------
   abstract login(credentials: LoginCredentials): Observable<LoginResult>;
+  abstract getRegistrationMenuOptions(): Observable<RegistrationMenuOption[]>;
+  abstract registerAccount(request: RegisterAccountRequest): Observable<void>;
 
   // ---- Brands ---------------------------------------------------------
   abstract getBrands(): Observable<Brand[]>;
@@ -34,9 +41,11 @@ export abstract class DataService {
   // ---- Products -------------------------------------------------------
   abstract getProducts(): Observable<Product[]>;
   abstract saveProduct(product: Product): Observable<Product>;
+  abstract setProductArchived(id: number, archived: boolean): Observable<Product>;
 
   // ---- Customers ------------------------------------------------------
   abstract getCustomers(): Observable<Customer[]>;
+  abstract getCustomer(id: number): Observable<Customer>;
   abstract saveCustomer(customer: Customer): Observable<Customer>;
 
   // ---- Staff ----------------------------------------------------------

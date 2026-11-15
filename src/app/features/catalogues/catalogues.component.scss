@@ -23,6 +23,21 @@
   min-width: 180px;
 }
 
+.catalogue-type,
+.customer-select {
+  min-width: 210px;
+}
+
+.catalogue-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
 .checkline {
   display: flex;
   gap: 8px;

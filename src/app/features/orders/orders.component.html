@@ -160,8 +160,33 @@
         </table>
       </div>
 
+      @if (!isCustomer() && supportsOrderStatusUpdate) {
+        <div class="status-editor">
+          <label class="field" for="order-status">
+            <span>Update order status</span>
+            <select
+              id="order-status"
+              [value]="statusDraft()"
+              (change)="statusDraft.set($any($event.target).value)"
+            >
+              @for (status of ['Pending', 'Confirmed', 'Processing', 'Dispatched', 'Delivered']; track status) {
+                <option [value]="status">{{ status }}</option>
+              }
+            </select>
+          </label>
+          @if (statusError()) {
+            <div class="notice error" role="alert">{{ statusError() }}</div>
+          }
+        </div>
+      }
+
       <div class="modal-actions">
         <button class="btn" (click)="close()">Close</button>
+        @if (!isCustomer() && supportsOrderStatusUpdate) {
+          <button class="btn primary" (click)="saveStatus()" [disabled]="savingStatus()">
+            {{ savingStatus() ? 'Saving…' : 'Save status' }}
+          </button>
+        }
       </div>
     </div>
   </div>
