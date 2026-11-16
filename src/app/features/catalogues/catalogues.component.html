@@ -3,7 +3,7 @@
     <h1>Catalogues</h1>
     <div class="muted">Prepare a standard brand catalogue or a customer-specific price list.</div>
   </div>
-  <button class="btn primary" (click)="print()">🖨 Print catalogue</button>
+  <button class="btn primary" (click)="print()" [disabled]="loading() || !!error() || !items().length || (catalogueType() === 'customer' && !selectedCustomer())">🖨 Print / Save PDF</button>
 </div>
 
 <div class="toolbar no-print">
@@ -39,15 +39,13 @@
       <input type="checkbox" [checked]="includeCode()" (change)="includeCode.set($any($event.target).checked)" />
       Product code
     </label>
-    @if (catalogueType() === 'standard') {
-      <label class="checkline">
-        <input type="checkbox" [checked]="includeMrp()" (change)="includeMrp.set($any($event.target).checked)" />
-        MRP
-      </label>
-    }
+    <label class="checkline">
+      <input type="checkbox" [checked]="includeMrp()" (change)="includeMrp.set($any($event.target).checked)" />
+      MRP
+    </label>
     <label class="checkline">
       <input type="checkbox" [checked]="includeSizes()" (change)="includeSizes.set($any($event.target).checked)" />
-      Available sizes
+      Active assigned size groups
     </label>
     @if (catalogueType() === 'customer') {
       <label class="checkline">
@@ -63,53 +61,61 @@
 } @else if (error()) {
   <div class="notice error">{{ error() }}</div>
 } @else {
-  <div class="catalogue-sheet">
-    <div class="sheet-head">
-      <h2>BOTOZ Catalogue</h2>
-      <span>
-        {{ brandFilter() === 'All' ? 'All brands' : brandFilter() }}
-        @if (catalogueType() === 'customer' && selectedCustomer()) {
-          · {{ selectedCustomer()?.name }}
-        }
-      </span>
-    </div>
-
-    <div class="catalogue-grid">
-      @for (p of items(); track p.id) {
-        <article class="cat-item">
-          <div class="cat-art">
-            @if (imageSrc(p)) {
-              <img [src]="imageSrc(p)" [alt]="p.name" />
+  <div class="catalogue-pages">
+      @for (page of pages(); track page.number) {
+        <section class="catalogue-page">
+          <div class="sheet-head">
+            @if (page.number === 1) {
+              <strong>{{ brandFilter() === 'All' ? 'All brands' : brandFilter() }}</strong>
             } @else {
-              <div class="cat-placeholder">👟</div>
+              <span></span>
+            }
+            <span>PRODUCT CATALOGUE</span>
+          </div>
+          <div class="catalogue-grid">
+            @for (p of page.products; track p.id) {
+              <article class="cat-item">
+                <div class="cat-art">
+                  <img [src]="imageSrc(p)" [alt]="p.name" />
+                </div>
+                <div class="cat-info">
+                  <strong>{{ p.name }}</strong>
+                  @if (includeCode()) {
+                    <div class="cat-meta">{{ p.code }}</div>
+                  }
+                  @if (includeMrp()) {
+                    <div class="cat-meta">MRP {{ displayMrp(p) }}</div>
+                  }
+                  @if (includePrice() && catalogueType() === 'customer') {
+                    <div class="cat-meta">Display price {{ displayPrice(p) }}</div>
+                  }
+                  @if (includeSizes()) {
+                    <div class="cat-meta cat-groups">
+                      @for (group of activeSizeGroups(p); track group.name) {
+                        <span>{{ group.name }}</span>
+                      } @empty {
+                        <span>No active assigned size group</span>
+                      }
+                    </div>
+                  }
+                </div>
+              </article>
             }
           </div>
-          <div class="cat-info">
-            <strong>{{ p.name }}</strong>
-            @if (includeCode()) {
-              <div class="cat-meta">{{ p.code }} · {{ p.brand }}</div>
-            } @else {
-              <div class="cat-meta">{{ p.brand }}</div>
-            }
-            @if (includeSizes()) {
-              <div class="cat-meta">Sizes {{ p.sizes.join(', ') }}</div>
-            }
-            @if ((catalogueType() === 'standard' && includeMrp()) || (catalogueType() === 'customer' && includePrice())) {
-              <div class="cat-price">
-                {{ catalogueType() === 'standard' ? 'MRP' : 'Display price' }} {{ displayPrice(p) }}
-              </div>
-            }
-          </div>
-        </article>
-      } @empty {
-        <div class="empty">
+          <footer class="sheet-footer">
+            <span>@if (page.number === 1 && selectedCustomer()) { Prepared for {{ selectedCustomer()?.name }} }</span>
+            <span>Page {{ page.number }} of {{ pages().length }}</span>
+          </footer>
+        </section>
+      }
+      @if (!items().length) {
+        <div class="empty no-print">
           @if (catalogueType() === 'customer' && !selectedCustomer()) {
             Select a customer to preview its catalogue.
           } @else {
-            No active products are available for these catalogue settings.
+            No active products with photos are available for these catalogue settings.
           }
         </div>
       }
-    </div>
   </div>
 }

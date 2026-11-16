@@ -10,6 +10,24 @@ import { AuthService } from './auth.service';
 export class AppStateService {
   private readonly auth = inject(AuthService);
 
+  private readonly menuAliases: Record<string, string[]> = {
+    Dashboard: ['dashboard'],
+    Products: ['products', 'product', 'prices'],
+    Packaging: ['packaging'],
+    'New Orders': ['neworders', 'orders'],
+    'Photo Order': ['photoorder', 'photosorder', 'pictureorders'],
+    Customers: ['customers', 'customer'],
+    Brands: ['brands', 'brand'],
+    Catalogues: ['catalogues', 'catalogue'],
+    'Order History': ['orderhistory', 'orderhistry', 'orders'],
+    Team: ['team', 'staff', 'useraccounts'],
+    Settings: ['settings'],
+    Home: ['home'],
+    Basket: ['basket', 'orders'],
+    Orders: ['orders'],
+    Account: ['account'],
+  };
+
   readonly role = computed<UserRole>(() => this.auth.role() ?? 'Customer');
   readonly isStaff = computed(() => this.role() !== 'Customer');
 
@@ -43,31 +61,81 @@ export class AppStateService {
     this._staffOrderCustomerId.set(0);
   }
 
+  canAccessMenu(menu: string): boolean {
+    const role = this.role();
+    if (role === 'Super Admin' || role === 'Customer') return true;
+
+    const allowedMenus = this.auth.user()?.menus;
+    if (allowedMenus === undefined) return true;
+    if (this.hasUnmappedMenuIds(allowedMenus)) {
+      // Some API responses return menu IDs. The API still enforces these grants;
+      // until IDs are paired with their labels, avoid hiding the entire workspace.
+      return true;
+    }
+
+    const aliases = this.menuAliases[menu] ?? [menu];
+    const normalizedAllowed = allowedMenus
+      .map((item) => this.normalizeMenu(item))
+      .filter(Boolean);
+    return aliases.some((alias) => normalizedAllowed.some((allowed) =>
+      allowed === alias || allowed.includes(alias) || alias.includes(allowed),
+    ));
+  }
+
+  /** Checks a permission by its exact API menu name (for combined screens). */
+  canAccessFeature(feature: string): boolean {
+    const role = this.role();
+    if (role === 'Super Admin' || role === 'Customer') return true;
+
+    const allowedMenus = this.auth.user()?.menus;
+    if (allowedMenus === undefined) return true;
+    if (this.hasUnmappedMenuIds(allowedMenus)) return true;
+
+    const target = this.normalizeMenu(feature);
+    return allowedMenus.some((menu) => this.normalizeMenu(menu) === target);
+  }
+
+  private normalizeMenu(value: string): string {
+    return value.toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  private hasUnmappedMenuIds(menus: string[]): boolean {
+    return menus.length > 0 && menus.every((menu) => /^\d+$/.test(menu.trim()));
+  }
+
   /** Navigation entries available to the current role. */
-  readonly navItems = computed<string[]>(() => {
+  private readonly roleNavItems = computed<string[]>(() => {
     switch (this.role()) {
       case 'Customer':
         return ['Home', 'Products', 'Basket', 'Orders', 'Account'];
       case 'Backend User':
-        return ['Dashboard', 'Orders', 'Products', 'Packaging', 'Catalogues'];
+        return ['Dashboard', 'New Orders', 'Products', 'Packaging', 'Catalogues'];
       case 'Admin':
       case 'Super Admin':
         return [
           'Dashboard',
           'Products',
           'Packaging',
-          'Orders',
+          'New Orders',
+          'Photo Order',
           'Customers',
           'Brands',
           'Catalogues',
           'Order History',
-          'User Accounts',
+          'Team',
+          'Settings',
         ];
       default:
         return [];
     }
   });
 
+  readonly navItems = computed(() => this.roleNavItems().filter((item) => this.canAccessMenu(item)));
+
   /** First valid section to open after login for each role. */
-  readonly defaultRoute = computed(() => this.role() === 'Customer' ? '/app/home' : '/app/dashboard');
+  readonly defaultRoute = computed(() => {
+    if (this.role() === 'Customer') return '/app/home';
+    const firstMenu = this.navItems()[0];
+    return firstMenu ? `/app/${firstMenu.toLowerCase().replace(/\s+/g, '-')}` : '/';
+  });
 }

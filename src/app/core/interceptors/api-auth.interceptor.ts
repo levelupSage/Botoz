@@ -31,9 +31,13 @@ export const apiAuthInterceptor: HttpInterceptorFn = (request, next) => {
       if (
         bypassAuth ||
         !(error instanceof HttpErrorResponse) ||
-        error.status !== 401 ||
-        !tokens.refreshToken
+        error.status !== 401
       ) {
+        return throwError(() => error);
+      }
+
+      if (!tokens.refreshToken) {
+        tokens.clear();
         return throwError(() => error);
       }
 

@@ -15,6 +15,27 @@
   margin-bottom: 18px;
 }
 
+.scheme-banners {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.scheme-banners img {
+  width: 100%;
+  aspect-ratio: 3 / 1;
+  object-fit: cover;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+}
+
+.scheme-banners p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--muted);
+}
+
 .brand-card {
   text-align: left;
   cursor: pointer;
@@ -81,6 +102,13 @@
   place-items: center;
   font-size: 22px;
   flex: none;
+  overflow: hidden;
+}
+
+.feat-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .feat-info {

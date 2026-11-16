@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, guestGuard, roleGuard } from './core/guards/auth.guard';
+import { authGuard, roleGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   // ---- Public ---------------------------------------------------------
@@ -11,7 +11,6 @@ export const routes: Routes = [
   },
   {
     path: 'login',
-    canActivate: [guestGuard],
     loadComponent: () =>
       import('./features/auth/login.component').then((m) => m.LoginComponent),
   },
@@ -32,65 +31,93 @@ export const routes: Routes = [
       {
         path: 'dashboard',
         canActivate: [roleGuard],
-        data: { roles: ['Super Admin', 'Admin', 'Backend User'] },
+        data: { roles: ['Super Admin', 'Admin', 'Backend User'], menu: 'Dashboard' },
         loadComponent: () =>
           import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
       },
       {
         path: 'products',
         canActivate: [roleGuard],
-        data: { roles: ['Super Admin', 'Admin', 'Backend User', 'Customer'] },
+        data: { roles: ['Super Admin', 'Admin', 'Backend User', 'Customer'], menu: 'Products' },
         loadComponent: () =>
           import('./features/products/products.component').then((m) => m.ProductsComponent),
       },
       {
         path: 'packaging',
         canActivate: [roleGuard],
-        data: { roles: ['Super Admin', 'Admin', 'Backend User'] },
+        data: { roles: ['Super Admin', 'Admin', 'Backend User'], menu: 'Packaging' },
         loadComponent: () =>
           import('./features/packaging/packaging.component').then((m) => m.PackagingComponent),
       },
       {
         path: 'orders',
         canActivate: [roleGuard],
-        data: { roles: ['Super Admin', 'Admin', 'Backend User', 'Customer'] },
+        data: { roles: ['Super Admin', 'Admin', 'Backend User', 'Customer'], menu: 'Orders' },
         loadComponent: () =>
           import('./features/orders/orders.component').then((m) => m.OrdersComponent),
       },
       {
+        path: 'new-orders',
+        canActivate: [roleGuard],
+        data: { roles: ['Super Admin', 'Admin', 'Backend User'], menu: 'New Orders' },
+        loadComponent: () =>
+          import('./features/orders/orders.component').then((m) => m.OrdersComponent),
+      },
+      {
+        path: 'photo-order',
+        canActivate: [roleGuard],
+        data: { roles: ['Super Admin', 'Admin'], menu: 'Photo Order' },
+        loadComponent: () =>
+          import('./features/photo-orders/photo-orders.component').then((m) => m.PhotoOrdersComponent),
+      },
+      {
         path: 'customers',
         canActivate: [roleGuard],
-        data: { roles: ['Super Admin', 'Admin'] },
+        data: { roles: ['Super Admin', 'Admin'], menu: 'Customers' },
         loadComponent: () =>
           import('./features/customers/customers.component').then((m) => m.CustomersComponent),
       },
       {
         path: 'brands',
         canActivate: [roleGuard],
-        data: { roles: ['Super Admin', 'Admin'] },
+        data: { roles: ['Super Admin', 'Admin'], menu: 'Brands' },
         loadComponent: () =>
           import('./features/brands/brands.component').then((m) => m.BrandsComponent),
       },
       {
         path: 'catalogues',
         canActivate: [roleGuard],
-        data: { roles: ['Super Admin', 'Admin', 'Backend User'] },
+        data: { roles: ['Super Admin', 'Admin', 'Backend User'], menu: 'Catalogues' },
         loadComponent: () =>
           import('./features/catalogues/catalogues.component').then((m) => m.CataloguesComponent),
       },
       {
         path: 'order-history',
         canActivate: [roleGuard],
-        data: { roles: ['Super Admin', 'Admin'] },
+        data: { roles: ['Super Admin', 'Admin'], menu: 'Order History' },
         loadComponent: () =>
           import('./features/order-history/order-history.component').then(
             (m) => m.OrderHistoryComponent,
           ),
       },
       {
+        path: 'team',
+        canActivate: [roleGuard],
+        data: { roles: ['Super Admin', 'Admin'], menu: 'Team' },
+        loadComponent: () =>
+          import('./features/team/team.component').then((m) => m.TeamComponent),
+      },
+      {
+        path: 'settings',
+        canActivate: [roleGuard],
+        data: { roles: ['Super Admin', 'Admin'], menu: 'Settings' },
+        loadComponent: () =>
+          import('./features/settings/settings.component').then((m) => m.SettingsComponent),
+      },
+      {
         path: 'user-accounts',
         canActivate: [roleGuard],
-        data: { roles: ['Super Admin', 'Admin'] },
+        data: { roles: ['Super Admin', 'Admin'], menu: 'Team' },
         loadComponent: () =>
           import('./features/auth/register.component').then((m) => m.RegisterComponent),
       },
@@ -98,21 +125,21 @@ export const routes: Routes = [
       {
         path: 'home',
         canActivate: [roleGuard],
-        data: { roles: ['Customer'] },
+        data: { roles: ['Customer'], menu: 'Home' },
         loadComponent: () =>
           import('./features/home/home.component').then((m) => m.HomeComponent),
       },
       {
         path: 'basket',
         canActivate: [roleGuard],
-        data: { roles: ['Customer', 'Super Admin', 'Admin', 'Backend User'] },
+        data: { roles: ['Customer', 'Super Admin', 'Admin', 'Backend User'], menu: 'Basket' },
         loadComponent: () =>
           import('./features/basket/basket.component').then((m) => m.BasketComponent),
       },
       {
         path: 'account',
         canActivate: [roleGuard],
-        data: { roles: ['Customer'] },
+        data: { roles: ['Customer'], menu: 'Account' },
         loadComponent: () =>
           import('./features/account/account.component').then((m) => m.AccountComponent),
       },

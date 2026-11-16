@@ -1,6 +1,7 @@
 import { PriceTier } from './enums';
 
 export interface ProductImage {
+  id?: number;
   name: string;
   active: boolean;
   archived?: boolean;
@@ -17,6 +18,13 @@ export interface Packing {
   name: string;
   rows: PackingRow[];
   active?: boolean;
+}
+
+export interface ProductSizeGroup {
+  id: number;
+  name: string;
+  active: boolean;
+  sizes: number[];
 }
 
 export interface Product {
@@ -37,4 +45,6 @@ export interface Product {
   /** All API-assigned groups, including groups used only to define sizes. */
   packingGroupIds?: number[];
   enabledPackingGroupIds?: number[];
+  /** Assigned size groups, including groups that only define size-wise ordering. */
+  sizeGroups?: ProductSizeGroup[];
 }

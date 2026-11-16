@@ -163,7 +163,7 @@ export class CustomersComponent implements OnInit {
       },
       error: () => {
         this.loadingDetails.set(false);
-        this.toast.show('Could not load customer details.');
+        this.toast.error('Could not load customer details.');
       },
     });
   }
@@ -284,11 +284,11 @@ export class CustomersComponent implements OnInit {
         this.saving.set(false);
         this.modalOpen.set(false);
         this.refreshStations();
-        this.toast.show(existing ? 'Customer updated' : 'Customer added');
+        this.toast.success(existing ? 'Customer updated successfully.' : 'Customer added successfully.');
       },
       error: (err: unknown) => {
         this.saving.set(false);
-        this.toast.show(err instanceof Error ? err.message : 'Could not save the customer.');
+        this.toast.error(err instanceof Error ? err.message : 'Could not save the customer.');
       },
     });
   }

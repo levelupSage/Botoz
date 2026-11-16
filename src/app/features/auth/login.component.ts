@@ -39,6 +39,7 @@ export class LoginComponent {
     this.loading.set(true);
     this.auth.login(this.form.getRawValue()).subscribe({
       next: () => {
+        this.loading.set(false);
         const redirect = this.route.snapshot.queryParamMap.get('redirect');
         this.router.navigateByUrl(redirect || this.appState.defaultRoute());
       },

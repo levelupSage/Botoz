@@ -8,10 +8,14 @@
 
 .picker {
   margin-bottom: 16px;
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(260px, 1.3fr);
+  gap: 16px;
 }
 
-.picker .field {
-  max-width: 420px;
+.picker .field,
+.picker select {
+  min-width: 0;
 }
 
 .card {
@@ -26,61 +30,90 @@
   margin-bottom: 14px;
 }
 
-.template-list {
-  display: grid;
+.template-picker {
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
-.template {
+.archived-list {
+  margin-top: 14px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+
+.archived-list summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.archived-template {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 11px 13px;
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  margin-top: 8px;
 }
 
-.template .muted {
-  font-size: 11px;
+.archived-template small {
+  display: block;
+  color: var(--muted);
   margin-top: 3px;
 }
 
-.template-right {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  white-space: nowrap;
-}
-
 .name-field {
-  max-width: 420px;
-  margin-bottom: 15px;
+  max-width: 460px;
+  margin-bottom: 18px;
 }
 
-.size-grid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 9px;
+.rows-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
 }
 
-.size-cell {
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 9px;
-  text-align: center;
-}
-
-.size-cell label {
+.rows-head small {
   display: block;
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+.packing-rows {
+  display: grid;
+  gap: 8px;
+}
+
+.packing-row {
+  display: grid;
+  grid-template-columns: 70px minmax(90px, 1fr) 110px minmax(100px, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 9px 11px;
+}
+
+.packing-row label {
   font-size: 12px;
   color: var(--muted);
-  margin-bottom: 6px;
 }
 
-.size-cell input {
+.packing-row input {
   text-align: center;
-  padding: 8px 3px;
+  padding: 8px;
+}
+
+.distribution {
+  display: grid;
+  gap: 5px;
+  margin-top: 14px;
+  font-size: 12px;
 }
 
 .actions {
@@ -96,7 +129,15 @@
 }
 
 @media (max-width: 560px) {
-  .size-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .picker {
+    grid-template-columns: 1fr;
+  }
+
+  .packing-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .packing-row button {
+    grid-column: 1 / -1;
   }
 }

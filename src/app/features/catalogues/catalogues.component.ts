@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Customer, Product } from '../../core/models';
 import { CatalogService } from '../../core/services/catalog.service';
-import { activeImageSrc, isOrderableFor, money, priceFor } from '../../core/utils/pricing.util';
+import { activeImageSrc, hasActiveImage, money, priceFor } from '../../core/utils/pricing.util';
 
 /**
  * Catalogues: pick a brand (or all), optionally show MRP, and print a
@@ -42,9 +42,19 @@ export class CataloguesComponent implements OnInit {
         (p) =>
           p.active &&
           !p.archived &&
-          (filter === 'All' || p.brand === filter) &&
-          (this.catalogueType() !== 'customer' || isOrderableFor(p, this.selectedCustomer())),
+          hasActiveImage(p) &&
+          (filter === 'All' || p.brand === filter),
       );
+  });
+
+  /** V15 lays out sixteen products on each printed A4 page. */
+  readonly pages = computed(() => {
+    const products = this.items();
+    const pageCount = Math.max(1, Math.ceil(products.length / 16));
+    return Array.from({ length: pageCount }, (_, index) => ({
+      number: index + 1,
+      products: products.slice(index * 16, (index + 1) * 16),
+    }));
   });
 
   ngOnInit(): void {
@@ -57,9 +67,29 @@ export class CataloguesComponent implements OnInit {
 
   displayPrice(product: Product): string {
     const customer = this.selectedCustomer();
-    return this.catalogueType() === 'customer'
-      ? money(priceFor(product, customer))
-      : money(product.mrp);
+    return money(priceFor(product, customer));
+  }
+
+  displayMrp(product: Product): string {
+    return money(product.mrp);
+  }
+
+  activeSizeGroups(product: Product): { name: string; sizes: number[] }[] {
+    if (product.sizeGroups) {
+      return product.sizeGroups
+        .filter((group) => group.active)
+        .map((group) => ({
+          name: group.name,
+          sizes: [...new Set(group.sizes)].sort((a, b) => a - b),
+        }))
+        .filter((group) => group.sizes.length > 0);
+    }
+    return (product.packings ?? [])
+      .filter((packing) => packing.active !== false && packing.rows?.length)
+      .map((packing) => ({
+        name: packing.name,
+        sizes: [...new Set(packing.rows.map((row) => row.size))].sort((a, b) => a - b),
+      }));
   }
 
   selectCustomer(value: string): void {

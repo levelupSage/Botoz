@@ -29,6 +29,8 @@ import {
   OrderStatus,
   Packing,
   Product,
+  ProductImage,
+  ProductSizeGroup,
   Staff,
   UserRole,
 } from '../models';
@@ -63,6 +65,7 @@ export class ApiDataService extends DataService {
   private readonly productPackingIds = new Map<number, Set<number>>();
   private readonly productSizes = new Map<number, Set<number>>();
   private readonly productGroupSizes = new Map<number, Map<number, Set<number>>>();
+  private readonly productGroupNames = new Map<number, Map<number, string>>();
 
   // ---- Authentication ------------------------------------------------
   login(credentials: LoginCredentials): Observable<LoginResult> {
@@ -73,21 +76,25 @@ export class ApiDataService extends DataService {
       }))
       .pipe(
         map((result) => {
-          const rawUser = this.asJson(result['user']);
-          const role = this.mapRole(this.text(rawUser['role']), this.stringArray(rawUser['menus']));
+          const rawUser = this.asJson(result['user'] ?? result['userDetails'] ?? result);
+          const rawMenus = rawUser['menus'] ?? rawUser['allowedMenus'] ?? rawUser['allowedFeatures'];
+          const menuNames = this.menuNames(rawMenus);
+          // The API returns an empty list for accounts using role defaults.
+          const menus = menuNames?.length ? menuNames : undefined;
+          const role = this.mapRole(this.text(rawUser['role']) || this.text(rawUser['roleName']), menus ?? []);
           const user: AuthUser = {
-            id: this.number(rawUser['id']),
+            id: this.number(rawUser['id'] ?? rawUser['userId']),
             name: this.text(rawUser['fullName']) || this.text(rawUser['loginId']),
             email: this.text(rawUser['email']) || this.text(rawUser['loginId']),
             role,
-            menus: this.stringArray(rawUser['menus']),
-            orderTabs: this.stringArray(rawUser['orderTabs']),
+            ...(menus !== undefined ? { menus } : {}),
+            orderTabs: this.stringArray(rawUser['orderTabs'] ?? rawUser['allowedOrderTabs']),
             // The published UserDTO has no customerId; it currently assumes the ids align.
             ...(role === 'Customer'
               ? { customerId: this.number(rawUser['customerId']) || this.number(rawUser['id']) }
               : {}),
           };
-          const token = this.text(result['accessToken']);
+          const token = this.text(result['accessToken']) || this.text(result['token']);
           if (!token) throw new Error('The API login response did not include an access token.');
           return {
             user,
@@ -165,6 +172,22 @@ export class ApiDataService extends DataService {
     );
   }
 
+  setBrandSizeLock(brand: Brand, locked: boolean): Observable<Brand> {
+    return this.request<Json>(this.http.patch(
+      `${this.baseUrl}/api/admin/brands/${brand.id}/size-lock`,
+      { locked },
+    )).pipe(map((body) => this.toBrand(body, { ...brand, sizeLocked: locked })));
+  }
+
+  uploadBrandLogo(brand: Brand, file: File): Observable<Brand> {
+    const form = new FormData();
+    form.append('file', file);
+    return this.request<Json>(this.http.post(
+      `${this.baseUrl}/api/admin/brands/${brand.id}/logo`,
+      form,
+    )).pipe(map((body) => this.toBrand(body, brand)));
+  }
+
   // ---- Products -------------------------------------------------------
   getProducts(): Observable<Product[]> {
     return this.paged<Json>('/api/admin/products', { status: 'ALL' }).pipe(
@@ -204,6 +227,18 @@ export class ApiDataService extends DataService {
   setProductArchived(id: number, archived: boolean): Observable<Product> {
     return this.request<Json>(
       this.http.patch(`${this.baseUrl}/api/admin/products/${id}/archive`, { archived }),
+    ).pipe(map((body) => this.toProduct(body)));
+  }
+
+  setProductActive(id: number, active: boolean): Observable<Product> {
+    return this.request<Json>(
+      this.http.patch(`${this.baseUrl}/api/admin/products/${id}/status`, { active }),
+    ).pipe(map((body) => this.toProduct(body)));
+  }
+
+  deleteProductPhoto(productId: number, photoId: number): Observable<Product> {
+    return this.request<Json>(
+      this.http.delete(`${this.baseUrl}/api/admin/products/${productId}/photos/${photoId}`),
     ).pipe(map((body) => this.toProduct(body)));
   }
 
@@ -261,12 +296,39 @@ export class ApiDataService extends DataService {
       map((rows) => rows.map((row) => ({
         id: this.number(row['id']),
         name: this.text(row['fullName']),
+        loginId: this.text(row['loginId']),
         email: this.text(row['email']),
         role: this.mapRole(this.text(row['role'])),
         permissions: this.stringArray(row['allowedFeatures']),
         active: this.text(row['status']).toUpperCase() === 'ACTIVE',
       }))),
     );
+  }
+
+  updateStaffAccount(staff: Staff, password: string): Observable<Staff> {
+    return this.request<Json>(this.http.put(
+      `${this.baseUrl}/api/admin/staff/${staff.id}`,
+      {
+        fullName: staff.name,
+        email: staff.email,
+        loginId: staff.loginId,
+        password,
+        status: staff.active ? 'ACTIVE' : 'INACTIVE',
+      },
+    )).pipe(map((row) => {
+      const result = this.asJson(row);
+      return {
+        id: this.number(result['id']) || staff.id,
+        name: this.text(result['fullName']) || staff.name,
+        loginId: this.text(result['loginId']) || staff.loginId,
+        email: this.text(result['email']) || staff.email,
+        role: this.mapRole(this.text(result['role']) || staff.role),
+        permissions: this.stringArray(result['allowedFeatures']).length
+          ? this.stringArray(result['allowedFeatures']) : staff.permissions,
+        active: this.text(result['status'])
+          ? this.text(result['status']).toUpperCase() === 'ACTIVE' : staff.active,
+      };
+    }));
   }
 
   // ---- Orders ---------------------------------------------------------
@@ -360,6 +422,7 @@ export class ApiDataService extends DataService {
     const retainedGroupIds = new Set(product.packingGroupIds ?? known);
     const assignedSizes = new Set<number>();
     const groupSizes = this.productGroupSizes.get(product.id);
+    const groupNames = this.productGroupNames.get(product.id);
     for (const groupId of retainedGroupIds) {
       for (const size of groupSizes?.get(groupId) ?? []) assignedSizes.add(size);
     }
@@ -378,7 +441,20 @@ export class ApiDataService extends DataService {
     ];
     return from(requestedPackings).pipe(
       concatMap((packing) => {
-        if (packing.id && known.has(packing.id)) return of(packing);
+        if (packing.id && known.has(packing.id)) {
+          const oldSizes = [...(groupSizes?.get(packing.id) ?? [])].sort((a, b) => a - b);
+          const newSizes = packing.rows.map((row) => row.size).sort((a, b) => a - b);
+          const unchanged = groupNames?.get(packing.id) === packing.name &&
+            oldSizes.length === newSizes.length &&
+            oldSizes.every((size, index) => size === newSizes[index]);
+          if (unchanged) return of(packing);
+
+          // Packing groups are shared records, so edits must use their own API endpoint.
+          return this.request<Json>(this.http.put(
+            `${this.baseUrl}/api/admin/packing-groups/${packing.id}`,
+            { name: packing.name, sizes: newSizes.map(String) },
+          )).pipe(map(() => packing));
+        }
         return this.request<Json>(
           this.http.post(`${this.baseUrl}/api/admin/packing-groups`, {
             name: packing.name,
@@ -417,17 +493,28 @@ export class ApiDataService extends DataService {
   }
 
   private uploadNewPhotos(productId: number, images: Product['images']): Observable<Json | null> {
-    const uploads = (images ?? []).filter((image) => image.src.startsWith('data:image/')).slice(0, 10);
+    const uploads = (images ?? []).filter((image) => image.src.startsWith('data:image/'));
     if (!uploads.length) return of(null);
-    return defer(() => from(Promise.all(uploads.map(async (image) => {
-      const blob = await (await fetch(image.src)).blob();
-      return new File([blob], image.name || 'product-photo', { type: blob.type });
-    })))).pipe(
-      switchMap((files) => {
-        const form = new FormData();
-        for (const file of files) form.append('files', file, file.name);
-        return this.request<Json>(this.http.post(`${this.baseUrl}/api/admin/products/${productId}/photos`, form));
-      }),
+    const batches: Product['images'][] = [];
+    for (let index = 0; index < uploads.length; index += 10) {
+      batches.push(uploads.slice(index, index + 10));
+    }
+
+    return from(batches).pipe(
+      concatMap((batch) => defer(() => from(Promise.all(batch.map(async (image) => {
+        const blob = await (await fetch(image.src)).blob();
+        return new File([blob], image.name || 'product-photo', { type: blob.type });
+      })))).pipe(
+        switchMap((files) => {
+          const form = new FormData();
+          for (const file of files) form.append('files', file, file.name);
+          return this.request<Json>(
+            this.http.post(`${this.baseUrl}/api/admin/products/${productId}/photos`, form),
+          );
+        }),
+      )),
+      toArray(),
+      map((responses) => responses.at(-1) ?? null),
     );
   }
 
@@ -474,7 +561,16 @@ export class ApiDataService extends DataService {
     const row = this.asJson(value);
     const id = this.number(row['id']) || fallback?.id || 0;
     const name = this.text(row['name']) || this.text(row['brandName']) || fallback?.name || '';
-    return { id, name, active: typeof row['active'] === 'boolean' ? row['active'] : this.text(row['status']).toUpperCase() !== 'INACTIVE' };
+    const logoPath = this.text(row['logoUrl']) || this.text(row['logo']) || this.text(row['imageUrl']) || fallback?.logoUrl || '';
+    return {
+      id,
+      name,
+      active: typeof row['active'] === 'boolean' ? row['active'] : this.text(row['status']).toUpperCase() !== 'INACTIVE',
+      ...(logoPath ? { logoUrl: this.absoluteUrl(logoPath) } : {}),
+      ...(typeof row['sizeLocked'] === 'boolean' ? { sizeLocked: row['sizeLocked'] } :
+        typeof row['lockSize'] === 'boolean' ? { sizeLocked: row['lockSize'] } :
+          typeof fallback?.sizeLocked === 'boolean' ? { sizeLocked: fallback.sizeLocked } : {}),
+    };
   }
 
   private toProduct(value: unknown): Product {
@@ -488,6 +584,19 @@ export class ApiDataService extends DataService {
     }
     const groupRows = Array.isArray(row['packingGroups']) ? row['packingGroups'] : [];
     const groupSizeMap = new Map<number, Set<number>>();
+    const groupNameMap = new Map<number, string>();
+    const sizeGroups: ProductSizeGroup[] = groupRows.map((item) => {
+      const group = this.asJson(item);
+      groupNameMap.set(this.number(group['id']), this.text(group['name']));
+      const sizes = Array.isArray(group['sizes']) ? group['sizes'] : [];
+      return {
+        id: this.number(group['id']),
+        name: this.text(group['name']),
+        active: group['enabled'] !== false,
+        sizes: sizes.map((sizeRow) => this.number(this.asJson(sizeRow)['size']))
+          .filter((size) => Number.isFinite(size) && size > 0),
+      };
+    });
     const packings: Packing[] = groupRows.map((item) => {
       const group = this.asJson(item);
           const rows = Array.isArray(group['sizes']) ? group['sizes'] : [];
@@ -519,10 +628,16 @@ export class ApiDataService extends DataService {
     this.productPackingIds.set(id, new Set(groupRows.map((item) => this.number(this.asJson(item)['id']))));
     this.productSizes.set(id, sizeValues);
     this.productGroupSizes.set(id, groupSizeMap);
+    this.productGroupNames.set(id, groupNameMap);
     const photos = Array.isArray(row['photos']) ? row['photos'] : [];
-    const images = photos.map((photo) => {
+    const images: ProductImage[] = photos.map((photo) => {
       const p = this.asJson(photo);
-      return { name: `Photo ${this.number(p['id']) || ''}`.trim(), active: true, src: this.absoluteUrl(this.text(p['url'])) };
+      return {
+        id: this.number(p['id']),
+        name: `Photo ${this.number(p['id']) || ''}`.trim(),
+        active: true,
+        src: this.absoluteUrl(this.text(p['url'])),
+      };
     });
     if (!images.length && this.text(row['coverPhotoUrl'])) {
       images.push({ name: 'Product photo', active: true, src: this.absoluteUrl(this.text(row['coverPhotoUrl'])) });
@@ -544,6 +659,7 @@ export class ApiDataService extends DataService {
       enabledPackingGroupIds: groupRows
         .filter((item) => this.asJson(item)['enabled'] !== false)
         .map((item) => this.number(this.asJson(item)['id'])),
+      sizeGroups,
     };
   }
 
@@ -653,6 +769,15 @@ export class ApiDataService extends DataService {
 
   private stringArray(value: unknown): string[] {
     return Array.isArray(value) ? value.map((item) => String(item)) : [];
+  }
+
+  private menuNames(value: unknown): string[] | undefined {
+    if (!Array.isArray(value)) return undefined;
+    return value.map((item) => {
+      if (typeof item !== 'object' || item === null) return String(item);
+      const row = this.asJson(item);
+      return this.text(row['title']) || this.text(row['name']) || this.text(row['label']) || this.text(row['routePath']);
+    }).filter(Boolean);
   }
 
   private mapRole(value: string, menus: string[] = []): UserRole {

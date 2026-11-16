@@ -6,19 +6,116 @@
   margin-bottom: 18px;
 }
 
-.add-card {
-  margin-bottom: 16px;
+.modal-backdrop {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(5 6 8 / 78%);
+  backdrop-filter: blur(2px);
 }
 
-.add-row {
+.add-modal {
+  width: min(100%, 1000px);
+  padding: 26px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: 0 24px 90px rgb(0 0 0 / 55%);
+}
+
+.modal-head {
   display: flex;
-  gap: 9px;
-  align-items: stretch;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
 }
 
-.add-row input {
-  flex: 1;
-  max-width: 420px;
+.modal-head h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.45px;
+}
+
+.modal-close {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 12px;
+  color: var(--text);
+  background: var(--panel2);
+  font-size: 22px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.modal-close:hover {
+  color: var(--gold2);
+  background: #2b2e35;
+}
+
+.add-modal .field {
+  margin: 0;
+  gap: 8px;
+}
+
+.add-modal .field label {
+  color: #c5c7cc;
+  font-size: 13px;
+}
+
+.add-modal label span {
+  color: var(--gold);
+}
+
+.add-modal input {
+  min-height: 54px;
+  padding: 12px 14px;
+  border-color: #373a42;
+  background: #1b1d22;
+  font-size: 15px;
+}
+
+.add-modal input::placeholder {
+  color: #858992;
+}
+
+.add-modal input:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgb(200 164 93 / 16%);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.modal-actions .btn {
+  min-height: 48px;
+  padding: 10px 17px;
+}
+
+.btn.gold {
+  border-color: var(--gold);
+  background: var(--gold);
+  color: #17140d;
+  font-weight: 750;
+}
+
+.btn.gold:hover:not(:disabled) {
+  border-color: var(--gold2);
+  background: var(--gold2);
+  box-shadow: 0 4px 16px rgb(200 164 93 / 22%);
 }
 
 .err {
@@ -26,39 +123,119 @@
   font-size: 11px;
 }
 
-.table-wrap {
-  overflow: auto;
+.brand-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
+.brand-card {
+  min-width: 0;
+  padding: 20px 22px;
+}
+
+.brand-main {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  min-width: 0;
+  margin-bottom: 12px;
+}
+
+.brand-logo {
+  display: grid;
+  place-items: center;
+  flex: 0 0 82px;
+  width: 82px;
+  height: 74px;
+  border: 1px solid var(--gold);
+  border-radius: 13px;
+  background: #111214;
+  object-fit: contain;
+}
+
+.brand-logo.initial {
+  color: var(--gold);
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.brand-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.brand-info strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 16px;
+}
+
+.brand-info span {
+  color: var(--muted);
   font-size: 12px;
 }
 
-th {
-  text-align: left;
-  font-weight: 650;
+.pill {
+  flex: none;
+  color: #8fd3b4;
+  background: #1e3b30;
+}
+
+.pill.inactive {
   color: var(--muted);
-  font-size: 10px;
-  letter-spacing: 0.3px;
-  padding: 11px 9px;
   background: var(--panel2);
-  white-space: nowrap;
 }
 
-td {
-  padding: 12px 9px;
-  border-bottom: 1px solid var(--line);
-  vertical-align: middle;
+.brand-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-tr:last-child td {
-  border-bottom: 0;
+.logo-upload {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.logo-upload input {
+  display: none;
+}
+
+.empty {
+  padding: 28px;
+  color: var(--muted);
+  text-align: center;
 }
 
 .notice.error {
   background: light-dark(#fbeaea, #3a2020);
   border-color: light-dark(#e9b1b1, #5a2e2e);
   color: light-dark(#8c3030, #f0b4b4);
+}
+
+@media (max-width: 1200px) {
+  .brand-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .brand-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .brand-card {
+    padding: 16px;
+  }
+
+  .add-modal {
+    padding: 20px;
+    border-radius: 18px;
+  }
 }

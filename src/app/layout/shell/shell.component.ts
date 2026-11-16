@@ -17,6 +17,8 @@ const ICONS: Record<string, string> = {
   Products: '▧',
   Packaging: '▤',
   Orders: '≡',
+  'New Orders': '≡',
+  'Photo Order': '📷',
   Customers: '♙',
   Brands: '◇',
   Catalogues: '▣',
@@ -25,6 +27,8 @@ const ICONS: Record<string, string> = {
   Account: '◎',
   'Order History': '◷',
   'User Accounts': '⊕',
+  Team: '♧',
+  Settings: '⚙',
 };
 
 /** Convert a nav label to its route slug (e.g. "Order History" -> "order-history"). */

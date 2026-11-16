@@ -1,66 +1,75 @@
 <div class="page-head">
   <div>
     <h1>Brands</h1>
-    <div class="muted">Manage the brands available across the catalogue.</div>
+    <div class="muted">Active brands appear on customer home and product filters.</div>
   </div>
+  <button class="btn gold" (click)="toggleAdd()">＋ Add brand</button>
 </div>
 
-<div class="card add-card">
-  <form [formGroup]="form" (ngSubmit)="add()" novalidate>
-    <div class="field">
-      <label for="brand-name">New brand name</label>
-      <div class="add-row">
-        <input id="brand-name" formControlName="name" placeholder="e.g. BOTOZ Premium" />
-        <button type="submit" class="btn primary" [disabled]="saving()">
-          {{ saving() ? 'Adding…' : '＋ Add' }}
-        </button>
+@if (addOpen()) {
+  <div class="modal-backdrop" (click)="closeAdd()">
+    <section class="add-modal" role="dialog" aria-modal="true" aria-labelledby="add-brand-title" (click)="$event.stopPropagation()">
+      <div class="modal-head">
+        <h2 id="add-brand-title">{{ editingBrand() ? 'Rename brand' : 'Add brand' }}</h2>
+        <button type="button" class="modal-close" aria-label="Close" (click)="closeAdd()">×</button>
       </div>
-      @if (form.controls.name.touched && form.controls.name.invalid) {
-        <small class="err">Brand name is required.</small>
-      }
-    </div>
-  </form>
-</div>
+      <form [formGroup]="form" (ngSubmit)="add()" novalidate>
+        <div class="field">
+          <label for="brand-name">Brand name <span>*</span></label>
+          <input id="brand-name" formControlName="name" placeholder="Brand name" autofocus />
+          @if (form.controls.name.touched && form.controls.name.invalid) {
+            <small class="err">Enter a brand name up to 120 characters.</small>
+          }
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn" (click)="closeAdd()">Cancel</button>
+          <button type="submit" class="btn gold" [disabled]="saving()">
+            {{ saving() ? 'Saving…' : editingBrand() ? 'Save changes' : 'Save brand' }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+}
 
 @if (loading()) {
   <div class="card empty">Loading brands…</div>
 } @else if (error()) {
-  <div class="notice error">{{ error() }}</div>
+  <div class="notice error">{{ error() }} <button class="btn small" (click)="retry()">Retry</button></div>
 } @else {
-  <div class="card">
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>BRAND</th>
-            <th>PRODUCTS</th>
-            <th>STATUS</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (row of rows(); track row.brand.id) {
-            <tr>
-              <td><strong>{{ row.brand.name }}</strong></td>
-              <td>{{ row.productCount }}</td>
-              <td>
-                <span class="pill" [class.gray]="!row.brand.active">
-                  {{ row.brand.active ? 'Active' : 'Inactive' }}
-                </span>
-              </td>
-              <td>
-                <button class="btn small" (click)="toggle(row.brand)">
-                  {{ row.brand.active ? 'Deactivate' : 'Activate' }}
-                </button>
-              </td>
-            </tr>
-          } @empty {
-            <tr>
-              <td colspan="4" class="empty">No brands yet.</td>
-            </tr>
+  <div class="brand-grid">
+    @for (row of rows(); track row.brand.id) {
+      <article class="card brand-card">
+        <div class="brand-main">
+          @if (row.brand.logoUrl) {
+            <img class="brand-logo" [src]="row.brand.logoUrl" [alt]="row.brand.name + ' logo'" />
+          } @else {
+            <div class="brand-logo initial">{{ initial(row.brand.name) }}</div>
           }
-        </tbody>
-      </table>
-    </div>
+          <div class="brand-info">
+            <strong>{{ row.brand.name }}</strong>
+            <span>{{ row.productCount }} {{ row.productCount === 1 ? 'product' : 'products' }}</span>
+          </div>
+          <span class="pill" [class.inactive]="!row.brand.active">
+            {{ row.brand.active ? 'ACTIVE' : 'INACTIVE' }}
+          </span>
+        </div>
+        <div class="brand-actions">
+          <button class="btn small" (click)="toggle(row.brand)">
+            {{ row.brand.active ? 'Deactivate' : 'Activate' }}
+          </button>
+          <button class="btn small" (click)="rename(row.brand)">Rename</button>
+          <label class="btn small logo-upload">
+            ＋ {{ row.brand.logoUrl ? 'Replace logo' : 'Logo (.png)' }}
+            <input type="file" accept="image/png,image/jpeg,image/webp" (change)="uploadLogo(row.brand, $event)" />
+          </label>
+          <button class="btn small" (click)="toggleSizeLock(row.brand)">
+            {{ row.brand.sizeLocked ? '🔓 Unlock Size' : '🔒 Lock Size' }}
+          </button>
+        </div>
+      </article>
+    } @empty {
+      <div class="card empty">No brands yet.</div>
+    }
   </div>
 }

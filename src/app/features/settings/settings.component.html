@@ -1,0 +1,36 @@
+<div class="page-head">
+  <div>
+    <h1>Business rules &amp; security</h1>
+    <p>Reference rules for the BOTOZ production workflow.</p>
+  </div>
+</div>
+
+<div class="rules-grid">
+  <section class="card rules-card">
+    <h2>Ordering rules</h2>
+    <ul>
+      @for (rule of orderingRules; track rule.title) {
+        <li><span class="rule-dot" aria-hidden="true"></span><div><strong>{{ rule.title }}</strong><p>{{ rule.description }}</p></div></li>
+      }
+    </ul>
+  </section>
+
+  <section class="card rules-card">
+    <h2>Security &amp; data rules</h2>
+    <ul>
+      @for (rule of securityRules; track rule.title) {
+        <li><span class="rule-dot" aria-hidden="true"></span><div><strong>{{ rule.title }}</strong><p>{{ rule.description }}</p></div></li>
+      }
+    </ul>
+  </section>
+</div>
+
+<section class="card architecture-card">
+  <h2>Production architecture</h2>
+  <div class="architecture-grid">
+    @for (item of architecture; track item.title) {
+      <article><strong>{{ item.title }}</strong><p>{{ item.description }}</p></article>
+    }
+  </div>
+  <div class="notice">Photo order requests and showcase settings are saved in this browser only; they do not sync between devices.</div>
+</section>

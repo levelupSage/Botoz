@@ -63,7 +63,11 @@
 
   <div class="toast-area">
     @for (t of toasts(); track t.id) {
-      <button class="toast" (click)="dismissToast(t.id)">✓ &nbsp;{{ t.message }}</button>
+      <button class="toast" [class.success]="t.type === 'success'" [class.error]="t.type === 'error'" [class.info]="t.type === 'info'" (click)="dismissToast(t.id)">
+        <span class="toast-icon" aria-hidden="true">{{ t.type === 'success' ? '✓' : t.type === 'error' ? '!' : 'i' }}</span>
+        <span>{{ t.message }}</span>
+        <span class="toast-dismiss" aria-hidden="true">×</span>
+      </button>
     }
   </div>
 </div>

@@ -6,6 +6,7 @@ import { AppStateService } from '../../core/services/app-state.service';
 import { AuthService } from '../../core/services/auth.service';
 import { BasketService } from '../../core/services/basket.service';
 import { CatalogService } from '../../core/services/catalog.service';
+import { ToastService } from '../../core/services/toast.service';
 
 interface LiveBasket {
   customer: Customer;
@@ -30,6 +31,7 @@ export class OrdersComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly basket = inject(BasketService);
   private readonly catalog = inject(CatalogService);
+  private readonly toast = inject(ToastService);
 
   readonly loading = signal(true);
   readonly supportsOrderStatusUpdate = this.data.supportsOrderStatusUpdate;
@@ -43,6 +45,10 @@ export class OrdersComponent implements OnInit {
   private readonly orders = signal<Order[]>([]);
 
   readonly isCustomer = computed(() => this.appState.role() === 'Customer');
+
+  isNewOrdersView(): boolean {
+    return this.router.url.includes('/new-orders');
+  }
 
   /** Staff-only: customers who currently have in-progress baskets. */
   readonly liveBaskets = computed<LiveBasket[]>(() => {
@@ -73,6 +79,9 @@ export class OrdersComponent implements OnInit {
 
     return this.orders().filter((o) => {
       if (this.isCustomer() && o.customerId !== myCustomerId) {
+        return false;
+      }
+      if (!this.isCustomer() && this.isNewOrdersView() && o.status === 'Delivered') {
         return false;
       }
       if (!term) {
@@ -145,16 +154,21 @@ export class OrdersComponent implements OnInit {
         this.orders.update((orders) => orders.map((item) => item.id === updated.id ? updated : item));
         this.selected.set(updated);
         this.savingStatus.set(false);
+        this.toast.success('Order status updated successfully.');
       },
       error: () => {
         this.savingStatus.set(false);
         this.statusError.set('Could not update the order status. Please try again.');
+        this.toast.error('Could not update the order status. Please try again.');
       },
     });
   }
 
   newOrder(): void {
-    // Staff begin with the product order flow, where they can pick a customer.
-    this.router.navigate(['/app', 'products']);
+    if (this.isCustomer()) {
+      this.router.navigate(['/app', 'products']);
+      return;
+    }
+    this.router.navigate(['/app', 'products'], { queryParams: { createOrder: '1' } });
   }
 }

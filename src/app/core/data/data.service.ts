@@ -37,11 +37,15 @@ export abstract class DataService {
   // ---- Brands ---------------------------------------------------------
   abstract getBrands(): Observable<Brand[]>;
   abstract saveBrand(brand: Brand): Observable<Brand>;
+  abstract setBrandSizeLock(brand: Brand, locked: boolean): Observable<Brand>;
+  abstract uploadBrandLogo(brand: Brand, file: File): Observable<Brand>;
 
   // ---- Products -------------------------------------------------------
   abstract getProducts(): Observable<Product[]>;
   abstract saveProduct(product: Product): Observable<Product>;
+  abstract setProductActive(id: number, active: boolean): Observable<Product>;
   abstract setProductArchived(id: number, archived: boolean): Observable<Product>;
+  abstract deleteProductPhoto(productId: number, photoId: number): Observable<Product>;
 
   // ---- Customers ------------------------------------------------------
   abstract getCustomers(): Observable<Customer[]>;
@@ -50,6 +54,7 @@ export abstract class DataService {
 
   // ---- Staff ----------------------------------------------------------
   abstract getStaff(): Observable<Staff[]>;
+  abstract updateStaffAccount(staff: Staff, password: string): Observable<Staff>;
 
   // ---- Orders ---------------------------------------------------------
   abstract getOrders(): Observable<Order[]>;

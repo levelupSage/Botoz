@@ -9,6 +9,15 @@
 @if (loading()) {
   <div class="card empty">Loading…</div>
 } @else {
+  @if (banners().length) {
+    <section class="scheme-banners" aria-label="Current scheme banners">
+      @for (banner of banners(); track $index) {
+        <img [src]="banner.src" [alt]="banner.name || 'BOTOZ scheme banner'" />
+      }
+      @if (schemeMessage()) { <p>{{ schemeMessage() }}</p> }
+    </section>
+  }
+
   <div class="grid brand-grid">
     @for (tile of brandTiles(); track tile.brand.id) {
       <button class="card brand-card" (click)="browseBrand(tile.brand)">
@@ -21,7 +30,7 @@
 
   <div class="card featured">
     <div class="card-head">
-      <h2>★ Featured articles</h2>
+      <h2>★ Fast-selling articles</h2>
       <button class="btn small" (click)="browseAll()">Browse all →</button>
     </div>
     @if (!featured().length) {
@@ -30,7 +39,9 @@
       <div class="grid feat-grid">
         @for (p of featured(); track p.id) {
           <button class="feat-item" (click)="browseAll()">
-            <div class="feat-art">👟</div>
+            <div class="feat-art">
+              @if (imageSrc(p)) { <img [src]="imageSrc(p)" [alt]="p.name" /> } @else { 👟 }
+            </div>
             <div class="feat-info">
               <strong>{{ p.name }}</strong>
               <div class="muted">{{ p.code }} · {{ p.brand }}</div>

@@ -74,17 +74,17 @@ export class BasketComponent {
       next: (order) => {
         this.submitting.set(false);
         this.confirmedId.set(order.id);
-        this.toast.show('Order submitted');
+        this.toast.success('Order submitted successfully.');
       },
       error: () => {
         this.submitting.set(false);
-        this.toast.show('Could not submit the order. Please try again.');
+        this.toast.error('Could not submit the order. Please try again.');
       },
     });
   }
 
   done(): void {
     this.confirmedId.set(null);
-    this.router.navigate(['/app', 'orders']);
+    this.router.navigate(['/app', this.isCustomer() ? 'orders' : 'new-orders']);
   }
 }

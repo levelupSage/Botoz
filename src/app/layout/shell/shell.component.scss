@@ -293,13 +293,44 @@ main {
 }
 
 .toast {
-  background: #202329;
-  color: #fff;
-  border: 1px solid #444;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(420px, calc(100vw - 32px));
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--line);
   border-radius: 11px;
   padding: 12px 15px;
-  box-shadow: 0 8px 30px #0003;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 32%);
   text-align: left;
+}
+
+.toast.success { border-color: #34785d; }
+.toast.error { border-color: #8b3f42; }
+.toast.info { border-color: #806b3c; }
+
+.toast-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  color: #dff8eb;
+  background: #27835f;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.toast.error .toast-icon { background: #a84348; }
+.toast.info .toast-icon { color: #17140d; background: var(--gold); }
+
+.toast-dismiss {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1;
 }
 
 @media (max-width: 700px) {

@@ -28,12 +28,16 @@ export const roleGuard: CanActivateFn = (route) => {
   const appState = inject(AppStateService);
   const router = inject(Router);
   const allowedRoles = route.data['roles'] as UserRole[] | undefined;
+  const requiredMenu = route.data['menu'] as string | undefined;
   const role = appState.role();
 
-  if (!allowedRoles || allowedRoles.includes(role)) {
+  if ((!allowedRoles || allowedRoles.includes(role)) &&
+      (!requiredMenu || appState.canAccessMenu(requiredMenu))) {
     return true;
   }
 
-  const destination = role === 'Customer' ? 'home' : 'dashboard';
-  return router.createUrlTree(['/app', destination]);
+  const firstAvailableMenu = appState.navItems()[0];
+  return firstAvailableMenu
+    ? router.createUrlTree(['/app', firstAvailableMenu.toLowerCase().replace(/\s+/g, '-')])
+    : router.createUrlTree(['/']);
 };

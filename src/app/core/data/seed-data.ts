@@ -215,6 +215,7 @@ const staff: Staff[] = [
   {
     id: 1,
     name: 'Super Admin',
+    loginId: 'botos.owner',
     email: 'owner@botoz.demo',
     role: 'Super Admin',
     permissions: ['all'],
@@ -223,6 +224,7 @@ const staff: Staff[] = [
   {
     id: 2,
     name: 'Sales Admin',
+    loginId: 'botos.admin',
     email: 'admin@botoz.demo',
     role: 'Admin',
     permissions: ['products', 'prices', 'orders', 'customers', 'catalogues', 'packaging'],
@@ -231,6 +233,7 @@ const staff: Staff[] = [
   {
     id: 3,
     name: 'Order Entry',
+    loginId: 'botos.backend',
     email: 'orders@botoz.demo',
     role: 'Backend User',
     permissions: ['orders'],

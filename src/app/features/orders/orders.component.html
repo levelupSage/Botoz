@@ -1,6 +1,6 @@
 <div class="page-head">
   <div>
-    <h1>{{ isCustomer() ? 'My orders' : 'Orders & customer baskets' }}</h1>
+    <h1>{{ isCustomer() ? 'My orders' : isNewOrdersView() ? 'New Orders' : 'Orders & customer baskets' }}</h1>
     <div class="subtitle">
       Submitted orders confirm immediately; active customer baskets are shown to staff.
     </div>

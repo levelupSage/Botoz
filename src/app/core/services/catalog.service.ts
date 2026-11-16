@@ -1,5 +1,5 @@
 import { computed, inject, Injectable, signal, WritableSignal } from '@angular/core';
-import { forkJoin, Observable, tap } from 'rxjs';
+import { forkJoin, Observable, tap, timeout } from 'rxjs';
 import { DataService } from '../data/data.service';
 import { Brand, Customer, Product } from '../models';
 
@@ -40,7 +40,7 @@ export class CatalogService {
       brands: this.data.getBrands(),
       products: this.data.getProducts(),
       customers: this.data.getCustomers(),
-    }).subscribe({
+    }).pipe(timeout({ first: 60_000 })).subscribe({
       next: ({ brands, products, customers }) => {
         this._brands.set(brands);
         this._products.set(products);
@@ -49,7 +49,7 @@ export class CatalogService {
         this._loading.set(false);
       },
       error: () => {
-        this._error.set('Could not load catalog data.');
+        this._error.set('Could not load catalog data. Check the API connection and try again.');
         this._loading.set(false);
       },
     });
@@ -65,7 +65,23 @@ export class CatalogService {
 
   // ---- Writes (persist via DataService, then update local signals) -----
   saveBrand(brand: Brand): Observable<Brand> {
-    return this.data.saveBrand(brand).pipe(tap((saved) => this.mergeInto(this._brands, saved)));
+    return this.data.saveBrand(brand).pipe(tap((saved) => {
+      const currentName = this._brands().find((item) => item.id === saved.id)?.name;
+      this.mergeInto(this._brands, saved);
+      if (currentName && currentName !== saved.name) {
+        this._products.update((products) => products.map((product) =>
+          product.brand === currentName ? { ...product, brand: saved.name } : product,
+        ));
+      }
+    }));
+  }
+
+  setBrandSizeLock(brand: Brand, locked: boolean): Observable<Brand> {
+    return this.data.setBrandSizeLock(brand, locked).pipe(tap((saved) => this.mergeInto(this._brands, saved)));
+  }
+
+  uploadBrandLogo(brand: Brand, file: File): Observable<Brand> {
+    return this.data.uploadBrandLogo(brand, file).pipe(tap((saved) => this.mergeInto(this._brands, saved)));
   }
 
   saveProduct(product: Product): Observable<Product> {
@@ -76,6 +92,18 @@ export class CatalogService {
 
   setProductArchived(id: number, archived: boolean): Observable<Product> {
     return this.data.setProductArchived(id, archived).pipe(
+      tap((saved) => this.mergeInto(this._products, saved)),
+    );
+  }
+
+  setProductActive(id: number, active: boolean): Observable<Product> {
+    return this.data.setProductActive(id, active).pipe(
+      tap((saved) => this.mergeInto(this._products, saved)),
+    );
+  }
+
+  deleteProductPhoto(productId: number, photoId: number): Observable<Product> {
+    return this.data.deleteProductPhoto(productId, photoId).pipe(
       tap((saved) => this.mergeInto(this._products, saved)),
     );
   }

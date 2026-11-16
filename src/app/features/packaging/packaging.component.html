@@ -1,19 +1,32 @@
 <div class="page-head">
   <div>
-    <h1>Packaging</h1>
-    <div class="muted">Define carton templates so customers can order whole cartons.</div>
+    <h1>Carton packing setup</h1>
+    <div class="muted">Choose a product, then create or edit the carton size groups used by order entry.</div>
   </div>
 </div>
 
 <div class="card picker">
   <div class="field">
+    <label for="product-search">Search product by name or code</label>
+    <input
+      id="product-search"
+      type="search"
+      [value]="productSearch()"
+      (input)="productSearch.set($any($event.target).value)"
+      placeholder="Type product name, code or brand"
+    />
+  </div>
+  <div class="field">
     <label for="product">Product</label>
-    <select id="product" (change)="selectProduct($any($event.target).value)">
+    <select id="product" [value]="selectedProductId() ?? 0" (change)="selectProduct($any($event.target).value)">
       <option value="0">Select a product…</option>
-      @for (p of products(); track p.id) {
-        <option [value]="p.id">{{ p.name }} · {{ p.code }}</option>
+      @for (p of filteredProducts(); track p.id) {
+        <option [value]="p.id">{{ p.code }} · {{ p.name }}</option>
       }
     </select>
+    @if (!filteredProducts().length) {
+      <small class="muted">No products match that search.</small>
+    }
   </div>
 </div>
 
@@ -22,41 +35,55 @@
 } @else if (error()) {
   <div class="notice error">{{ error() }}</div>
 } @else if (selectedProduct(); as product) {
-  <!-- Existing templates -->
   <div class="card">
     <div class="card-head">
-      <h2>Existing templates</h2>
-      <span class="pill gray">{{ existingPackings().length }}</span>
+      <div>
+        <h2>{{ product.name }}</h2>
+        <div class="muted">{{ product.code }} · {{ product.brand }}</div>
+      </div>
+      <span class="pill gold">{{ product.sizes.length }} sizes</span>
     </div>
-    @if (!existingPackings().length) {
-      <div class="empty">No carton templates yet for this product.</div>
-    } @else {
-      <div class="template-list">
-        @for (k of existingPackings(); track k.id) {
-          <div class="template">
-            <div>
-              <strong>{{ k.name }}</strong>
-              <div class="muted">{{ rowsText(k) }}</div>
-            </div>
-            <div class="template-right">
-              <span class="pill gold">{{ packingTotal(k) }} pairs/carton</span>
-              <button class="btn small danger" (click)="removeTemplate(k)">Remove</button>
-            </div>
+
+    <div class="template-picker">
+      <button type="button" class="btn small" [class.primary]="editingPackingId() === 'new'" (click)="startNewTemplate()">
+        + New template
+      </button>
+      @for (packing of existingPackings(); track packing.id) {
+        <button
+          type="button"
+          class="btn small"
+          [class.primary]="editingPackingId() === packing.id"
+          (click)="loadTemplate(packing.id.toString())"
+        >
+          {{ packing.name }} <span class="muted">· {{ packing.rows.length }} sizes</span>
+        </button>
+      }
+      @if (!existingPackings().length && editingPackingId() !== 'new') {
+        <span class="muted">No active templates yet.</span>
+      }
+    </div>
+
+    @if (archivedPackings().length) {
+      <details class="archived-list">
+        <summary>Archived templates ({{ archivedPackings().length }})</summary>
+        @for (packing of archivedPackings(); track packing.id) {
+          <div class="archived-template">
+            <span><strong>{{ packing.name }}</strong><small>{{ rowsText(packing) }}</small></span>
+            <button class="btn small" [disabled]="saving()" (click)="restoreTemplate(packing)">Restore</button>
           </div>
         }
-      </div>
+      </details>
     }
   </div>
 
-  <!-- New template -->
   <div class="card">
     <div class="card-head">
-      <h2>Add a template</h2>
+      <h2>{{ editingPackingId() === 'new' ? 'Create template' : 'Edit template' }}</h2>
       <span class="pill gold">{{ draftTotal() }} pairs/carton</span>
     </div>
 
     <div class="field name-field">
-      <label for="tpl-name">Template name</label>
+      <label for="tpl-name">Template name *</label>
       <input
         id="tpl-name"
         [value]="draftName()"
@@ -65,25 +92,48 @@
       />
     </div>
 
-    <div class="size-grid">
-      @for (r of draftRows(); track r.size) {
-        <div class="size-cell">
-          <label [attr.for]="'pairs-' + r.size">Size {{ r.size }}</label>
+    <div class="rows-head">
+      <div><strong>Size-wise pairs per carton</strong><small>Each row needs a unique size and a positive whole pair count.</small></div>
+      <button class="btn small" (click)="addRow()">+ Add size</button>
+    </div>
+    <div class="packing-rows">
+      @for (row of draftRows(); track $index) {
+        <div class="packing-row">
+          <label [attr.for]="'row-size-' + $index">Size</label>
           <input
-            [id]="'pairs-' + r.size"
+            [id]="'row-size-' + $index"
             type="number"
-            min="0"
+            min="1"
             step="1"
-            [value]="r.pairs"
-            (input)="setDraftPairs(r.size, $any($event.target).value)"
+            [value]="row.size || ''"
+            (input)="setDraftSize($index, $any($event.target).value)"
           />
+          <label [attr.for]="'row-pairs-' + $index">Pairs in carton</label>
+          <input
+            [id]="'row-pairs-' + $index"
+            type="number"
+            min="1"
+            step="1"
+            [value]="row.pairs"
+            (input)="setDraftPairs($index, $any($event.target).value)"
+          />
+          <button class="btn small danger" [disabled]="draftRows().length === 1" (click)="removeRow($index)" aria-label="Remove size row">Remove</button>
         </div>
+      } @empty {
+        <div class="empty">Add a size row to start this template.</div>
       }
     </div>
 
+    <div class="distribution notice">
+      <strong>{{ draftTotal() }} pairs/carton</strong>
+      <span>{{ draftRowsText() }}</span>
+    </div>
     <div class="actions">
+      @if (selectedTemplate(); as packing) {
+        <button class="btn danger" [disabled]="saving()" (click)="archiveTemplate(packing)">Archive template</button>
+      }
       <button class="btn primary" [disabled]="saving()" (click)="saveTemplate()">
-        {{ saving() ? 'Saving…' : 'Save template' }}
+        {{ saving() ? 'Saving…' : editingPackingId() === 'new' ? 'Save template' : 'Save changes' }}
       </button>
     </div>
   </div>

@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
-import { Observable, of, throwError } from 'rxjs';
+import { from, Observable, of, throwError } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { delay } from 'rxjs/operators';
 import {
   AuthUser,
@@ -114,6 +115,13 @@ export class MockDataService extends DataService {
     return of(this.read<Staff[]>(KEYS.staff, [])).pipe(delay(LATENCY_MS));
   }
 
+  updateStaffAccount(staff: Staff, _password: string): Observable<Staff> {
+    const rows = this.read<Staff[]>(KEYS.staff, []);
+    const saved = this.upsert(rows, staff, (item) => item.id, (max) => max + 1);
+    this.write(KEYS.staff, rows);
+    return of(saved).pipe(delay(LATENCY_MS));
+  }
+
   getOrders(): Observable<Order[]> {
     return of(this.read<Order[]>(KEYS.orders, [])).pipe(delay(LATENCY_MS));
   }
@@ -124,6 +132,33 @@ export class MockDataService extends DataService {
     const saved = this.upsert(brands, brand, (b) => b.id, (max) => max + 1);
     this.write(KEYS.brands, brands);
     return of(saved).pipe(delay(LATENCY_MS));
+  }
+
+  setBrandSizeLock(brand: Brand, locked: boolean): Observable<Brand> {
+    const brands = this.read<Brand[]>(KEYS.brands, []);
+    const saved = { ...brand, sizeLocked: locked };
+    this.upsert(brands, saved, (item) => item.id, (max) => max + 1);
+    this.write(KEYS.brands, brands);
+    return of(saved).pipe(delay(LATENCY_MS));
+  }
+
+  uploadBrandLogo(brand: Brand, file: File): Observable<Brand> {
+    const reader = new FileReader();
+    const logoData = new Promise<string>((resolve, reject) => {
+      reader.onload = () => resolve(String(reader.result ?? ''));
+      reader.onerror = () => reject(new Error('Could not read the logo file.'));
+      reader.readAsDataURL(file);
+    });
+    return from(logoData).pipe(
+      map((logoUrl) => {
+        const brands = this.read<Brand[]>(KEYS.brands, []);
+        const saved = { ...brand, logoUrl };
+        this.upsert(brands, saved, (item) => item.id, (max) => max + 1);
+        this.write(KEYS.brands, brands);
+        return saved;
+      }),
+      delay(LATENCY_MS),
+    );
   }
 
   saveProduct(product: Product): Observable<Product> {
@@ -138,6 +173,24 @@ export class MockDataService extends DataService {
     const product = products.find((item) => item.id === id);
     if (!product) return throwError(() => new Error('Product not found.')).pipe(delay(LATENCY_MS));
     product.archived = archived;
+    this.write(KEYS.products, products);
+    return of(product).pipe(delay(LATENCY_MS));
+  }
+
+  setProductActive(id: number, active: boolean): Observable<Product> {
+    const products = this.read<Product[]>(KEYS.products, []);
+    const product = products.find((item) => item.id === id);
+    if (!product) return throwError(() => new Error('Product not found.')).pipe(delay(LATENCY_MS));
+    product.active = active;
+    this.write(KEYS.products, products);
+    return of(product).pipe(delay(LATENCY_MS));
+  }
+
+  deleteProductPhoto(productId: number, photoId: number): Observable<Product> {
+    const products = this.read<Product[]>(KEYS.products, []);
+    const product = products.find((item) => item.id === productId);
+    if (!product) return throwError(() => new Error('Product not found.')).pipe(delay(LATENCY_MS));
+    product.images = product.images.filter((image) => image.id !== photoId);
     this.write(KEYS.products, products);
     return of(product).pipe(delay(LATENCY_MS));
   }

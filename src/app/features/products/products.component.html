@@ -15,16 +15,19 @@
     @if (orderingMode()) {
       <button class="btn" (click)="goToBasket()">Open basket</button>
     }
-    @if (isStaff() && !isStaffOrdering()) {
+    @if (canCreateOrders() && !isStaffOrdering() && !canManage()) {
       <button class="btn" (click)="openPicker()">＋ Create order</button>
     }
     @if (canManage() && !isStaffOrdering()) {
-      <button class="btn primary" (click)="openAdd()">＋ Add product</button>
+      @if (canTakePhotoOrder()) { <button class="btn" (click)="openPhotoOrder()">Take photo order</button> }
+      <button class="btn" (click)="openShowcase()">Fast-selling &amp; schemes</button>
+      @if (canCreateOrders()) { <button class="btn" (click)="openPicker()">Create order</button> }
+      @if (canManageProducts()) { <button class="btn primary" (click)="openAdd()">Add product</button> }
     }
   </div>
 </div>
 
-@if (isStaff() && !isStaffOrdering()) {
+@if (canCreateOrders() && !isStaffOrdering() && !canManage()) {
   <div class="notice staff-order">
     <span>Create an order on behalf of a customer:</span>
     <select class="staff-select" (change)="startStaffOrder($any($event.target).value)">
@@ -42,38 +45,89 @@
   </div>
 }
 
+<div class="catalogue-search card">
 <div class="toolbar">
-  <input
-    class="search"
-    placeholder="Search product, code, brand…"
-    [value]="search()"
-    (input)="search.set($any($event.target).value)"
-  />
-  <select
-    class="brand-select"
-    [value]="brandFilter()"
-    (change)="brandFilter.set($any($event.target).value)"
-  >
-    @for (b of brandOptions(); track b) {
-      <option [value]="b">{{ b }}</option>
+  <div class="search-box">
+    <input
+      class="search"
+      placeholder="Search any product, code or brand…"
+      [value]="search()"
+      (input)="search.set($any($event.target).value)"
+    />
+    @if (canManage() && !orderingMode()) {
+      <label class="camera-btn" title="Search by product photo" aria-label="Search by product photo">
+        📷
+        <input type="file" accept="image/*" capture="environment" (change)="searchByPhoto($event)" />
+      </label>
     }
-  </select>
+  </div>
+  @if (canManage() && !orderingMode()) {
+    <button class="btn" (click)="toggleAdvancedSearch()">
+      {{ advancedOpen() ? 'Hide advanced search −' : 'Advanced search +' }}
+    </button>
+  }
   @if (orderingMode() && activeCustomer()) {
     <span class="pill gold">Category {{ activeCustomer()?.category }}</span>
   }
 </div>
 
-@if (!orderingMode()) {
+@if (imageSearchPreview() || imageSearchMessage()) {
+  <div class="image-search-result notice">
+    @if (imageSearchPreview()) {
+      <img [src]="imageSearchPreview()" alt="Selected photo for product search" />
+    }
+    <span>{{ imageSearching() ? 'Comparing this photo with saved product photos…' : imageSearchMessage() }}</span>
+    @if (!imageSearching()) {
+      <button class="btn small" (click)="imageSearchPreview.set(''); imageSearchMessage.set('')">Clear</button>
+    }
+  </div>
+}
+
+@if (advancedOpen() && canManage() && !orderingMode()) {
+  <div class="advanced-search card">
+    <label class="field">
+      <span>Brand / status</span>
+      <select [value]="draftBrandFilter()" (change)="draftBrandFilter.set($any($event.target).value)">
+        @for (brand of brandOptions(); track brand) { <option [value]="brand">{{ brand === 'All' ? 'All brands' : brand }}</option> }
+      </select>
+    </label>
+    <label class="field">
+      <span>Size</span>
+      <select [value]="draftSizeFilter()" (change)="draftSizeFilter.set($any($event.target).value)">
+        @for (size of sizeOptions(); track size) { <option [value]="size">{{ size === 'All' ? 'All sizes' : size }}</option> }
+      </select>
+    </label>
+    <label class="field">
+      <span>Minimum MRP (₹)</span>
+      <input type="number" min="0" placeholder="No minimum" [value]="draftMinMrp()" (input)="draftMinMrp.set($any($event.target).value)" />
+    </label>
+    <label class="field">
+      <span>Maximum MRP (₹)</span>
+      <input type="number" min="0" placeholder="No maximum" [value]="draftMaxMrp()" (input)="draftMaxMrp.set($any($event.target).value)" />
+    </label>
+    <label class="field">
+      <span>Sort results</span>
+      <select [value]="draftSort()" (change)="draftSort.set($any($event.target).value)">
+        <option>Relevance</option><option>A–Z</option><option>MRP: low to high</option><option>MRP: high to low</option>
+      </select>
+    </label>
+    <button class="btn gold" (click)="applyAdvancedSearch()">Apply filters</button>
+    <button class="btn" (click)="resetAdvancedSearch()">Reset</button>
+  </div>
+}
+</div>
+
+@if (!orderingMode() && !loading() && !error()) {
   <div class="status-tabs">
     <button class="status-tab" [class.active]="statusFilter() === 'All'" (click)="statusFilter.set('All')">
-      All products
+      All products ({{ counts().all }})
     </button>
     <button
       class="status-tab active-tab"
       [class.active]="statusFilter() === 'Active'"
       (click)="statusFilter.set('Active')"
     >
-      Active ({{ counts().active }})
+      Activated ({{ counts().active }})
     </button>
     <button
       class="status-tab archived-tab"
@@ -84,22 +138,24 @@
     </button>
     <button
       class="status-tab"
+      [class.deactivated-tab]="true"
       [class.active]="statusFilter() === 'Deactivated'"
       (click)="statusFilter.set('Deactivated')"
     >
       Deactivated ({{ counts().deactivated }})
     </button>
   </div>
-  <div class="result-count muted">{{ filtered().length }} products found</div>
+  <div class="status-help muted">Archived and deactivated are separate statuses. Archive / Restore remains unchanged.</div>
+  <div class="result-count muted">{{ results().length }} products found</div>
 }
 
 @if (loading()) {
   <div class="card empty">Loading products…</div>
 } @else if (error()) {
-  <div class="notice error">{{ error() }}</div>
+  <div class="notice error">{{ error() }} <button class="btn small" (click)="retryCatalogLoad()">Retry</button></div>
 } @else {
   <div class="grid product-grid">
-    @for (p of filtered(); track p.id) {
+    @for (p of results(); track p.id) {
       <article class="card product">
         <div class="product-art">
           @if (imageSrc(p)) {
@@ -119,22 +175,23 @@
             </div>
             @if (showOrderButton()) {
               <button class="btn small primary" (click)="openOrder(p)">Order</button>
-            } @else {
+            } @else if (canManageProducts()) {
               <button class="btn small" (click)="openEdit(p)">Edit</button>
             }
           </div>
 
           @if (canManage() && !orderingMode()) {
             <div class="product-actions">
-              <button class="btn small" (click)="openEdit(p)">A/B/C prices</button>
-              <button class="btn small" (click)="openEdit(p)">Photos ({{ photoCount(p) }})</button>
-              <button
-                class="btn small"
-                [class.danger]="!p.archived"
-                (click)="toggleArchive(p)"
-              >
-                {{ p.archived ? 'Restore' : 'Archive' }}
-              </button>
+              @if (canManagePrices()) { <button class="btn small" (click)="openPriceManager(p)">A/B/C prices</button> }
+              @if (canManagePhotos()) { <button class="btn small" (click)="openPhotoManager(p)">Photos ({{ photoCount(p) }})</button> }
+              @if (canManageProducts()) {
+                <button class="btn small" [class.danger]="!p.archived" (click)="toggleArchive(p)">
+                  {{ p.archived ? 'Restore' : 'Archive' }}
+                </button>
+                <button class="btn small" [class.danger]="p.active" [disabled]="!!p.archived" (click)="toggleActive(p)">
+                  {{ p.active ? 'Deactivate' : 'Activate' }}
+                </button>
+              }
             </div>
           }
         </div>
@@ -161,15 +218,10 @@
   <div class="modal-backdrop" (click)="closePicker()">
     <div class="modal picker-modal" (click)="$event.stopPropagation()">
       <div class="modal-head">
-        <h2>Create order · choose a customer</h2>
-        <button class="icon-btn" (click)="closePicker()" aria-label="Close">✕</button>
+        <h2>Create order: choose a customer</h2>
+        <button class="icon-btn" (click)="closePicker()" aria-label="Close">×</button>
       </div>
-      <input
-        class="search picker-search"
-        placeholder="Search customer name, code or phone…"
-        [value]="pickerSearch()"
-        (input)="pickerSearch.set($any($event.target).value)"
-      />
+      <input class="search picker-search" placeholder="Search customer name, code or phone..." [value]="pickerSearch()" (input)="pickerSearch.set($any($event.target).value)" />
       <div class="picker-results">
         @for (c of pickerResults(); track c.id) {
           <button class="picker-item" (click)="chooseCustomer(c.id)">
@@ -180,6 +232,96 @@
           <div class="empty">No active customers match.</div>
         }
       </div>
+    </div>
+  </div>
+}
+
+@if (priceProduct(); as product) {
+  <div class="modal-backdrop" (click)="closePriceManager()">
+    <div class="modal price-modal" (click)="$event.stopPropagation()">
+      <div class="modal-head"><h2>Edit category prices</h2><button class="icon-btn" (click)="closePriceManager()" aria-label="Close">×</button></div>
+      <p class="muted">{{ product.name }} · {{ product.code }} · MRP {{ money(product.mrp) }}</p>
+      <div class="price-editor-grid">
+        @for (tier of priceTiers; track tier) {
+          <label class="field"><span>Category {{ tier }} price (₹)</span><input type="number" min="0" step="1" [value]="priceDraft()[tier]" (input)="setPrice(tier, $any($event.target).value)" /></label>
+        }
+      </div>
+      <small class="muted">Use 0 to leave a customer category without a display price.</small>
+      <div class="modal-actions"><button class="btn" (click)="closePriceManager()">Cancel</button><button class="btn primary" [disabled]="priceSaving()" (click)="savePrices()">{{ priceSaving() ? 'Saving...' : 'Save prices' }}</button></div>
+    </div>
+  </div>
+}
+
+@if (photoProduct(); as product) {
+  <div class="modal-backdrop" (click)="closePhotoManager()">
+    <div class="modal photo-manager-modal" (click)="$event.stopPropagation()">
+      <div class="modal-head"><h2>Manage product photos</h2><button class="icon-btn" (click)="closePhotoManager()" aria-label="Close">×</button></div>
+      <p class="muted">{{ product.name }} · If all photos are archived, the item is hidden from customer ordering.</p>
+      @if (!supportsPhotoArchive) { <div class="notice">Photo archive/restore is not supported by the connected API. You can still upload photos here.</div> }
+      <label class="field"><span>Add photos</span><input type="file" accept="image/*" multiple (change)="addProductPhotos($event)" /></label>
+      <div class="photo-manager-list">
+        @for (photo of photoDraftImages(); track $index) {
+          <div class="photo-manager-item">
+            <img [src]="photo.src" [alt]="photo.name" />
+            <span>{{ photo.name }}</span>
+            <button class="btn small" [disabled]="!supportsPhotoArchive" (click)="togglePhoto($index)">{{ photo.active ? 'Archive' : 'Restore' }}</button>
+            <button class="btn small danger" [disabled]="!photo.id" (click)="removeDraftPhoto($index)">Remove</button>
+            @if (photo.id) { <button class="btn small danger" (click)="deleteProductPhoto(product, photo)">Delete</button> }
+          </div>
+        } @empty {
+          <div class="empty">No photos added yet.</div>
+        }
+      </div>
+      <div class="modal-actions"><button class="btn" (click)="closePhotoManager()">Cancel</button><button class="btn primary" [disabled]="photosSaving()" (click)="savePhotoChanges()">{{ photosSaving() ? 'Saving...' : 'Save photos' }}</button></div>
+    </div>
+  </div>
+}
+
+@if (showcaseOpen()) {
+  <div class="modal-backdrop" (click)="closeShowcase()">
+    <div class="modal showcase-modal" (click)="$event.stopPropagation()">
+      <div class="modal-head"><h2>Fast-selling products and schemes</h2><button class="icon-btn" (click)="closeShowcase()" aria-label="Close">×</button></div>
+      <label class="field"><span>Scheme message</span><input [value]="schemeMessage()" (input)="schemeMessage.set($any($event.target).value)" placeholder="Add a short message for customers" /></label>
+      <h3>Featured products</h3>
+      <div class="showcase-products">
+        @for (product of featureableProducts(); track product.id) {
+          <label><input type="checkbox" [checked]="featuredIds().includes(product.id)" (change)="toggleFeatured(product.id)" /> {{ product.name }} · {{ product.code }}</label>
+        }
+      </div>
+      <label class="field"><span>Banner photos</span><input type="file" accept="image/jpeg,image/png,image/webp" multiple (change)="addShowcaseBanners($event)" /></label>
+      <div class="showcase-banners">
+        @for (banner of showcaseBanners(); track $index) {
+          <div><img [src]="banner.src" [alt]="banner.name" /><span>{{ banner.name }}</span><button class="btn small danger" (click)="removeShowcaseBanner($index)">Remove</button></div>
+        }
+      </div>
+      <p class="muted">Showcase settings are saved on this device.</p>
+      <div class="modal-actions"><button class="btn" (click)="closeShowcase()">Cancel</button><button class="btn primary" (click)="saveShowcase()">Save featured products and banners</button></div>
+    </div>
+  </div>
+}
+
+@if (photoOrderOpen()) {
+  <div class="modal-backdrop" (click)="closePhotoOrder()">
+    <div class="modal photo-order-modal" (click)="$event.stopPropagation()">
+      <div class="modal-head"><h2>Take Photo Order</h2><button class="icon-btn" (click)="closePhotoOrder()" aria-label="Close">×</button></div>
+      <label class="field"><span>Customer *</span><select [value]="photoCustomerId()" (change)="photoCustomerId.set(+$any($event.target).value)"><option value="0">Choose customer</option>@for (customer of orderableCustomers(); track customer.id) {<option [value]="customer.id">{{ customer.name }} · {{ customer.code }}</option>}</select></label>
+      <div class="field photo-upload"><label for="photo-order-files">Take or upload photos</label><input id="photo-order-files" type="file" accept="image/*" capture="environment" multiple (change)="addPhotoOrderFiles($event)" /><small class="muted">Add up to 12 photos and caption each one.</small></div>
+      @if (photoDraft().length) {
+        <div class="photo-draft-list">
+          @for (photo of photoDraft(); track $index) {
+            <div class="photo-draft-item"><img [src]="photo.src" [alt]="photo.caption || photo.name" /><div class="field"><label [attr.for]="'photo-caption-' + $index">Caption *</label><input [id]="'photo-caption-' + $index" [value]="photo.caption" (input)="setPhotoCaption($index, $any($event.target).value)" placeholder="Product name or details" /></div><button class="btn small danger" (click)="removePhotoDraft($index)">Remove</button></div>
+          }
+        </div>
+      } @else { <div class="empty">No photos yet. Take or upload a product picture above.</div> }
+      @if (photoRequests().length) {
+        <details class="saved-photo-requests">
+          <summary>Saved photo requests on this device ({{ photoRequests().length }})</summary>
+          @for (request of photoRequests(); track request.id) {
+            <div class="saved-photo-request"><strong>{{ request.id }} · {{ request.customerName }}</strong><span>{{ request.items.length }} photo(s) · {{ formatPhotoDate(request.createdAt) }}</span></div>
+          }
+        </details>
+      }
+      <div class="modal-actions"><button class="btn" (click)="closePhotoOrder()">Cancel</button><button class="btn primary" [disabled]="!photoDraft().length || !photoCustomerId()" (click)="submitPhotoOrder()">Send to Photo Orders</button></div>
     </div>
   </div>
 }

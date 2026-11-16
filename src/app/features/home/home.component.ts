@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { Brand, Customer, Product } from '../../core/models';
 import { AppStateService } from '../../core/services/app-state.service';
 import { CatalogService } from '../../core/services/catalog.service';
+import { ProductShowcaseService } from '../../core/services/product-showcase.service';
 import { isOrderableFor } from '../../core/utils/pricing.util';
 
 /** Customer landing: welcome, brand tiles, and a few featured products. */
@@ -17,8 +18,11 @@ export class HomeComponent implements OnInit {
   private readonly catalog = inject(CatalogService);
   private readonly appState = inject(AppStateService);
   private readonly router = inject(Router);
+  private readonly showcase = inject(ProductShowcaseService);
 
   readonly loading = this.catalog.loading;
+  readonly banners = this.showcase.banners;
+  readonly schemeMessage = this.showcase.message;
 
   readonly customer = computed<Customer | null>(() => {
     const id = this.appState.activeCustomerId();
@@ -34,13 +38,14 @@ export class HomeComponent implements OnInit {
     })),
   );
 
-  /** First few orderable products, used as "featured". */
-  readonly featured = computed<Product[]>(() =>
-    this.catalog
-      .products()
-      .filter((p) => isOrderableFor(p, this.customer()))
-      .slice(0, 6),
-  );
+  /** Admin-picked fast sellers, falling back to the first available products. */
+  readonly featured = computed<Product[]>(() => {
+    const available = this.catalog.products().filter((product) => isOrderableFor(product, this.customer()));
+    const ids = this.showcase.featuredProductIds();
+    return ids.length
+      ? ids.map((id) => available.find((product) => product.id === id)).filter((product): product is Product => !!product)
+      : available.slice(0, 6);
+  });
 
   ngOnInit(): void {
     this.catalog.load();
@@ -52,5 +57,9 @@ export class HomeComponent implements OnInit {
 
   browseAll(): void {
     this.router.navigate(['/app', 'products']);
+  }
+
+  imageSrc(product: Product): string | null {
+    return product.images.find((image) => image.active && image.src)?.src ?? null;
   }
 }

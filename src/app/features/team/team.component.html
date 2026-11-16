@@ -1,0 +1,228 @@
+<div class="page-head">
+  <div>
+    <h1>Team &amp; permissions</h1>
+    <p>
+      Separate staff logins. Each Admin sees only permitted tabs and each Backend User sees
+      assigned work.
+    </p>
+  </div>
+  <button class="btn gold" (click)="openAdd()">＋ Add staff</button>
+</div>
+
+<section class="stats-grid" aria-label="Team account summary">
+  <article class="card stat-card">
+    <span>Super Admin</span>
+    <strong>{{ superAdminCount() }}</strong>
+    <small>Owner access</small>
+  </article>
+  <article class="card stat-card">
+    <span>Admins</span>
+    <strong>{{ adminCount() }}/10</strong>
+    <small>Individual permissions</small>
+  </article>
+  <article class="card stat-card">
+    <span>Backend Users</span>
+    <strong>{{ backendCount() }}/20</strong>
+    <small>Assigned workload</small>
+  </article>
+</section>
+
+<section class="card staff-panel">
+  <header class="panel-head">
+    <h2>Staff login accounts</h2>
+    <span class="count-pill">{{ staff().length }} account(s)</span>
+  </header>
+
+  @if (loading()) {
+    <div class="empty">Loading staff accounts…</div>
+  } @else if (error()) {
+    <div class="notice error" role="alert">
+      <span>{{ error() }}</span>
+      <button class="btn small" (click)="loadStaff()">Retry</button>
+    </div>
+  } @else {
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Name / email</th>
+            <th>Login ID</th>
+            <th>Role</th>
+            <th>Allowed features</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (account of staff(); track account.id) {
+            <tr>
+              <td>
+                <strong>{{ account.name }}</strong>
+                <small>{{ account.email }}</small>
+              </td>
+              <td><strong>{{ account.loginId || '—' }}</strong></td>
+              <td>{{ account.role }}</td>
+              <td>
+                @if (account.role === 'Super Admin') {
+                  <span class="feature-chip full">Full access</span>
+                } @else if (account.permissions.length) {
+                  <div class="feature-list">
+                    @for (feature of account.permissions; track feature) {
+                      <span class="feature-chip">{{ feature }}</span>
+                    }
+                  </div>
+                } @else {
+                  <span class="muted">No features assigned</span>
+                }
+              </td>
+              <td>
+                <span class="status-pill" [class.inactive]="!account.active">
+                  {{ account.active ? 'Active' : 'Inactive' }}
+                </span>
+              </td>
+              <td><button class="btn small" (click)="openEdit(account)">Edit credentials</button></td>
+            </tr>
+          } @empty {
+            <tr><td colspan="6" class="empty">No staff accounts found.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>
+
+<aside class="card help-note">
+  <p>
+    <strong>How it works:</strong> Staff use their own Login ID and password. Admin permissions are
+    selected per account; Backend Users can be limited to assigned features.
+  </p>
+  <small>Creating accounts uses registration. Editing credentials and account status uses staff admin.</small>
+</aside>
+
+@if (modalOpen()) {
+  <div class="modal-backdrop" (click)="closeModal()">
+    <section
+      class="team-modal"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-labelledby]="editing() ? 'edit-staff-title' : 'add-staff-title'"
+      (click)="$event.stopPropagation()"
+    >
+      <header class="modal-head">
+        <div>
+          <h2 [id]="editing() ? 'edit-staff-title' : 'add-staff-title'">
+            {{ editing() ? 'Edit credentials' : 'Add staff' }}
+          </h2>
+          <p>
+            {{ editing() ? 'Update login details or account status.' : 'Create a separate team login and choose its access.' }}
+          </p>
+        </div>
+        <button type="button" class="close-btn" aria-label="Close" (click)="closeModal()">×</button>
+      </header>
+
+      <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <div class="form-grid">
+          <label class="field">
+            <span>Full name *</span>
+            <input formControlName="fullName" placeholder="e.g. Aarav Sharma" />
+            @if (form.controls.fullName.touched && form.controls.fullName.invalid) {
+              <small>Enter at least 3 characters.</small>
+            }
+          </label>
+          <label class="field">
+            <span>Login ID *</span>
+            <input formControlName="loginId" placeholder="Choose a login ID" />
+            @if (form.controls.loginId.touched && form.controls.loginId.invalid) {
+              <small>Use at least 3 characters.</small>
+            }
+          </label>
+          <label class="field">
+            <span>Email *</span>
+            <input type="email" formControlName="email" placeholder="name@company.com" />
+            @if (form.controls.email.touched && form.controls.email.invalid) {
+              <small>Enter a valid email.</small>
+            }
+          </label>
+          <label class="field">
+            <span>Password {{ editing() ? '(leave blank to keep current)' : '*' }}</span>
+            <input
+              type="password"
+              formControlName="password"
+              autocomplete="new-password"
+              [placeholder]="editing() ? 'No change' : '8+ characters, mixed case, number and symbol'"
+            />
+          </label>
+          @if (!editing()) {
+            <label class="field">
+              <span>Role *</span>
+              <select formControlName="role">
+                @for (role of roleOptions(); track role.value) {
+                  <option [value]="role.value">{{ role.label }}</option>
+                }
+              </select>
+            </label>
+          }
+        </div>
+
+        @if (!editing()) {
+          <section class="permissions">
+            <div class="permissions-head">
+              <div>
+                <h3>Allowed features</h3>
+                <p>Select the workspace sections this account can access.</p>
+              </div>
+              <span>{{ selectedMenuIds().length }} selected</span>
+            </div>
+
+            @if (loadingMenus()) {
+              <div class="empty">Loading permissions…</div>
+            } @else if (!menuOptions().length) {
+              <div class="notice error">
+                <span>{{ menuError() || 'No permissions are available.' }}</span>
+                <button type="button" class="btn small" (click)="retryMenus()">Retry</button>
+              </div>
+            } @else {
+              <div class="menu-list">
+                @for (menu of menuOptions(); track menu.id) {
+                  <label class="menu-choice">
+                    <input
+                      type="checkbox"
+                      [checked]="hasMenu(menu.id)"
+                      (change)="toggleMenu(menu.id, $any($event.target).checked)"
+                    />
+                    <span>
+                      <strong>{{ menu.title }}</strong>
+                      @if (menu.hasTab && menu.tabs.length) {
+                        <small>
+                          @for (tab of menu.tabs; track tab.id) {
+                            {{ tab.title }}@if (!$last) { · }
+                          }
+                        </small>
+                      }
+                    </span>
+                  </label>
+                }
+              </div>
+            }
+          </section>
+        }
+
+        <label class="active-choice">
+          <input type="checkbox" formControlName="active" />
+          Active account
+        </label>
+
+        <footer class="modal-actions">
+          <button type="button" class="btn" (click)="closeModal()">Cancel</button>
+          <button
+            type="submit"
+            class="btn gold"
+            [disabled]="saving() || (!editing() && (loadingMenus() || !menuOptions().length))"
+          >
+            {{ saving() ? 'Saving…' : editing() ? 'Save changes' : 'Create account' }}
+          </button>
+        </footer>
+      </form>
+    </section>
+  </div>
+}

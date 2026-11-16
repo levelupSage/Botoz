@@ -172,21 +172,25 @@ export class ProductModalComponent {
       category: existing?.category ?? '',
       categoryPrices,
       active: raw.active,
+      archived: existing?.archived,
       images,
       sizes: sizes.length ? sizes : (existing?.sizes ?? []),
       packings: existing?.packings ?? [],
+      packingGroupIds: existing?.packingGroupIds,
+      enabledPackingGroupIds: existing?.enabledPackingGroupIds,
+      sizeGroups: existing?.sizeGroups,
     };
 
     this.saving.set(true);
     this.catalog.saveProduct(product).subscribe({
       next: () => {
         this.saving.set(false);
-        this.toast.show(existing ? 'Product updated' : 'Product added');
+        this.toast.success(existing ? 'Product updated successfully.' : 'Product added successfully.');
         this.saved.emit();
       },
       error: () => {
         this.saving.set(false);
-        this.toast.show('Could not save the product.');
+        this.toast.error('Could not save the product.');
       },
     });
   }
