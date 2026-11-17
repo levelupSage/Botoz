@@ -12,7 +12,7 @@
     </div>
   </div>
   <div class="head-actions">
-    @if (orderingMode()) {
+    @if (orderingMode() && (!isCustomer() || customerCanOrder())) {
       <button class="btn" (click)="goToBasket()">Open basket</button>
     }
     @if (canCreateOrders() && !isStaffOrdering() && !canManage()) {
@@ -26,6 +26,12 @@
     }
   </div>
 </div>
+
+@if (isCustomer() && !customerCanOrder()) {
+  <div class="notice error order-rights-notice" role="status">
+    Online ordering is disabled for this account. Contact your account manager for access.
+  </div>
+}
 
 @if (canCreateOrders() && !isStaffOrdering() && !canManage()) {
   <div class="notice staff-order">

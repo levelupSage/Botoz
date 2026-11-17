@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, OnInit } from '@a
 import { Router } from '@angular/router';
 import { Brand, Customer, Product } from '../../core/models';
 import { AppStateService } from '../../core/services/app-state.service';
+import { BrandService } from '../../core/services/brand.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { ProductShowcaseService } from '../../core/services/product-showcase.service';
 import { isOrderableFor } from '../../core/utils/pricing.util';
@@ -16,6 +17,7 @@ import { isOrderableFor } from '../../core/utils/pricing.util';
 })
 export class HomeComponent implements OnInit {
   private readonly catalog = inject(CatalogService);
+  private readonly brandService = inject(BrandService);
   private readonly appState = inject(AppStateService);
   private readonly router = inject(Router);
   private readonly showcase = inject(ProductShowcaseService);
@@ -30,7 +32,7 @@ export class HomeComponent implements OnInit {
   });
 
   readonly brandTiles = computed(() =>
-    this.catalog.activeBrands().map((brand) => ({
+    this.brandService.activeBrands().map((brand) => ({
       brand,
       available: this.catalog
         .products()
@@ -49,6 +51,7 @@ export class HomeComponent implements OnInit {
 
   ngOnInit(): void {
     this.catalog.load();
+    this.brandService.load();
   }
 
   browseBrand(brand: Brand): void {

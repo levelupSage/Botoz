@@ -11,6 +11,7 @@ import {
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Product, ProductImage } from '../../core/models';
 import { DataService } from '../../core/data/data.service';
+import { BrandService } from '../../core/services/brand.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { ToastService } from '../../core/services/toast.service';
 
@@ -27,6 +28,7 @@ import { ToastService } from '../../core/services/toast.service';
 })
 export class ProductModalComponent {
   private readonly fb = inject(FormBuilder);
+  private readonly brandService = inject(BrandService);
   private readonly catalog = inject(CatalogService);
   private readonly toast = inject(ToastService);
   private readonly data = inject(DataService);
@@ -37,7 +39,7 @@ export class ProductModalComponent {
   readonly cancelled = output<void>();
 
   readonly saving = signal(false);
-  readonly brands = this.catalog.brands;
+  readonly brands = this.brandService.brands;
   readonly supportsPhotoArchive = this.data.supportsPhotoArchive;
 
   /** Newly added photos (data URLs) + existing ones, editable here. */
@@ -61,6 +63,7 @@ export class ProductModalComponent {
   private hydrated = false;
 
   constructor() {
+    this.brandService.load();
     // Hydrate the form once brands + the product input are available.
     effect(() => {
       const brandsReady = this.brands().length > 0;

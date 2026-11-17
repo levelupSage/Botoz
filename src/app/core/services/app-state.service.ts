@@ -1,6 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { UserRole } from '../models';
 import { AuthService } from './auth.service';
+import { CustomerOrderRightsService } from './customer-order-rights.service';
 
 /**
  * UI-level session state derived from the authenticated user: which nav items
@@ -9,6 +10,7 @@ import { AuthService } from './auth.service';
 @Injectable({ providedIn: 'root' })
 export class AppStateService {
   private readonly auth = inject(AuthService);
+  private readonly customerOrderRights = inject(CustomerOrderRightsService);
 
   private readonly menuAliases: Record<string, string[]> = {
     Dashboard: ['dashboard'],
@@ -30,6 +32,9 @@ export class AppStateService {
 
   readonly role = computed<UserRole>(() => this.auth.role() ?? 'Customer');
   readonly isStaff = computed(() => this.role() !== 'Customer');
+  readonly customerCanOrder = computed(() =>
+    this.role() !== 'Customer' || this.customerOrderRights.canOrder(this.activeCustomerId()),
+  );
 
   /**
    * Customer selected by a staff member when creating an order on someone's
@@ -63,6 +68,9 @@ export class AppStateService {
 
   canAccessMenu(menu: string): boolean {
     const role = this.role();
+    if (role === 'Customer' && !this.customerCanOrder() && ['Basket', 'Orders'].includes(menu)) {
+      return false;
+    }
     if (role === 'Super Admin' || role === 'Customer') return true;
 
     const allowedMenus = this.auth.user()?.menus;
@@ -109,7 +117,7 @@ export class AppStateService {
       case 'Customer':
         return ['Home', 'Products', 'Basket', 'Orders', 'Account'];
       case 'Backend User':
-        return ['Dashboard', 'New Orders', 'Products', 'Packaging', 'Catalogues'];
+        return ['Dashboard', 'New Orders', 'Products', 'Packaging', 'Customers', 'Catalogues'];
       case 'Admin':
       case 'Super Admin':
         return [

@@ -12,8 +12,68 @@
 
 .toolbar {
   display: flex;
+  flex-wrap: wrap;
   gap: 9px;
   margin-bottom: 16px;
+}
+
+.status-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 2px 0 14px;
+}
+
+.status-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 7px 13px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: #f5f5f6;
+  font-weight: 750;
+  background: var(--panel2);
+}
+
+.status-tab span:last-child {
+  opacity: 0.8;
+}
+
+.status-tab.all.selected {
+  border-color: var(--gold);
+  color: var(--gold2);
+  background: #30291b;
+}
+
+.status-tab.active {
+  background: #176b41;
+}
+
+.status-tab.active.selected {
+  border-color: #38a86c;
+}
+
+.status-tab.inactive {
+  background: #a91f27;
+}
+
+.status-tab.inactive.selected {
+  border-color: #ed6870;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #70dda0;
+  box-shadow: 0 0 0 3px rgb(112 221 160 / 15%);
+}
+
+.status-tab.inactive .status-dot {
+  background: #ff858b;
+  box-shadow: 0 0 0 3px rgb(255 133 139 / 15%);
 }
 
 .search {
@@ -28,6 +88,7 @@
 
 table {
   width: 100%;
+  min-width: 1200px;
   border-collapse: collapse;
   font-size: 12px;
 }
@@ -47,6 +108,7 @@ td {
   padding: 12px 9px;
   border-bottom: 1px solid var(--line);
   vertical-align: middle;
+  line-height: 1.45;
 }
 
 tr:last-child td {
@@ -55,8 +117,21 @@ tr:last-child td {
 
 .row-actions {
   display: flex;
+  flex-wrap: wrap;
+  min-width: 360px;
   gap: 6px;
-  white-space: nowrap;
+  white-space: normal;
+}
+
+.customer-status-pill {
+  color: #8fd3b4;
+  background: #176b41;
+}
+
+.customer-status-pill.deactivated {
+  border: 1px solid #9c3840;
+  color: #ffb6bd;
+  background: #49232b;
 }
 
 .notice.error {
@@ -65,53 +140,106 @@ tr:last-child td {
   color: light-dark(#8c3030, #f0b4b4);
 }
 
+.customer-save-error {
+  margin: 0 0 16px;
+}
+
 /* ---- Modal ----------------------------------------------------------- */
 .modal-backdrop {
   position: fixed;
+  z-index: 1100;
   inset: 0;
-  background: #0009;
   display: grid;
   place-items: center;
-  padding: 16px;
-  z-index: 50;
+  padding: 18px;
+  background: rgb(5 7 10 / 78%);
+  backdrop-filter: blur(5px);
 }
 
 .modal {
-  width: min(720px, 100%);
-  max-height: 92vh;
+  width: min(940px, 100%);
+  max-height: min(92vh, 920px);
+  max-height: min(92dvh, 920px);
   overflow: auto;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 17px;
-  padding: 21px;
-  box-shadow: 0 25px 80px #0005;
+  overscroll-behavior: contain;
+  border: 1px solid #3b3e46;
+  border-radius: 18px;
+  padding: 24px;
+  color: var(--text);
+  background: linear-gradient(145deg, #202228 0%, #191b20 72%);
+  box-shadow: 0 28px 100px rgb(0 0 0 / 65%);
 }
 
 .modal-head {
+  position: sticky;
+  z-index: 2;
+  top: -24px;
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 17px;
+  align-items: flex-start;
+  margin: -24px -24px 20px;
+  padding: 24px;
   gap: 12px;
+  border-bottom: 1px solid var(--line);
+  background: #1d1f24;
 }
 
 .modal-head h2 {
-  font-size: 20px;
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.modal-kicker {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--gold2);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.4px;
 }
 
 .icon-btn {
-  border: 0;
-  background: var(--panel2);
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid #3b3e46;
+  border-radius: 10px;
   color: var(--text);
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  background: var(--panel2);
+  font-size: 18px;
+}
+
+.icon-btn:hover:not(:disabled) {
+  border-color: var(--gold);
+  color: var(--gold2);
+}
+
+.modal .field input,
+.modal .field select,
+.modal .field textarea,
+.modal .pct input,
+.modal .override-row input {
+  min-height: 42px;
+  border-color: #3b3e46;
+  background: #13151a;
+}
+
+.modal .field input:focus,
+.modal .field select:focus,
+.modal .field textarea:focus,
+.modal .pct input:focus,
+.modal .override-row input:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgb(200 164 93 / 16%);
 }
 
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 13px;
+  gap: 16px;
 }
 
 .field.full {
@@ -119,8 +247,14 @@ tr:last-child td {
 }
 
 .err {
-  color: var(--red);
-  font-size: 11px;
+  color: #ff9292;
+  font-size: 12px;
+}
+
+.field .help {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
 }
 
 /* ---- Overrides ------------------------------------------------------- */
@@ -168,10 +302,38 @@ tr:last-child td {
 }
 
 .modal-actions {
+  position: sticky;
+  bottom: -24px;
+  z-index: 2;
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  margin-top: 19px;
+  margin: 20px -24px -24px;
+  padding: 16px 24px 24px;
+  border-top: 1px solid var(--line);
+  background: #1d1f24;
+}
+
+.order-rights-toggle {
+  margin-right: auto;
+  border-color: #138445;
+  color: #fff;
+  background: #15803d;
+  font-weight: 750;
+}
+
+.order-rights-toggle.enabled:hover:not(:disabled) {
+  border-color: #23a455;
+  background: #169447;
+}
+
+.order-rights-toggle.disabled {
+  border-color: #a52b34;
+  background: #b91c1c;
+}
+
+.order-rights-toggle.disabled:hover:not(:disabled) {
+  background: #d12b35;
 }
 
 /* ---- Station picker -------------------------------------------------- */
@@ -183,6 +345,12 @@ tr:last-child td {
 
 .station-row select {
   flex: 1;
+}
+
+.station-create {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 7px;
 }
 
 /* ---- Sections (brand discounts, overrides) --------------------------- */
@@ -213,6 +381,85 @@ tr:last-child td {
   padding: 8px 11px;
 }
 
+.discount-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(145px, 0.45fr) auto;
+  align-items: end;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.discount-field {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+
+.discount-field > label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.discount-editor > button {
+  min-height: 44px;
+  white-space: nowrap;
+}
+
+.discount-input input {
+  min-width: 0;
+  flex: 1;
+  text-align: right;
+}
+
+.discount-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.discount-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #202228;
+}
+
+.discount-entry strong {
+  margin-left: 8px;
+  color: var(--gold2);
+}
+
+.remove-discount {
+  padding: 4px 7px;
+  border: 0;
+  border-radius: 6px;
+  color: #ff9b9b;
+  background: transparent;
+  font-size: 11px;
+}
+
+.remove-discount:hover {
+  background: #482629;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .pct {
   display: flex;
   align-items: center;
@@ -238,11 +485,68 @@ tr:last-child td {
   margin-top: 14px;
 }
 
-@media (max-width: 560px) {
+@media (max-width: 700px) {
+  .modal-backdrop {
+    padding: 10px;
+  }
+
+  .modal {
+    max-height: 94vh;
+    max-height: 94dvh;
+    padding: 18px;
+    border-radius: 14px;
+  }
+
+  .modal-head {
+    top: -18px;
+    margin: -18px -18px 16px;
+    padding: 18px;
+  }
+
+  .modal-actions {
+    flex-wrap: wrap;
+    bottom: -18px;
+    margin: 18px -18px -18px;
+    padding: 14px 18px 18px;
+  }
+
+  .order-rights-toggle {
+    flex: 1 0 100%;
+    margin-right: 0;
+  }
+
   .form-grid {
     grid-template-columns: 1fr;
   }
+
   .field.full {
     grid-column: auto;
+  }
+
+  .page-head {
+    align-items: stretch;
+  }
+
+  .toolbar {
+    flex-direction: column;
+  }
+
+  .search,
+  .cat-select {
+    width: 100%;
+    max-width: none;
+  }
+
+  .row-actions {
+    flex-wrap: wrap;
+    white-space: normal;
+  }
+
+  .discount-editor {
+    grid-template-columns: minmax(0, 1fr) 110px;
+  }
+
+  .discount-editor > button {
+    grid-column: 1 / -1;
   }
 }

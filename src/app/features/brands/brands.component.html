@@ -3,73 +3,130 @@
     <h1>Brands</h1>
     <div class="muted">Active brands appear on customer home and product filters.</div>
   </div>
-  <button class="btn gold" (click)="toggleAdd()">＋ Add brand</button>
+  <button class="btn gold add-brand-trigger" type="button" (click)="toggleAdd()">+ Add brand</button>
 </div>
 
 @if (addOpen()) {
-  <div class="modal-backdrop" (click)="closeAdd()">
-    <section class="add-modal" role="dialog" aria-modal="true" aria-labelledby="add-brand-title" (click)="$event.stopPropagation()">
-      <div class="modal-head">
-        <h2 id="add-brand-title">{{ editingBrand() ? 'Rename brand' : 'Add brand' }}</h2>
-        <button type="button" class="modal-close" aria-label="Close" (click)="closeAdd()">×</button>
+<div class="modal-backdrop" (click)="closeAdd()" (keydown)="onModalKeydown($event)">
+  <section class="add-modal" role="dialog" aria-modal="true" aria-labelledby="add-brand-title"
+    aria-describedby="brand-modal-description" (click)="$event.stopPropagation()">
+    <div class="modal-head">
+      <div class="modal-title-wrap">
+        <span class="modal-kicker">BRAND MANAGEMENT</span>
+        <h2 id="add-brand-title">{{ editingBrand() ? 'Edit brand' : 'Add a brand' }}</h2>
+        <p id="brand-modal-description">Enter a unique brand name. You can add a logo and update its settings later.</p>
       </div>
-      <form [formGroup]="form" (ngSubmit)="add()" novalidate>
-        <div class="field">
-          <label for="brand-name">Brand name <span>*</span></label>
-          <input id="brand-name" formControlName="name" placeholder="Brand name" autofocus />
-          @if (form.controls.name.touched && form.controls.name.invalid) {
-            <small class="err">Enter a brand name up to 120 characters.</small>
+      <button type="button" class="modal-close" aria-label="Close dialog" [disabled]="saving()"
+        (click)="closeAdd()">x</button>
+    </div>
+    <form [formGroup]="form" (ngSubmit)="add()" novalidate>
+      <div class="field">
+        <label for="brand-name">Brand name <span aria-hidden="true">*</span></label>
+        <input #brandNameInput id="brand-name" formControlName="name" placeholder="For example, Puma" maxlength="120"
+          autocomplete="off" [attr.aria-invalid]="form.controls.name.touched && form.controls.name.invalid"
+          [attr.aria-describedby]="form.controls.name.touched && form.controls.name.invalid ? 'brand-name-hint brand-name-error' : 'brand-name-hint'" />
+        <div class="field-meta">
+          <small id="brand-name-hint">Use the name customers will recognize.</small>
+          <small>{{ form.controls.name.value.length }}/120</small>
+        </div>
+        @if (form.controls.name.touched && form.controls.name.invalid) {
+        <small class="err" id="brand-name-error">
+          @if (form.controls.name.hasError('required') || form.controls.name.hasError('pattern')) { Enter a brand name.
           }
-        </div>
-        <div class="modal-actions">
-          <button type="button" class="btn" (click)="closeAdd()">Cancel</button>
-          <button type="submit" class="btn gold" [disabled]="saving()">
-            {{ saving() ? 'Saving…' : editingBrand() ? 'Save changes' : 'Save brand' }}
-          </button>
-        </div>
-      </form>
-    </section>
-  </div>
+          @else { Brand name must be 120 characters or fewer. }
+        </small>
+        }
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn" [disabled]="saving()" (click)="closeAdd()">Cancel</button>
+        <button type="submit" class="btn gold save-brand" [disabled]="saving()">
+          {{ saving() ? 'Saving...' : (editingBrand() ? 'Save changes' : 'Create brand') }}
+        </button>
+      </div>
+    </form>
+  </section>
+</div>
 }
 
 @if (loading()) {
-  <div class="card empty">Loading brands…</div>
+<div class="card empty">Loading brands...</div>
 } @else if (error()) {
-  <div class="notice error">{{ error() }} <button class="btn small" (click)="retry()">Retry</button></div>
+<div class="notice error">{{ error() }} <button class="btn small" (click)="retry()">Retry</button></div>
 } @else {
-  <div class="brand-grid">
-    @for (row of rows(); track row.brand.id) {
-      <article class="card brand-card">
-        <div class="brand-main">
-          @if (row.brand.logoUrl) {
-            <img class="brand-logo" [src]="row.brand.logoUrl" [alt]="row.brand.name + ' logo'" />
-          } @else {
-            <div class="brand-logo initial">{{ initial(row.brand.name) }}</div>
-          }
-          <div class="brand-info">
-            <strong>{{ row.brand.name }}</strong>
-            <span>{{ row.productCount }} {{ row.productCount === 1 ? 'product' : 'products' }}</span>
-          </div>
-          <span class="pill" [class.inactive]="!row.brand.active">
-            {{ row.brand.active ? 'ACTIVE' : 'INACTIVE' }}
-          </span>
-        </div>
-        <div class="brand-actions">
-          <button class="btn small" (click)="toggle(row.brand)">
-            {{ row.brand.active ? 'Deactivate' : 'Activate' }}
-          </button>
-          <button class="btn small" (click)="rename(row.brand)">Rename</button>
-          <label class="btn small logo-upload">
-            ＋ {{ row.brand.logoUrl ? 'Replace logo' : 'Logo (.png)' }}
-            <input type="file" accept="image/png,image/jpeg,image/webp" (change)="uploadLogo(row.brand, $event)" />
-          </label>
-          <button class="btn small" (click)="toggleSizeLock(row.brand)">
-            {{ row.brand.sizeLocked ? '🔓 Unlock Size' : '🔒 Lock Size' }}
-          </button>
-        </div>
-      </article>
-    } @empty {
-      <div class="card empty">No brands yet.</div>
+<div class="brand-grid">
+  @for (brand of brands(); track brand.id) {
+  <article class="card brand-card">
+    <div class="brand-main">
+      @if (brand.logoUrl) {
+      <img class="brand-logo" [src]="brand.logoUrl" [alt]="brand.name + ' logo'" />
+      } @else {
+      <div class="brand-logo initial">{{ initial(brand.name) }}</div>
+      }
+      <div class="brand-info">
+        <strong>{{ brand.name }}</strong>
+      </div>
+      <span class="pill" [class.inactive]="!brand.active" [attr.aria-label]="brand.active ? 'Active' : 'Inactive'">
+        {{ brand.active ? 'ACTIVE' : 'INACTIVE' }}
+      </span>
+    </div>
+    <div class="brand-actions">
+      <button class="btn small" (click)="toggle(brand)">
+        <svg class="action-icon" viewBox="0 0 20 20" aria-hidden="true">
+          <path d="M10 2v7m4.95-4.95a7 7 0 1 1-9.9 0" />
+        </svg>
+        {{ brand.active ? 'Deactivate' : 'Activate' }}
+      </button>
+      <button class="btn small" (click)="rename(brand)">
+        <svg class="action-icon" viewBox="0 0 20 20" aria-hidden="true">
+          <path d="m3 14.5-.8 3.3 3.3-.8L16.8 5.7a2.1 2.1 0 0 0-3-3L3 14.5Z" />
+          <path d="m12.5 4 3.5 3.5" />
+        </svg>
+        Rename
+      </button>
+      <label class="btn small logo-upload">
+        <svg class="action-icon" viewBox="0 0 20 20" aria-hidden="true">
+          <rect x="2.5" y="3.5" width="15" height="13" rx="2" />
+          <circle cx="7" cy="8" r="1.5" />
+          <path d="m4 15 4.5-4 2.5 2 2-1.5 3 3.5" />
+        </svg>
+        {{ brand.logoUrl ? 'Replace logo' : 'Add logo' }}
+        <input type="file" accept="image/png,image/jpeg,image/webp" (change)="uploadLogo(brand, $event)" />
+      </label>
+      <button class="btn small" (click)="toggleSizeLock(brand)">
+        @if (brand.sizeLocked) {
+        <svg class="action-icon" viewBox="0 0 20 20" aria-hidden="true">
+          <rect x="3.5" y="8.5" width="13" height="9" rx="2" />
+          <path d="M6.5 8.5V6a3.5 3.5 0 0 1 6.7-1.4" />
+        </svg>
+        Unlock sizes
+        } @else {
+        <svg class="action-icon" viewBox="0 0 20 20" aria-hidden="true">
+          <rect x="3.5" y="8.5" width="13" height="9" rx="2" />
+          <path d="M6.5 8.5V6a3.5 3.5 0 0 1 7 0v2.5" />
+        </svg>
+        Lock sizes
+        }
+      </button>
+      <button class="btn small delete-brand" [disabled]="deletingBrandId() !== null" (click)="deleteBrand(brand)">
+        <svg class="action-icon" viewBox="0 0 20 20" aria-hidden="true">
+          <path d="M3 5.5h14M7 5.5V3.8h6v1.7m-8.5 0 .8 11h9.4l.8-11M8 8.5v5m4-5v5" />
+        </svg>
+        {{ deletingBrandId() === brand.id ? 'Deleting...' : 'Delete' }}
+      </button>
+
+    </div>
+    @if (brand.sizeLocked) {
+    <div class="brand-lock-message" role="status">
+      <svg class="action-icon" viewBox="0 0 20 20" aria-hidden="true">
+        <rect x="4" y="8.5" width="12" height="9" rx="2" />
+        <path d="M6.5 8.5V6a3.5 3.5 0 0 1 7 0v2.5" />
+      </svg>
+      Customer size-wise quantities locked
+    </div>
     }
-  </div>
+  </article>
+  } @empty {
+  <div class="card empty">No brands yet.</div>
+  }
+</div>
 }

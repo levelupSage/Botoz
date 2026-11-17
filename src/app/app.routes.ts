@@ -73,7 +73,7 @@ export const routes: Routes = [
       {
         path: 'customers',
         canActivate: [roleGuard],
-        data: { roles: ['Super Admin', 'Admin'], menu: 'Customers' },
+        data: { roles: ['Super Admin', 'Admin', 'Backend User'], menu: 'Customers' },
         loadComponent: () =>
           import('./features/customers/customers.component').then((m) => m.CustomersComponent),
       },

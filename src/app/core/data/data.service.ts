@@ -10,6 +10,7 @@ import {
   OrderStatus,
   Product,
   Staff,
+  Station,
 } from '../models';
 
 /**
@@ -37,6 +38,7 @@ export abstract class DataService {
   // ---- Brands ---------------------------------------------------------
   abstract getBrands(): Observable<Brand[]>;
   abstract saveBrand(brand: Brand): Observable<Brand>;
+  abstract deleteBrand(id: number): Observable<void>;
   abstract setBrandSizeLock(brand: Brand, locked: boolean): Observable<Brand>;
   abstract uploadBrandLogo(brand: Brand, file: File): Observable<Brand>;
 
@@ -51,6 +53,10 @@ export abstract class DataService {
   abstract getCustomers(): Observable<Customer[]>;
   abstract getCustomer(id: number): Observable<Customer>;
   abstract saveCustomer(customer: Customer): Observable<Customer>;
+  abstract setCustomerActive(customer: Customer, active: boolean): Observable<Customer>;
+  abstract deleteCustomer(id: number): Observable<void>;
+  abstract getStations(): Observable<Station[]>;
+  abstract createStation(name: string): Observable<Station>;
 
   // ---- Staff ----------------------------------------------------------
   abstract getStaff(): Observable<Staff[]>;

@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Customer, Product } from '../../core/models';
+import { BrandService } from '../../core/services/brand.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { activeImageSrc, hasActiveImage, money, priceFor } from '../../core/utils/pricing.util';
 
@@ -16,6 +17,7 @@ import { activeImageSrc, hasActiveImage, money, priceFor } from '../../core/util
 })
 export class CataloguesComponent implements OnInit {
   private readonly catalog = inject(CatalogService);
+  private readonly brandService = inject(BrandService);
 
   readonly loading = this.catalog.loading;
   readonly error = this.catalog.error;
@@ -28,7 +30,7 @@ export class CataloguesComponent implements OnInit {
   readonly includeSizes = signal(true);
   readonly includePrice = signal(false);
 
-  readonly brandOptions = computed(() => ['All', ...this.catalog.activeBrands().map((b) => b.name)]);
+  readonly brandOptions = computed(() => ['All', ...this.brandService.activeBrands().map((b) => b.name)]);
   readonly customerOptions = this.catalog.activeCustomers;
   readonly selectedCustomer = computed<Customer | null>(
     () => this.catalog.customerById(this.customerId()) ?? null,
@@ -59,6 +61,7 @@ export class CataloguesComponent implements OnInit {
 
   ngOnInit(): void {
     this.catalog.load();
+    this.brandService.load();
   }
 
   imageSrc(product: Product): string | null {

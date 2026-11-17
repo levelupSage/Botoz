@@ -1,23 +1,21 @@
 <div class="page-head">
   <div>
     <h1>Customers</h1>
-    <div class="subtitle">
-      Create and manage customer accounts. Category A/B/C prices apply by default; individual
-      overrides take priority.
-    </div>
+    <div class="subtitle">Manage unique customer IDs, stations, login credentials, and category pricing.</div>
   </div>
-  <button class="btn primary" (click)="openNew()">＋ Add customer</button>
+  <button class="btn primary" type="button" (click)="openNew()">+ Add customer</button>
 </div>
 
 <div class="toolbar">
   <input
     class="search"
-    placeholder="Search customers…"
+    type="search" aria-label="Search customers" placeholder="Search customers..."
     [value]="search()"
     (input)="search.set($any($event.target).value)"
   />
   <select
     class="cat-select"
+    aria-label="Filter by category"
     [value]="categoryFilter()"
     (change)="categoryFilter.set($any($event.target).value)"
   >
@@ -28,20 +26,35 @@
   </select>
 </div>
 
+<div class="status-tabs" role="group" aria-label="Filter customers by status">
+  <button type="button" class="status-tab all" [class.selected]="statusFilter() === 'All'" (click)="statusFilter.set('All')">
+    All <span>{{ customers().length }}</span>
+  </button>
+  <button type="button" class="status-tab active" [class.selected]="statusFilter() === 'Active'" (click)="statusFilter.set('Active')">
+    <span class="status-dot"></span> Active <span>{{ activeCount() }}</span>
+  </button>
+  <button type="button" class="status-tab inactive" [class.selected]="statusFilter() === 'Inactive'" (click)="statusFilter.set('Inactive')">
+    <span class="status-dot"></span> Deactivated <span>{{ inactiveCount() }}</span>
+  </button>
+</div>
+
 @if (loading()) {
-  <div class="card empty">Loading customers…</div>
+  <div class="card empty">Loading customers...</div>
 } @else if (error()) {
-  <div class="notice error">{{ error() }}</div>
+  <div class="notice error">
+    {{ error() }}
+    <button type="button" class="btn small" (click)="retryCatalog()">Retry</button>
+  </div>
 } @else {
   <div class="card">
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
-            <th>CODE</th>
+            <th>CUSTOMER ID / LOGIN ID</th>
             <th>BUSINESS</th>
-            <th>PHONE / EMAIL</th>
-            <th>CATEGORY</th>
+            <th>WHATSAPP / PHONE / EMAIL</th>
+            <th>STATION / PRICE CATEGORY</th>
             <th>PRICE RULE</th>
             <th>STATUS</th>
             <th>ACTIONS</th>
@@ -50,27 +63,54 @@
         <tbody>
           @for (c of filtered(); track c.id) {
             <tr>
-              <td>{{ c.loginId ?? c.code }}</td>
               <td>
-                <strong>{{ c.name }}</strong>
-                <div class="muted">{{ c.address || 'No address' }}</div>
+                <strong>{{ c.customerId || ('CUS-' + ('' + c.id).padStart(4, '0')) }}</strong>
+                <div class="muted">Login ID: {{ c.loginId ?? c.code }}</div>
+                <div class="muted">Code: {{ c.code }}</div>
               </td>
               <td>
-                {{ c.phone }}
+                <strong>{{ c.name }}</strong>
+                <div class="muted">{{ c.contact ? 'Contact: ' + c.contact : c.address || 'No address' }}</div>
+              </td>
+              <td>
+                <strong>WhatsApp: {{ c.whatsapp || c.phone }}</strong>
+                <div class="muted">Phone: {{ c.phone || 'Not provided' }}</div>
                 <div class="muted">{{ c.email }}</div>
               </td>
               <td>
-                <span class="pill" [class]="'pill ' + categoryPillClass(c.category)">
-                  Category {{ c.category }}
-                </span>
+                <strong>{{ c.station || c.address || 'No station' }}</strong>
+                <div><span class="pill" [class]="'pill ' + categoryPillClass(c.category)">Category {{ c.category }}</span></div>
               </td>
               <td>{{ priceRule(c) }}</td>
-              <td><span class="pill" [class.gray]="!c.active">{{ c.active ? 'Active' : 'Inactive' }}</span></td>
+              <td>
+                <span class="pill customer-status-pill" [class.deactivated]="!c.active">
+                  {{ c.active ? 'Active' : 'Deactivated' }}
+                </span>
+              </td>
               <td class="row-actions">
-                <button class="btn small" (click)="openEdit(c)">Edit</button>
-                <button class="btn small primary" [disabled]="!c.active" (click)="startOrder(c)">
-                  Create order
+                <button class="btn small" [disabled]="loadingDetails() || saving()" (click)="openEdit(c)">
+                  {{ loadingDetails() ? 'Loading...' : 'Edit' }}
                 </button>
+                <button class="btn small primary" [disabled]="!c.active || updatingStatusId() !== null" (click)="startOrder(c)">
+                  + Take order
+                </button>
+                <button
+                  class="btn small"
+                  [attr.title]="supportsProductPriceOverrides ? 'Edit per-product price overrides' : 'Not supported by the connected API'"
+                  (click)="openPriceOverrides(c)"
+                >Price overrides</button>
+                <button class="btn small" [disabled]="updatingStatusId() !== null" (click)="setCustomerStatus(c, !c.active)">
+                  {{ updatingStatusId() === c.id ? 'Saving...' : c.active ? 'Deactivate' : 'Activate' }}
+                </button>
+                @if (canDeleteCustomers()) {
+                  <button
+                    class="btn small danger"
+                    [disabled]="deletingCustomerId() !== null"
+                    (click)="deleteCustomer(c)"
+                  >
+                    {{ deletingCustomerId() === c.id ? 'Deleting...' : 'Delete' }}
+                  </button>
+                }
               </td>
             </tr>
           } @empty {
@@ -84,26 +124,45 @@
   </div>
 
   <div class="notice footer-note">
+    Admin and Backend User can create, edit, and deactivate accounts. Permanent deletion is reserved for Super Admin and is blocked when order history or an active basket exists.
     Price priority: individual override first; otherwise the product price for the customer
     category. Historical order snapshots do not change when pricing is updated.
   </div>
 }
 
 @if (modalOpen()) {
-  <div class="modal-backdrop" (click)="close()">
-    <div class="modal" (click)="$event.stopPropagation()">
+  <div class="modal-backdrop">
+    <section
+      class="modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="customer-modal-title"
+    >
       <div class="modal-head">
-        <h2>{{ editing() ? 'Edit customer account' : 'Add customer account' }}</h2>
-        <button class="icon-btn" (click)="close()" aria-label="Close">✕</button>
+        <div>
+          <span class="modal-kicker">CUSTOMER MANAGEMENT</span>
+          <h2 id="customer-modal-title">{{ editing() ? 'Edit customer account' : 'Add customer account' }}</h2>
+        </div>
+        <button type="button" class="icon-btn" [disabled]="saving()" (click)="close()" aria-label="Close dialog">×</button>
       </div>
 
       <form [formGroup]="form" (ngSubmit)="save()" novalidate>
+        @if (customerSaveError()) {
+          <div class="notice error customer-save-error" role="alert">{{ customerSaveError() }}</div>
+        }
         <div class="form-grid">
           <div class="field">
             <label for="c-name">Business name *</label>
-            <input id="c-name" formControlName="name" placeholder="Business name" />
+            <input
+              #businessNameInput
+              id="c-name"
+              formControlName="name"
+              placeholder="Business name"
+              maxlength="120"
+              autocomplete="organization"
+            />
             @if (form.controls.name.touched && form.controls.name.invalid) {
-              <small class="err">Business name is required.</small>
+              <small class="err">Enter a business name up to 120 characters.</small>
             }
           </div>
           <div class="field">
@@ -114,10 +173,18 @@
 
           <div class="field">
             <label for="c-login">Login ID *</label>
-            <input id="c-login" formControlName="loginId" autocomplete="off" placeholder="Enter a unique login ID" />
+            <input
+              id="c-login"
+              formControlName="loginId"
+              autocomplete="username"
+              maxlength="80"
+              placeholder="Enter a unique login ID"
+            />
             <span class="help">Give this Login ID to the customer for signing in.</span>
             @if (form.controls.loginId.touched && form.controls.loginId.invalid) {
-              <small class="err">Login ID is required.</small>
+              <small class="err">
+                {{ form.controls.loginId.hasError('duplicate') ? 'This Login ID is already in use.' : 'Enter a unique Login ID.' }}
+              </small>
             }
           </div>
           <div class="field">
@@ -143,13 +210,33 @@
             <label for="c-station">Station *</label>
             <div class="station-row">
               <select id="c-station" formControlName="station">
-                <option value="">Select station…</option>
+                <option value="">Select station...</option>
                 @for (s of stations(); track s) {
                   <option [value]="s">{{ s }}</option>
                 }
               </select>
-              <button type="button" class="btn small" (click)="addStation()">＋ Add</button>
+              <button type="button" class="btn small" (click)="addStation()">+ Add</button>
             </div>
+            @if (stationAddOpen()) {
+              <div class="station-create">
+                <input
+                  aria-label="New station name"
+                  placeholder="Enter station name"
+                  maxlength="100"
+                  required
+                  [value]="stationDraft()"
+                  (input)="updateStationDraft($any($event.target).value)"
+                  (keydown.enter)="$event.preventDefault(); saveStation()"
+                />
+                <button type="button" class="btn small primary" [disabled]="!!stationDraftError() || !stationDraft().trim() || stationSaving()" (click)="saveStation()">
+                  {{ stationSaving() ? 'Saving…' : 'Save' }}
+                </button>
+                <button type="button" class="btn small" (click)="cancelStationCreation()">Cancel</button>
+              </div>
+              @if (stationDraftError()) {
+                <small class="err" role="alert">{{ stationDraftError() }}</small>
+              }
+            }
             <span class="help">A station groups customers located at the same place.</span>
             @if (form.controls.station.touched && form.controls.station.invalid) {
               <small class="err">Station is required.</small>
@@ -170,17 +257,32 @@
             <input
               id="c-whatsapp"
               type="tel"
+              inputmode="numeric"
+              autocomplete="tel"
+              maxlength="10"
               formControlName="whatsapp"
-              placeholder="WhatsApp number"
+              placeholder="10-digit WhatsApp number"
               (input)="fillPhoneFromWhatsapp()"
             />
             @if (form.controls.whatsapp.touched && form.controls.whatsapp.invalid) {
-              <small class="err">WhatsApp number is required.</small>
+              <small class="err">
+                @if (form.controls.whatsapp.hasError('required')) { WhatsApp number is required. }
+                @else if (form.controls.whatsapp.hasError('phoneFormat')) { Enter digits only. }
+                @else if (form.controls.whatsapp.hasError('phoneStart')) { Indian mobile number must start with 6, 7, 8 or 9. }
+                @else { Enter a 10-digit Indian mobile number. }
+              </small>
             }
           </div>
           <div class="field">
             <label for="c-phone">Phone No.</label>
-            <input id="c-phone" type="tel" formControlName="phone" placeholder="Phone number" />
+            <input id="c-phone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="10" formControlName="phone" placeholder="Optional, 10 digits" />
+            @if (form.controls.phone.touched && form.controls.phone.invalid) {
+              <small class="err">
+                @if (form.controls.phone.hasError('phoneFormat')) { Enter digits only. }
+                @else if (form.controls.phone.hasError('phoneStart')) { Indian mobile number must start with 6, 7, 8 or 9. }
+                @else { Enter a 10-digit Indian mobile number. }
+              </small>
+            }
           </div>
 
           <div class="field">
@@ -211,13 +313,9 @@
           </div>
           <div class="field">
             <label for="c-status">Status</label>
-            <select
-              id="c-status"
-              [value]="form.controls.active.value ? 'true' : 'false'"
-              (change)="form.controls.active.setValue($any($event.target).value === 'true')"
-            >
-              <option value="true">Active</option>
-              <option value="false">Inactive</option>
+            <select id="c-status" formControlName="active">
+              <option [ngValue]="true">Active</option>
+              <option [ngValue]="false">Inactive</option>
             </select>
           </div>
         </div>
@@ -225,30 +323,68 @@
         <!-- Customer-wise brand discounts -->
         <div class="section">
           <h3>Customer-wise brand discounts</h3>
-          <p class="help">Optional discount percentage applied per brand for this customer.</p>
-          <div class="chips-grid">
-            @for (b of brands(); track b.id) {
-              <div class="chip-row">
-                <span>{{ b.name }}</span>
-                <div class="pct">
+          <p class="help">Set a discount for selected brands. It applies to new order lines.</p>
+          @if (brandsLoading()) {
+            <p class="help">Loading brands...</p>
+          } @else if (brandsError()) {
+            <div class="notice error">
+              {{ brandsError() }}
+              <button type="button" class="btn small" (click)="retryBrands()">Retry</button>
+            </div>
+          } @else if (brands().length) {
+            <div class="discount-editor">
+              <div class="discount-field">
+                <label for="discount-brand">Brand</label>
+                <select
+                  id="discount-brand"
+                  [value]="selectedDiscountBrand()"
+                  (change)="selectDiscountBrand($any($event.target).value)"
+                >
+                  @for (b of brands(); track b.id) {
+                    <option [value]="b.name">{{ b.name }}{{ hasBrandDiscount(b.name) ? ' (configured)' : '' }}</option>
+                  }
+                </select>
+              </div>
+              <div class="discount-field">
+                <label for="discount-percent">Discount (%)</label>
+                <div class="pct discount-input">
                   <input
+                    id="discount-percent"
                     type="number"
-                    min="0"
+                    inputmode="decimal"
+                    min="0.1"
                     max="100"
-                    placeholder="0"
-                    [value]="discountValue(b.name)"
-                    (input)="setDiscount(b.name, $any($event.target).value)"
+                    step="0.1"
+                    required
+                    placeholder="e.g. 5"
+                    [value]="discountDraft()"
+                    (input)="discountDraft.set($any($event.target).value)"
                   />
                   <span class="suffix">%</span>
                 </div>
               </div>
-            }
-          </div>
+              <button type="button" class="btn" (click)="applyBrandDiscount()">
+                {{ hasBrandDiscount(selectedDiscountBrand()) ? 'Update discount' : '+ Add / update' }}
+              </button>
+            </div>
+            <div class="discount-list">
+              @for (discount of discountRows(); track discount.brand) {
+                <div class="discount-entry">
+                  <span>{{ discount.brand }} <strong>{{ discount.percent }}%</strong></span>
+                  <button type="button" class="remove-discount" [attr.aria-label]="'Remove ' + discount.brand + ' discount'" (click)="removeBrandDiscount(discount.brand)">Remove</button>
+                </div>
+              } @empty {
+                <p class="help">No brand discounts configured.</p>
+              }
+            </div>
+          } @else {
+            <p class="help">No brands available to discount yet.</p>
+          }
         </div>
 
         @if (supportsProductPriceOverrides) {
           <!-- Per-product overrides are hidden when the connected API lacks support. -->
-          <div class="section">
+          <div class="section" id="customer-price-overrides">
             <h3>Per-product price overrides</h3>
             <p class="help">
               Leave blank to use the category {{ form.controls.category.value }} price.
@@ -275,12 +411,23 @@
         }
 
         <div class="modal-actions">
-          <button type="button" class="btn" (click)="close()">Cancel</button>
+          <button
+            type="button"
+            class="btn order-rights-toggle"
+            [class.enabled]="orderRights()"
+            [class.disabled]="!orderRights()"
+            [attr.aria-pressed]="orderRights()"
+            [disabled]="saving()"
+            (click)="toggleOrderRights()"
+          >
+            Order Rights: {{ orderRights() ? 'ON' : 'OFF' }}
+          </button>
+          <button type="button" class="btn" [disabled]="saving()" (click)="close()">Cancel</button>
           <button type="submit" class="btn primary" [disabled]="saving()">
-            {{ saving() ? 'Saving…' : editing() ? 'Save customer' : 'Add customer' }}
+            {{ saving() ? 'Saving...' : editing() ? 'Save customer' : 'Add customer' }}
           </button>
         </div>
       </form>
-    </div>
+    </section>
   </div>
 }

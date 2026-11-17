@@ -14,6 +14,7 @@ import {
   OrderStatus,
   Product,
   Staff,
+  Station,
   UserRole,
 } from '../models';
 import { DataService } from './data.service';
@@ -26,6 +27,7 @@ const KEYS = {
   customers: `${LS_PREFIX}customers`,
   staff: `${LS_PREFIX}staff`,
   orders: `${LS_PREFIX}orders`,
+  stations: `${LS_PREFIX}stations`,
   nextOrderSeq: `${LS_PREFIX}nextOrderSeq`,
 } as const;
 
@@ -134,6 +136,12 @@ export class MockDataService extends DataService {
     return of(saved).pipe(delay(LATENCY_MS));
   }
 
+  deleteBrand(id: number): Observable<void> {
+    const brands = this.read<Brand[]>(KEYS.brands, []).filter((brand) => brand.id !== id);
+    this.write(KEYS.brands, brands);
+    return of(undefined).pipe(delay(LATENCY_MS));
+  }
+
   setBrandSizeLock(brand: Brand, locked: boolean): Observable<Brand> {
     const brands = this.read<Brand[]>(KEYS.brands, []);
     const saved = { ...brand, sizeLocked: locked };
@@ -200,6 +208,53 @@ export class MockDataService extends DataService {
     const saved = this.upsert(customers, customer, (c) => c.id, (max) => max + 1);
     this.write(KEYS.customers, customers);
     return of(saved).pipe(delay(LATENCY_MS));
+  }
+
+  setCustomerActive(customer: Customer, active: boolean): Observable<Customer> {
+    const customers = this.read<Customer[]>(KEYS.customers, []);
+    const saved = customers.find((item) => item.id === customer.id);
+    if (!saved) return throwError(() => new Error('Customer not found.')).pipe(delay(LATENCY_MS));
+    saved.active = active;
+    this.write(KEYS.customers, customers);
+    return of(saved).pipe(delay(LATENCY_MS));
+  }
+
+  getStations(): Observable<Station[]> {
+    const saved = this.read<Station[]>(KEYS.stations, []);
+    if (saved.length) return of(saved).pipe(delay(LATENCY_MS));
+    const names = [...new Set(this.read<Customer[]>(KEYS.customers, [])
+      .map((customer) => customer.station?.trim())
+      .filter((name): name is string => !!name))].sort();
+    const stations = names.map((name, index) => ({ id: index + 1, name }));
+    this.write(KEYS.stations, stations);
+    return of(stations).pipe(delay(LATENCY_MS));
+  }
+
+  createStation(name: string): Observable<Station> {
+    const stations = this.read<Station[]>(KEYS.stations, []);
+    const trimmedName = name.trim();
+    if (!trimmedName) return throwError(() => new Error('Station name is required.')).pipe(delay(LATENCY_MS));
+    if (trimmedName.length > 100) {
+      return throwError(() => new Error('Station name must be 100 characters or fewer.')).pipe(delay(LATENCY_MS));
+    }
+    if (/[\u0000-\u001f\u007f]/.test(trimmedName)) {
+      return throwError(() => new Error('Station name contains invalid characters.')).pipe(delay(LATENCY_MS));
+    }
+    const existing = stations.find((station) => station.name.toLowerCase() === trimmedName.toLowerCase());
+    if (existing) return of(existing).pipe(delay(LATENCY_MS));
+    const station = { id: stations.reduce((max, item) => Math.max(max, item.id), 0) + 1, name: trimmedName };
+    stations.push(station);
+    this.write(KEYS.stations, stations);
+    return of(station).pipe(delay(LATENCY_MS));
+  }
+
+  deleteCustomer(id: number): Observable<void> {
+    const customers = this.read<Customer[]>(KEYS.customers, []);
+    if (!customers.some((customer) => customer.id === id)) {
+      return throwError(() => new Error('Customer not found.')).pipe(delay(LATENCY_MS));
+    }
+    this.write(KEYS.customers, customers.filter((customer) => customer.id !== id));
+    return of(undefined).pipe(delay(LATENCY_MS));
   }
 
   createOrder(order: Order): Observable<Order> {

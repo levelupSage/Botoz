@@ -32,6 +32,7 @@ import {
   ProductImage,
   ProductSizeGroup,
   Staff,
+  Station,
   UserRole,
 } from '../models';
 import { DataService } from './data.service';
@@ -172,6 +173,17 @@ export class ApiDataService extends DataService {
     );
   }
 
+  deleteBrand(id: number): Observable<void> {
+    return this.request<unknown>(this.http.delete(`${this.baseUrl}/api/admin/brands/${id}`)).pipe(
+      map(() => {
+        const oldName = this.brandById.get(id);
+        this.brandById.delete(id);
+        if (oldName) this.brandByName.delete(oldName.toLowerCase());
+        return undefined;
+      }),
+    );
+  }
+
   setBrandSizeLock(brand: Brand, locked: boolean): Observable<Brand> {
     return this.request<Json>(this.http.patch(
       `${this.baseUrl}/api/admin/brands/${brand.id}/size-lock`,
@@ -266,6 +278,39 @@ export class ApiDataService extends DataService {
     );
   }
 
+  getStations(): Observable<Station[]> {
+    return this.request<Json>(this.http.get(`${this.baseUrl}/api/admin/customers/options`)).pipe(
+      map((options) => {
+        const rows = Array.isArray(options['stations']) ? options['stations'] : [];
+        return rows.map((item) => {
+          const row = this.asJson(item);
+          const station = { id: this.number(row['id']), name: this.text(row['name']) };
+          if (station.id && station.name) this.stationByName.set(station.name.toLowerCase(), station.id);
+          return station;
+        }).filter((station) => station.id > 0 && station.name.length > 0);
+      }),
+    );
+  }
+
+  createStation(name: string): Observable<Station> {
+    const normalizedName = name.trim();
+    if (!normalizedName) return throwError(() => new Error('Station name is required.'));
+    if (normalizedName.length > 100) return throwError(() => new Error('Station name must be 100 characters or fewer.'));
+    if (/[\u0000-\u001f\u007f]/.test(normalizedName)) {
+      return throwError(() => new Error('Station name contains invalid characters.'));
+    }
+    const knownId = this.stationByName.get(normalizedName.toLowerCase());
+    if (knownId) return of({ id: knownId, name: normalizedName });
+    return this.request<Json>(
+      this.http.post(`${this.baseUrl}/api/admin/stations`, { name: normalizedName }),
+    ).pipe(map((row) => {
+      const station = { id: this.number(row['id']), name: this.text(row['name']) || normalizedName };
+      if (!station.id) throw new Error('The API did not return the created station ID.');
+      this.stationByName.set(station.name.toLowerCase(), station.id);
+      return station;
+    }));
+  }
+
   saveCustomer(customer: Customer): Observable<Customer> {
     if (Object.keys(customer.overrides ?? {}).length) {
       return throwError(() => new Error('The API does not support per-product customer price overrides yet.'));
@@ -287,6 +332,18 @@ export class ApiDataService extends DataService {
           }),
         );
       }),
+    );
+  }
+
+  setCustomerActive(customer: Customer, active: boolean): Observable<Customer> {
+    return this.request<Json>(
+      this.http.patch(`${this.baseUrl}/api/admin/customers/${customer.id}/status`, { active }),
+    ).pipe(map((body) => this.toCustomer(body, { ...customer, active })));
+  }
+
+  deleteCustomer(id: number): Observable<void> {
+    return this.request<unknown>(this.http.delete(`${this.baseUrl}/api/admin/customers/${id}`)).pipe(
+      map(() => undefined),
     );
   }
 
@@ -523,14 +580,7 @@ export class ApiDataService extends DataService {
     const known = this.stationByName.get((customer.station ?? '').toLowerCase());
     if (known) return of(known);
     if (!customer.station?.trim()) return throwError(() => new Error('Choose a station before saving the customer.'));
-    return this.request<Json>(this.http.post(`${this.baseUrl}/api/admin/stations`, { name: customer.station.trim() })).pipe(
-      map((station) => {
-        const id = this.number(station['id']);
-        if (!id) throw new Error('The API did not return the created station ID.');
-        this.stationByName.set(customer.station!.toLowerCase(), id);
-        return id;
-      }),
-    );
+    return this.createStation(customer.station).pipe(map((station) => station.id));
   }
 
   private customerRequest(customer: Customer, stationId: number): Json {
@@ -691,7 +741,11 @@ export class ApiDataService extends DataService {
       stationId,
       contact: this.text(row['contactPerson']) || fallback?.contact,
       reminderDay: this.text(row['weeklyReminderDay']) || fallback?.reminderDay,
-      active: (this.text(row['status']).toUpperCase() || 'ACTIVE') === 'ACTIVE',
+      active: typeof row['active'] === 'boolean'
+        ? row['active']
+        : row['status'] != null
+          ? this.text(row['status']).toUpperCase() === 'ACTIVE'
+          : fallback?.active ?? true,
       overrides: {},
       brandDiscounts,
       loginPassword: '',

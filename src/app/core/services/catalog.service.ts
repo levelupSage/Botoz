@@ -1,10 +1,10 @@
 import { computed, inject, Injectable, signal, WritableSignal } from '@angular/core';
 import { forkJoin, Observable, tap, timeout } from 'rxjs';
 import { DataService } from '../data/data.service';
-import { Brand, Customer, Product } from '../models';
+import { Customer, Product } from '../models';
 
 /**
- * Central reactive store for catalog data (brands, products, customers).
+ * Reactive store for products and customers used throughout the workspace.
  * Loads once from the swappable {@link DataService} and exposes signals that
  * feature pages (Products, Orders, Basket) read from.
  */
@@ -12,23 +12,19 @@ import { Brand, Customer, Product } from '../models';
 export class CatalogService {
   private readonly data = inject(DataService);
 
-  private readonly _brands = signal<Brand[]>([]);
   private readonly _products = signal<Product[]>([]);
   private readonly _customers = signal<Customer[]>([]);
   private readonly _loading = signal(false);
   private readonly _loaded = signal(false);
   private readonly _error = signal<string | null>(null);
 
-  readonly brands = this._brands.asReadonly();
   readonly products = this._products.asReadonly();
   readonly customers = this._customers.asReadonly();
   readonly loading = this._loading.asReadonly();
   readonly error = this._error.asReadonly();
-
-  readonly activeBrands = computed(() => this._brands().filter((b) => b.active));
   readonly activeCustomers = computed(() => this._customers().filter((c) => c.active));
 
-  /** Loads catalog data once; call again with force=true to refresh. */
+  /** Loads products and customers once; force=true refreshes both. */
   load(force = false): void {
     if (this._loading() || (this._loaded() && !force)) {
       return;
@@ -37,12 +33,10 @@ export class CatalogService {
     this._error.set(null);
 
     forkJoin({
-      brands: this.data.getBrands(),
       products: this.data.getProducts(),
       customers: this.data.getCustomers(),
     }).pipe(timeout({ first: 60_000 })).subscribe({
-      next: ({ brands, products, customers }) => {
-        this._brands.set(brands);
+      next: ({ products, customers }) => {
         this._products.set(products);
         this._customers.set(customers);
         this._loaded.set(true);
@@ -64,26 +58,6 @@ export class CatalogService {
   }
 
   // ---- Writes (persist via DataService, then update local signals) -----
-  saveBrand(brand: Brand): Observable<Brand> {
-    return this.data.saveBrand(brand).pipe(tap((saved) => {
-      const currentName = this._brands().find((item) => item.id === saved.id)?.name;
-      this.mergeInto(this._brands, saved);
-      if (currentName && currentName !== saved.name) {
-        this._products.update((products) => products.map((product) =>
-          product.brand === currentName ? { ...product, brand: saved.name } : product,
-        ));
-      }
-    }));
-  }
-
-  setBrandSizeLock(brand: Brand, locked: boolean): Observable<Brand> {
-    return this.data.setBrandSizeLock(brand, locked).pipe(tap((saved) => this.mergeInto(this._brands, saved)));
-  }
-
-  uploadBrandLogo(brand: Brand, file: File): Observable<Brand> {
-    return this.data.uploadBrandLogo(brand, file).pipe(tap((saved) => this.mergeInto(this._brands, saved)));
-  }
-
   saveProduct(product: Product): Observable<Product> {
     return this.data
       .saveProduct(product)
@@ -112,6 +86,18 @@ export class CatalogService {
     return this.data
       .saveCustomer(customer)
       .pipe(tap((saved) => this.mergeInto(this._customers, saved)));
+  }
+
+  setCustomerActive(customer: Customer, active: boolean): Observable<Customer> {
+    return this.data.setCustomerActive(customer, active).pipe(
+      tap((saved) => this.mergeInto(this._customers, saved)),
+    );
+  }
+
+  deleteCustomer(id: number): Observable<void> {
+    return this.data.deleteCustomer(id).pipe(
+      tap(() => this._customers.update((customers) => customers.filter((customer) => customer.id !== id))),
+    );
   }
 
   /** Replace-or-append the saved entity into a signal-backed list by id. */

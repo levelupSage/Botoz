@@ -1,13 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, ElementRef, inject, OnInit, signal, ViewChild } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Brand } from '../../core/models';
-import { CatalogService } from '../../core/services/catalog.service';
+import { BrandService } from '../../core/services/brand.service';
 import { ToastService } from '../../core/services/toast.service';
-
-interface BrandRow {
-  brand: Brand;
-  productCount: number;
-}
 
 @Component({
   selector: 'app-brands',
@@ -17,15 +12,18 @@ interface BrandRow {
   styleUrl: './brands.component.scss',
 })
 export class BrandsComponent implements OnInit {
-  private readonly catalog = inject(CatalogService);
+  private readonly brandService = inject(BrandService);
   private readonly toast = inject(ToastService);
   private readonly fb = inject(FormBuilder);
+  @ViewChild('brandNameInput') private brandNameInput?: ElementRef<HTMLInputElement>;
 
-  readonly loading = this.catalog.loading;
-  readonly error = this.catalog.error;
+  readonly loading = this.brandService.loading;
+  readonly error = this.brandService.error;
   readonly saving = signal(false);
+  readonly deletingBrandId = signal<number | null>(null);
   readonly addOpen = signal(false);
   readonly editingBrand = signal<Brand | null>(null);
+  readonly brands = this.brandService.brands;
 
   private readonly loadErrorToast = effect(() => {
     const message = this.error();
@@ -33,23 +31,15 @@ export class BrandsComponent implements OnInit {
   });
 
   readonly form = this.fb.nonNullable.group({
-    name: ['', [Validators.required, Validators.maxLength(120)]],
-  });
-
-  readonly rows = computed<BrandRow[]>(() => {
-    const products = this.catalog.products();
-    return this.catalog.brands().map((brand) => ({
-      brand,
-      productCount: products.filter((product) => product.brand === brand.name).length,
-    }));
+    name: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(120)]],
   });
 
   ngOnInit(): void {
-    this.catalog.load();
+    this.brandService.load();
   }
 
   retry(): void {
-    this.catalog.load(true);
+    this.brandService.load(true);
   }
 
   toggleAdd(): void {
@@ -60,12 +50,14 @@ export class BrandsComponent implements OnInit {
     this.editingBrand.set(null);
     this.form.reset({ name: '' });
     this.addOpen.update((isOpen) => !isOpen);
+    this.focusBrandName();
   }
 
   rename(brand: Brand): void {
     this.editingBrand.set(brand);
     this.form.reset({ name: brand.name });
     this.addOpen.set(true);
+    this.focusBrandName();
   }
 
   closeAdd(): void {
@@ -73,6 +65,17 @@ export class BrandsComponent implements OnInit {
     this.addOpen.set(false);
     this.editingBrand.set(null);
     this.form.reset({ name: '' });
+  }
+
+  onModalKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.closeAdd();
+    }
+  }
+
+  private focusBrandName(): void {
+    requestAnimationFrame(() => this.brandNameInput?.nativeElement.focus());
   }
 
   initial(name: string): string {
@@ -94,15 +97,16 @@ export class BrandsComponent implements OnInit {
       this.closeAdd();
       return;
     }
-    if (this.catalog.brands().some((brand) =>
-      brand.id !== editing?.id && brand.name.toLowerCase() === name.toLowerCase(),
+    const normalizedName = name.toLowerCase();
+    if (this.brands().some((brand) =>
+      brand.id !== editing?.id && brand.name.trim().toLowerCase() === normalizedName,
     )) {
       this.toast.error('A brand with that name already exists.');
       return;
     }
 
     this.saving.set(true);
-    this.catalog.saveBrand(editing ? { ...editing, name } : { id: 0, name, active: true }).subscribe({
+    this.brandService.save(editing ? { ...editing, name } : { id: 0, name, active: true }).subscribe({
       next: () => {
         this.saving.set(false);
         this.form.reset({ name: '' });
@@ -118,15 +122,33 @@ export class BrandsComponent implements OnInit {
   }
 
   toggle(brand: Brand): void {
-    this.catalog.saveBrand({ ...brand, active: !brand.active }).subscribe({
-      next: (saved) => this.toast.success(saved.active ? 'Brand activated successfully.' : 'Brand deactivated successfully.'),
+    this.brandService.save({ ...brand, active: !brand.active }).subscribe({
+      next: (saved) => this.toast.success(
+        saved.active ? 'Brand activated successfully.' : 'Brand deactivated successfully.',
+      ),
       error: (error: unknown) => this.apiFailure(error, 'Could not update the brand.'),
+    });
+  }
+
+  deleteBrand(brand: Brand): void {
+    if (!window.confirm(`Delete "${brand.name}"? This action cannot be undone.`)) return;
+
+    this.deletingBrandId.set(brand.id);
+    this.brandService.delete(brand.id).subscribe({
+      next: () => {
+        this.deletingBrandId.set(null);
+        this.toast.success(`${brand.name} deleted successfully.`);
+      },
+      error: (error: unknown) => {
+        this.deletingBrandId.set(null);
+        this.apiFailure(error, 'Could not delete the brand.');
+      },
     });
   }
 
   toggleSizeLock(brand: Brand): void {
     const locked = !brand.sizeLocked;
-    this.catalog.setBrandSizeLock(brand, locked).subscribe({
+    this.brandService.setSizeLock(brand, locked).subscribe({
       next: () => this.toast.success(locked ? 'Brand size quantities locked.' : 'Brand size quantities unlocked.'),
       error: (error: unknown) => this.apiFailure(error, 'Could not change the brand size lock.'),
     });
@@ -145,7 +167,7 @@ export class BrandsComponent implements OnInit {
       this.toast.error('Logo must be 5 MB or smaller.');
       return;
     }
-    this.catalog.uploadBrandLogo(brand, file).subscribe({
+    this.brandService.uploadLogo(brand, file).subscribe({
       next: () => this.toast.success('Brand logo uploaded successfully.'),
       error: (error: unknown) => this.apiFailure(error, 'Could not upload the brand logo.'),
     });

@@ -3,6 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Customer, Product, ProductImage, PriceTier } from '../../core/models';
 import { DataService } from '../../core/data/data.service';
 import { AppStateService } from '../../core/services/app-state.service';
+import { BrandService } from '../../core/services/brand.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { ToastService } from '../../core/services/toast.service';
 import { AdminPhotoOrderService, AdminPhotoOrderLine } from '../../core/services/admin-photo-order.service';
@@ -30,6 +31,7 @@ interface PhotoDraft extends AdminPhotoOrderLine {}
 })
 export class ProductsComponent implements OnInit {
   private readonly catalog = inject(CatalogService);
+  private readonly brandService = inject(BrandService);
   private readonly data = inject(DataService);
   private readonly appState = inject(AppStateService);
   private readonly toast = inject(ToastService);
@@ -67,6 +69,7 @@ export class ProductsComponent implements OnInit {
   readonly editProduct = signal<Product | null | undefined>(undefined);
 
   readonly isCustomer = computed(() => this.role() === 'Customer');
+  readonly customerCanOrder = this.appState.customerCanOrder;
   readonly isStaff = this.appState.isStaff;
   readonly isStaffOrdering = this.appState.isStaffOrdering;
   readonly canManage = computed(() => this.role() === 'Admin' || this.role() === 'Super Admin');
@@ -142,7 +145,7 @@ export class ProductsComponent implements OnInit {
   /** True when prices/order buttons should be customer-scoped. */
   readonly orderingMode = computed(() => this.isCustomer() || this.isStaffOrdering());
 
-  readonly brandOptions = computed(() => ['All', ...this.catalog.brands().map((b) => b.name)]);
+  readonly brandOptions = computed(() => ['All', ...this.brandService.brands().map((b) => b.name)]);
   readonly sizeOptions = computed(() => [
     'All',
     ...[...new Set(this.catalog.products().flatMap((product) => product.sizes ?? []))]
@@ -222,6 +225,7 @@ export class ProductsComponent implements OnInit {
 
   ngOnInit(): void {
     this.catalog.load();
+    this.brandService.load();
     const query = this.route.snapshot.queryParamMap;
     const startPhotoOrder = query.get('photoOrder') === '1';
     const startCreateOrder = query.get('createOrder') === '1';
@@ -251,6 +255,7 @@ export class ProductsComponent implements OnInit {
 
   retryCatalogLoad(): void {
     this.catalog.load(true);
+    this.brandService.load(true);
   }
 
   applyAdvancedSearch(): void {
@@ -428,10 +433,14 @@ export class ProductsComponent implements OnInit {
   }
 
   showOrderButton(): boolean {
-    return this.orderingMode();
+    return this.orderingMode() && (!this.isCustomer() || this.customerCanOrder());
   }
 
   openOrder(product: Product): void {
+    if (this.isCustomer() && !this.customerCanOrder()) {
+      this.toast.error('Ordering is disabled for this account. Contact your account manager.');
+      return;
+    }
     const customer = this.activeCustomer();
     if (!customer) {
       this.toast.show('No customer context — please sign in again or pick a customer.');
@@ -456,6 +465,10 @@ export class ProductsComponent implements OnInit {
   money = money;
 
   goToBasket(): void {
+    if (this.isCustomer() && !this.customerCanOrder()) {
+      this.toast.error('Ordering is disabled for this account.');
+      return;
+    }
     this.router.navigate(['/app', 'basket']);
   }
 

@@ -62,6 +62,10 @@ export class BasketComponent {
   }
 
   confirm(): void {
+    if (this.isCustomer() && !this.appState.customerCanOrder()) {
+      this.toast.error('Ordering is disabled for this account. Contact your account manager.');
+      return;
+    }
     const customer = this.activeCustomer();
     const items = this.items();
     if (!customer || !items.length) {
