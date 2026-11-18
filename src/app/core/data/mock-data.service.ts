@@ -13,6 +13,7 @@ import {
   Order,
   OrderStatus,
   Product,
+  ProductSizeGroup,
   Staff,
   Station,
   UserRole,
@@ -29,6 +30,7 @@ const KEYS = {
   orders: `${LS_PREFIX}orders`,
   stations: `${LS_PREFIX}stations`,
   nextOrderSeq: `${LS_PREFIX}nextOrderSeq`,
+  packingGroups: `${LS_PREFIX}packingGroups`,
 } as const;
 
 /** Simulated network latency so the UI behaves like it will against a real API. */
@@ -100,6 +102,66 @@ export class MockDataService extends DataService {
 
   getProducts(): Observable<Product[]> {
     return of(this.read<Product[]>(KEYS.products, [])).pipe(delay(LATENCY_MS));
+  }
+
+  getPackingGroups(): Observable<ProductSizeGroup[]> {
+    const groups = new Map<number, ProductSizeGroup>();
+    for (const group of this.read<ProductSizeGroup[]>(KEYS.packingGroups, [])) groups.set(group.id, group);
+    for (const product of this.read<Product[]>(KEYS.products, [])) {
+      for (const group of product.sizeGroups ?? []) groups.set(group.id, group);
+      for (const packing of product.packings ?? []) {
+        if (!groups.has(packing.id)) groups.set(packing.id, {
+          id: packing.id,
+          name: packing.name,
+          active: packing.active !== false,
+          sizes: packing.rows.map((row) => row.size),
+        });
+      }
+    }
+    return of([...groups.values()]).pipe(delay(LATENCY_MS));
+  }
+
+  createPackingGroup(name: string, sizes: number[]): Observable<ProductSizeGroup> {
+    const groups = this.read<ProductSizeGroup[]>(KEYS.packingGroups, []);
+    const allGroups = new Map(groups.map((group) => [group.id, group]));
+    for (const product of this.read<Product[]>(KEYS.products, [])) {
+      for (const group of product.sizeGroups ?? []) allGroups.set(group.id, group);
+      for (const packing of product.packings ?? []) {
+        if (!allGroups.has(packing.id)) allGroups.set(packing.id, {
+          id: packing.id,
+          name: packing.name,
+          active: packing.active !== false,
+          sizes: packing.rows.map((row) => row.size),
+        });
+      }
+    }
+    const existing = [...allGroups.values()].find((group) => group.name.toLowerCase() === name.toLowerCase() &&
+      group.sizes.join(',') === sizes.join(','));
+    if (existing) return of(existing).pipe(delay(LATENCY_MS));
+    const id = Math.max(0, ...allGroups.keys()) + 1;
+    const created = { id, name, active: true, sizes: [...sizes] };
+    this.write(KEYS.packingGroups, [...groups, created]);
+    return of(created).pipe(delay(LATENCY_MS));
+  }
+
+  updatePackingGroup(id: number, name: string, sizes: number[]): Observable<ProductSizeGroup> {
+    const groups = this.read<ProductSizeGroup[]>(KEYS.packingGroups, []);
+    const updated = { id, name, active: true, sizes: [...sizes] };
+    const next = groups.some((group) => group.id === id)
+      ? groups.map((group) => group.id === id ? updated : group)
+      : [...groups, updated];
+    this.write(KEYS.packingGroups, next);
+    return of(updated).pipe(delay(LATENCY_MS));
+  }
+
+  deletePackingGroup(id: number): Observable<void> {
+    const inUse = this.read<Product[]>(KEYS.products, []).some((product) =>
+      (product.sizeGroups ?? []).some((group) => group.id === id) ||
+      (product.packings ?? []).some((packing) => packing.id === id),
+    );
+    if (inUse) return throwError(() => new Error('Packing group is assigned to a product.')).pipe(delay(LATENCY_MS));
+    this.write(KEYS.packingGroups, this.read<ProductSizeGroup[]>(KEYS.packingGroups, []).filter((group) => group.id !== id));
+    return of(undefined).pipe(delay(LATENCY_MS));
   }
 
   getCustomers(): Observable<Customer[]> {

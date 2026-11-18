@@ -1,7 +1,7 @@
 <div class="page-head">
   <div>
     <h1>Customers</h1>
-    <div class="subtitle">Manage unique customer IDs, stations, login credentials, and category pricing.</div>
+    <div class="subtitle">Manage unique customer IDs, station locations and admin-managed login credentials. Price category A/B/C controls default display pricing; individual overrides take priority.</div>
   </div>
   <button class="btn primary" type="button" (click)="openNew()">+ Add customer</button>
 </div>
@@ -70,7 +70,7 @@
               </td>
               <td>
                 <strong>{{ c.name }}</strong>
-                <div class="muted">{{ c.contact ? 'Contact: ' + c.contact : c.address || 'No address' }}</div>
+                <div class="muted">(Station: {{ c.station || 'Not assigned' }})</div>
               </td>
               <td>
                 <strong>WhatsApp: {{ c.whatsapp || c.phone }}</strong>
@@ -79,7 +79,7 @@
               </td>
               <td>
                 <strong>{{ c.station || c.address || 'No station' }}</strong>
-                <div><span class="pill" [class]="'pill ' + categoryPillClass(c.category)">Category {{ c.category }}</span></div>
+                <div class="muted">Price category {{ c.category }}</div>
               </td>
               <td>{{ priceRule(c) }}</td>
               <td>
@@ -124,9 +124,7 @@
   </div>
 
   <div class="notice footer-note">
-    Admin and Backend User can create, edit, and deactivate accounts. Permanent deletion is reserved for Super Admin and is blocked when order history or an active basket exists.
-    Price priority: individual override first; otherwise the product price for the customer
-    category. Historical order snapshots do not change when pricing is updated.
+    Admin and Backend User can create/edit customer accounts and activate or deactivate access. Permanent deletion is reserved for Super Admin and is blocked when orders or active baskets depend on the record. Price priority: individual override first; otherwise the product price for the customer category.
   </div>
 }
 

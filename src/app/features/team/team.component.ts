@@ -32,13 +32,26 @@ export class TeamComponent implements OnInit {
   readonly editing = signal<Staff | null>(null);
   readonly selectedMenuIds = signal<number[]>([]);
   readonly selectedTabIds = signal<number[]>([]);
-  readonly roleOptions = computed(() => this.auth.role() === 'Super Admin'
-    ? [
+  readonly orderTabs = computed(() => {
+    const orderMenu = this.menuOptions().find((menu) => menu.title.trim().toLowerCase() === 'orders');
+    return orderMenu?.tabs ?? [];
+  });
+  readonly roleOptions = computed(() => {
+    if (this.auth.role() === 'Super Admin') {
+      return [
         { value: 'SUPER_ADMIN' as const, label: 'Super Admin' },
         { value: 'ADMIN' as const, label: 'Admin' },
         { value: 'BACKEND_USER' as const, label: 'Backend User' },
-      ]
-    : [{ value: 'BACKEND_USER' as const, label: 'Backend User' }]);
+      ];
+    }
+    if (this.auth.role() === 'Admin') {
+      return [
+        { value: 'ADMIN' as const, label: 'Admin' },
+        { value: 'BACKEND_USER' as const, label: 'Backend User' },
+      ];
+    }
+    return [{ value: 'BACKEND_USER' as const, label: 'Backend User' }];
+  });
 
   readonly superAdminCount = computed(() => this.staff().filter((item) => item.role === 'Super Admin').length);
   readonly adminCount = computed(() => this.staff().filter((item) => item.role === 'Admin').length);
@@ -56,6 +69,7 @@ export class TeamComponent implements OnInit {
   ngOnInit(): void {
     this.loadStaff();
     this.loadMenus();
+    this.form.controls.role.valueChanges.subscribe((role) => this.applyRoleDefaults(role));
   }
 
   loadStaff(): void {
@@ -75,7 +89,26 @@ export class TeamComponent implements OnInit {
     this.loadingMenus.set(true);
     this.menuError.set(null);
     this.data.getRegistrationMenuOptions().pipe(finalize(() => this.loadingMenus.set(false))).subscribe({
-      next: (options) => this.menuOptions.set(options),
+      next: (options) => {
+        const excludedTitles = new Set([
+          'dashboard', 'settings', 'order history',
+          'photo order', 'photo orders', 'photos order', 'photos orders',
+        ]);
+        const orderMenu = options.find((menu) => menu.title.trim().toLowerCase() === 'orders')
+          ?? options.find((menu) => ['new order', 'new orders'].includes(menu.title.trim().toLowerCase()));
+        const visibleMenus = options
+          .filter((menu) => {
+            const title = menu.title.trim().toLowerCase();
+            if (excludedTitles.has(title)) return false;
+            if (['new order', 'new orders'].includes(title) && orderMenu?.title.trim().toLowerCase() === 'orders') return false;
+            return true;
+          })
+          .map((menu) => menu.id === orderMenu?.id ? { ...menu, title: 'Orders' } : menu);
+        this.menuOptions.set(visibleMenus);
+        if (this.modalOpen() && !this.selectedMenuIds().length) {
+          this.applyRoleDefaults(this.form.controls.role.value);
+        }
+      },
       error: (error: unknown) => {
         const message = this.errorMessage(error, 'Could not load staff permissions.');
         this.menuError.set(message);
@@ -90,10 +123,28 @@ export class TeamComponent implements OnInit {
 
   openAdd(): void {
     this.editing.set(null);
-    this.form.reset({ fullName: '', loginId: '', email: '', password: '', role: 'BACKEND_USER', active: true });
+    const role: RegisterableAccountRole = this.auth.role() === 'Admin' || this.auth.role() === 'Super Admin'
+      ? 'ADMIN'
+      : 'BACKEND_USER';
+    this.form.reset({ fullName: '', loginId: '', email: '', password: '', role, active: true });
     this.selectedMenuIds.set([]);
     this.selectedTabIds.set([]);
+    this.applyRoleDefaults(role);
     this.modalOpen.set(true);
+  }
+
+  private applyRoleDefaults(role: RegisterableAccountRole): void {
+    const menus = this.menuOptions();
+    if (!menus.length) return;
+    const defaultTitles = role === 'ADMIN'
+      ? ['products', 'customers', 'brands', 'orders']
+      : role === 'BACKEND_USER' ? ['orders'] : [];
+    const selected = role === 'SUPER_ADMIN'
+      ? menus
+      : menus.filter((menu) => defaultTitles.includes(menu.title.trim().toLowerCase()));
+    this.selectedMenuIds.set(selected.map((menu) => menu.id));
+    const orders = selected.find((menu) => menu.title.trim().toLowerCase() === 'orders');
+    this.selectedTabIds.set(role === 'ADMIN' || role === 'SUPER_ADMIN' ? (orders?.tabs.map((tab) => tab.id) ?? []) : []);
   }
 
   openEdit(staff: Staff): void {
@@ -119,10 +170,12 @@ export class TeamComponent implements OnInit {
 
   toggleMenu(menuId: number, checked: boolean): void {
     this.selectedMenuIds.update((ids) => checked ? [...new Set([...ids, menuId])] : ids.filter((id) => id !== menuId));
+    const menu = this.menuOptions().find((item) => item.id === menuId);
     if (!checked) {
-      const menu = this.menuOptions().find((item) => item.id === menuId);
       const tabIds = new Set(menu?.tabs.map((tab) => tab.id) ?? []);
       this.selectedTabIds.update((ids) => ids.filter((id) => !tabIds.has(id)));
+    } else if (this.form.controls.role.value === 'ADMIN' && menu?.tabs.length) {
+      this.selectedTabIds.update((ids) => [...new Set([...ids, ...menu.tabs.map((tab) => tab.id)])]);
     }
   }
 
@@ -132,6 +185,20 @@ export class TeamComponent implements OnInit {
 
   hasMenu(menuId: number): boolean { return this.selectedMenuIds().includes(menuId); }
   hasTab(tabId: number): boolean { return this.selectedTabIds().includes(tabId); }
+
+  showMenuTabs(menu: RegistrationMenuOption): boolean {
+    return this.form.controls.role.value !== 'BACKEND_USER' && menu.hasTab && menu.tabs.length > 0;
+  }
+
+  showAdminOrderTabs(): boolean {
+    const orderMenu = this.menuOptions().find((menu) => menu.title.trim().toLowerCase() === 'orders');
+    return this.form.controls.role.value === 'ADMIN' && !!orderMenu?.tabs.length &&
+      this.selectedMenuIds().includes(orderMenu.id);
+  }
+
+  setStatus(value: string): void {
+    this.form.controls.active.setValue(value === 'ACTIVE');
+  }
 
   submit(): void {
     this.form.markAllAsTouched();

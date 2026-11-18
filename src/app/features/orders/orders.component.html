@@ -142,6 +142,9 @@
               <th>ORDER TYPE</th>
               <th>SIZE DISTRIBUTION</th>
               <th>PAIRS</th>
+              @if (canViewAdminRate()) {
+                <th>ADMIN RATE / PAIR</th>
+              }
             </tr>
           </thead>
           <tbody>
@@ -154,6 +157,9 @@
                 <td>{{ typeLabel(it) }}</td>
                 <td>{{ distribution(it) }}</td>
                 <td>{{ it.total }}</td>
+                @if (canViewAdminRate()) {
+                  <td>{{ it.adminRatePerPair ? '₹' + it.adminRatePerPair : '—' }}</td>
+                }
               </tr>
             }
           </tbody>

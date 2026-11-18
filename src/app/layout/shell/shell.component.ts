@@ -4,6 +4,7 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { filter, map, startWith } from 'rxjs';
 import { AppStateService } from '../../core/services/app-state.service';
 import { AuthService } from '../../core/services/auth.service';
+import { ThemeService } from '../../core/services/theme.service';
 import { ToastService } from '../../core/services/toast.service';
 
 interface NavEntry {
@@ -49,10 +50,16 @@ export class ShellComponent {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
+  private readonly theme = inject(ThemeService);
 
   readonly user = this.auth.user;
   readonly role = this.appState.role;
   readonly toasts = this.toast.toasts;
+  readonly isDarkMode = this.theme.isDark;
+
+  toggleTheme(): void {
+    this.theme.toggle();
+  }
 
   dismissToast(id: number): void {
     this.toast.dismiss(id);

@@ -25,21 +25,51 @@
     </div>
 
     @if (mode() === 'size') {
-      <div class="size-grid">
-        @for (size of product().sizes; track size) {
-          <div class="size-cell">
-            <label [attr.for]="'size-' + size">Size {{ size }}</label>
-            <input
-              [id]="'size-' + size"
-              type="number"
-              min="0"
-              step="1"
-              [value]="sizeQty()[size]"
-              (input)="updateSize(size, $any($event.target).value)"
-            />
+      @if (sizes().length) {
+        <section class="size-group-picker" aria-label="Filter sizes">
+          <strong>{{ sizeGroups().length ? 'Choose size group' : 'Size filter' }}</strong>
+          <div class="size-group-options">
+            <button
+              class="size-group-option"
+              [class.active]="selectedSizeGroupId() === 'all'"
+              (click)="setSizeGroup('all')"
+            >
+              All sizes
+            </button>
+            @for (group of sizeGroups(); track group.id) {
+              <button
+                class="size-group-option"
+                [class.active]="selectedSizeGroupId() === group.id"
+                (click)="setSizeGroup(group.id)"
+              >
+                {{ group.name }}
+              </button>
+            }
           </div>
-        }
-      </div>
+          @if (sizeGroups().length) {
+            <div class="muted group-hint">
+              Sizes change to the selected group. Pair quantities can still be changed freely.
+            </div>
+          }
+        </section>
+        <div class="size-grid">
+          @for (size of visibleSizes(); track size) {
+            <div class="size-cell">
+              <label [attr.for]="'size-' + size">Size {{ size }}</label>
+              <input
+                [id]="'size-' + size"
+                type="number"
+                min="0"
+                step="1"
+                [value]="sizeQty()[size]"
+                (input)="updateSize(size, $any($event.target).value)"
+              />
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="empty">No sizes are assigned to this product. Assign a size group in Packaging before ordering.</div>
+      }
     } @else {
       @if (!packings().length) {
         <div class="empty">No active carton packing templates for this product.</div>
@@ -71,9 +101,35 @@
       Choose actual quantities. There is no monetary subtotal in customer order review.
     </div>
 
+    @if (canSetAdminRate()) {
+      <section class="admin-rate-tile">
+        <div class="admin-rate-field">
+          <label for="admin-rate">Admin rate (₹ per pair)</label>
+          <input
+            id="admin-rate"
+            type="number"
+            min="0"
+            step="0.01"
+            [value]="adminRatePerPair() || ''"
+            placeholder="Enter rate"
+            (input)="onAdminRateChange($any($event.target).value)"
+          />
+        </div>
+        <div class="admin-rate-help">
+          <strong>Internal rate only</strong>
+          @if (adminRatePerPair() > 0) {
+            <span>Saved rate: {{ money(adminRatePerPair()) }} per pair.</span>
+          } @else {
+            <span>Enter a rate to save it with this order line.</span>
+          }
+          <span>Visible to Admin and Super Admin only.</span>
+        </div>
+      </section>
+    }
+
     <div class="modal-actions">
       <button class="btn" (click)="cancel()">Cancel</button>
-      <button class="btn primary" (click)="add()">{{ addLabel() }}</button>
+      <button class="btn primary" [disabled]="!canAdd()" (click)="add()">{{ addLabel() }}</button>
     </div>
   </div>
 </div>

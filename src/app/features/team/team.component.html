@@ -93,14 +93,14 @@
 
 <aside class="card help-note">
   <p>
-    <strong>How it works:</strong> Staff use their own Login ID and password. Admin permissions are
-    selected per account; Backend Users can be limited to assigned features.
+    <strong>How it works:</strong> Staff use their own Login ID and password. Admins can create Admin
+    or Backend User accounts with selected features. Only Super Admin can create another Super Admin.
   </p>
   <small>Creating accounts uses registration. Editing credentials and account status uses staff admin.</small>
 </aside>
 
 @if (modalOpen()) {
-  <div class="modal-backdrop" (click)="closeModal()">
+  <div class="modal-backdrop">
     <section
       class="team-modal"
       role="dialog"
@@ -114,7 +114,7 @@
             {{ editing() ? 'Edit credentials' : 'Add staff' }}
           </h2>
           <p>
-            {{ editing() ? 'Update login details or account status.' : 'Create a separate team login and choose its access.' }}
+            {{ editing() ? 'Update login details and account status.' : 'Create a staff login, choose a role, and set its access.' }}
           </p>
         </div>
         <button type="button" class="close-btn" aria-label="Close" (click)="closeModal()">×</button>
@@ -154,7 +154,7 @@
           </label>
           @if (!editing()) {
             <label class="field">
-              <span>Role *</span>
+              <span>Role</span>
               <select formControlName="role">
                 @for (role of roleOptions(); track role.value) {
                   <option [value]="role.value">{{ role.label }}</option>
@@ -162,6 +162,13 @@
               </select>
             </label>
           }
+          <label class="field">
+            <span>Status</span>
+            <select [value]="form.controls.active.value ? 'ACTIVE' : 'INACTIVE'" (change)="setStatus($any($event.target).value)">
+              <option value="ACTIVE">Active</option>
+              <option value="INACTIVE">Inactive</option>
+            </select>
+          </label>
         </div>
 
         @if (!editing()) {
@@ -192,7 +199,7 @@
                     />
                     <span>
                       <strong>{{ menu.title }}</strong>
-                      @if (menu.hasTab && menu.tabs.length) {
+                      @if (showMenuTabs(menu)) {
                         <small>
                           @for (tab of menu.tabs; track tab.id) {
                             {{ tab.title }}@if (!$last) { · }
@@ -203,14 +210,25 @@
                   </label>
                 }
               </div>
+              @if (showAdminOrderTabs()) {
+                <section class="order-tabs-panel">
+                  <div>
+                    <h4>Allowed Orders sub-tabs (Admin only)</h4>
+                    <p>Choose which order queues this Admin can access. If Orders is unchecked, all queues are hidden.</p>
+                  </div>
+                  <div class="order-tab-list">
+                    @for (tab of orderTabs(); track tab.id) {
+                      <label class="order-tab-choice">
+                        <input type="checkbox" [checked]="hasTab(tab.id)" (change)="toggleTab(tab.id, $any($event.target).checked)" />
+                        <span>{{ tab.title }}</span>
+                      </label>
+                    }
+                  </div>
+                </section>
+              }
             }
           </section>
         }
-
-        <label class="active-choice">
-          <input type="checkbox" formControlName="active" />
-          Active account
-        </label>
 
         <footer class="modal-actions">
           <button type="button" class="btn" (click)="closeModal()">Cancel</button>
@@ -219,7 +237,7 @@
             class="btn gold"
             [disabled]="saving() || (!editing() && (loadingMenus() || !menuOptions().length))"
           >
-            {{ saving() ? 'Saving…' : editing() ? 'Save changes' : 'Create account' }}
+            {{ saving() ? 'Saving…' : editing() ? 'Save changes' : 'Save staff' }}
           </button>
         </footer>
       </form>

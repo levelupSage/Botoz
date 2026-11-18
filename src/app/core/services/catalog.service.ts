@@ -1,5 +1,5 @@
 import { computed, inject, Injectable, signal, WritableSignal } from '@angular/core';
-import { forkJoin, Observable, tap, timeout } from 'rxjs';
+import { forkJoin, Observable, of, tap, timeout } from 'rxjs';
 import { DataService } from '../data/data.service';
 import { Customer, Product } from '../models';
 
@@ -15,36 +15,86 @@ export class CatalogService {
   private readonly _products = signal<Product[]>([]);
   private readonly _customers = signal<Customer[]>([]);
   private readonly _loading = signal(false);
-  private readonly _loaded = signal(false);
+  private readonly _customersLoading = signal(false);
+  private readonly _productsLoading = signal(false);
+  private readonly _productsLoaded = signal(false);
+  private readonly _customersLoaded = signal(false);
   private readonly _error = signal<string | null>(null);
+  private readonly _customersError = signal<string | null>(null);
+  private readonly _productsError = signal<string | null>(null);
 
   readonly products = this._products.asReadonly();
   readonly customers = this._customers.asReadonly();
   readonly loading = this._loading.asReadonly();
+  readonly customersLoading = this._customersLoading.asReadonly();
+  readonly productsLoading = this._productsLoading.asReadonly();
   readonly error = this._error.asReadonly();
+  readonly customersError = this._customersError.asReadonly();
+  readonly productsError = this._productsError.asReadonly();
   readonly activeCustomers = computed(() => this._customers().filter((c) => c.active));
 
   /** Loads products and customers once; force=true refreshes both. */
   load(force = false): void {
-    if (this._loading() || (this._loaded() && !force)) {
-      return;
-    }
+    const loadProducts = force || !this._productsLoaded();
+    const loadCustomers = force || !this._customersLoaded();
+    if (this._loading() || (!loadProducts && !loadCustomers)) return;
     this._loading.set(true);
     this._error.set(null);
 
     forkJoin({
-      products: this.data.getProducts(),
-      customers: this.data.getCustomers(),
+      products: loadProducts ? this.data.getProducts() : of(this._products()),
+      customers: loadCustomers ? this.data.getCustomers() : of(this._customers()),
     }).pipe(timeout({ first: 60_000 })).subscribe({
       next: ({ products, customers }) => {
-        this._products.set(products);
-        this._customers.set(customers);
-        this._loaded.set(true);
+        if (loadProducts) {
+          this._products.set(products);
+          this._productsLoaded.set(true);
+        }
+        if (loadCustomers) {
+          this._customers.set(customers);
+          this._customersLoaded.set(true);
+        }
         this._loading.set(false);
       },
       error: () => {
         this._error.set('Could not load catalog data. Check the API connection and try again.');
         this._loading.set(false);
+      },
+    });
+  }
+
+  /** Load only customers for features that do not need the product catalogue. */
+  loadCustomers(force = false): void {
+    if (this._customersLoading() || (this._customersLoaded() && !force)) return;
+    this._customersLoading.set(true);
+    this._customersError.set(null);
+    this.data.getCustomers().pipe(timeout({ first: 60_000 })).subscribe({
+      next: (customers) => {
+        this._customers.set(customers);
+        this._customersLoaded.set(true);
+        this._customersLoading.set(false);
+      },
+      error: () => {
+        this._customersError.set('Could not load customers. Check the API connection and try again.');
+        this._customersLoading.set(false);
+      },
+    });
+  }
+
+  /** Load products without coupling their request state to customer data. */
+  loadProducts(force = false): void {
+    if (this._productsLoading() || (this._productsLoaded() && !force)) return;
+    this._productsLoading.set(true);
+    this._productsError.set(null);
+    this.data.getProducts().pipe(timeout({ first: 60_000 })).subscribe({
+      next: (products) => {
+        this._products.set(products);
+        this._productsLoaded.set(true);
+        this._productsLoading.set(false);
+      },
+      error: () => {
+        this._productsError.set('Could not load products. Check the API connection and try again.');
+        this._productsLoading.set(false);
       },
     });
   }

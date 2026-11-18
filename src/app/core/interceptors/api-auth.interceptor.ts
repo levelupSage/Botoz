@@ -64,7 +64,9 @@ export const apiAuthInterceptor: HttpInterceptorFn = (request, next) => {
 
       return refreshRequest.pipe(
         catchError((refreshError: unknown) => {
-          tokens.clear();
+          const transientBackendFailure = refreshError instanceof HttpErrorResponse &&
+            (refreshError.status === 0 || refreshError.status >= 500);
+          if (!transientBackendFailure) tokens.clear();
           return throwError(() => refreshError);
         }),
         switchMap((token) => next(authorized(token))),

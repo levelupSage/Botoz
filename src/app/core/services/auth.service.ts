@@ -1,5 +1,6 @@
 import { computed, effect, Injectable, inject, signal } from '@angular/core';
 import { map, Observable, tap } from 'rxjs';
+import { Router } from '@angular/router';
 import { DataService } from '../data/data.service';
 import { AuthUser, LoginCredentials, UserRole } from '../models';
 import { AuthTokenStore } from './auth-token.store';
@@ -22,6 +23,7 @@ interface PersistedAuth {
 export class AuthService {
   private readonly data = inject(DataService);
   private readonly tokens = inject(AuthTokenStore);
+  private readonly router = inject(Router);
 
   private readonly restored = this.restore();
   private readonly _user = signal<AuthUser | null>(this.restored?.user ?? null);
@@ -36,6 +38,7 @@ export class AuthService {
         } catch {
           /* ignore */
         }
+        void this.router.navigate(['/login']);
       }
     });
   }

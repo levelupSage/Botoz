@@ -465,7 +465,15 @@
 
 /* Customer picker uses the shared modal frame from styles.scss. */
 .picker-modal {
-  width: min(520px, calc(100vw - 32px));
+  width: min(760px, calc(100vw - 32px));
+}
+
+.picker-label {
+  display: block;
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .picker-search {
@@ -486,12 +494,17 @@
   display: grid;
   gap: 4px;
   width: 100%;
-  padding: 12px 13px;
+  padding: 12px 14px;
   color: var(--text);
   text-align: left;
   background: var(--panel2);
   border: 1px solid var(--line);
   border-radius: 10px;
+}
+
+.picker-item.selected {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold);
 }
 
 .picker-item:hover,
@@ -503,6 +516,17 @@
 .picker-item span {
   color: var(--muted);
   font-size: 12px;
+}
+
+.picker-note {
+  margin-top: 12px;
+}
+
+.picker-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
 }
 
 @media (max-width: 1050px) {

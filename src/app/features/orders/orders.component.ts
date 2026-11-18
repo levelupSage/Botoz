@@ -45,6 +45,7 @@ export class OrdersComponent implements OnInit {
   private readonly orders = signal<Order[]>([]);
 
   readonly isCustomer = computed(() => this.appState.role() === 'Customer');
+  readonly canViewAdminRate = computed(() => ['Admin', 'Super Admin'].includes(this.appState.role()));
 
   isNewOrdersView(): boolean {
     return this.router.url.includes('/new-orders');

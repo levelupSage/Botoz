@@ -1,4 +1,4 @@
-<div class="modal-backdrop" (click)="cancel()">
+<div class="modal-backdrop">
   <div class="modal" (click)="$event.stopPropagation()">
     <div class="modal-head">
       <h2>{{ isEdit() ? 'Edit product' : 'Add product' }}</h2>
@@ -37,10 +37,25 @@
           }
         </div>
 
-        <div class="field full">
-          <label for="p-sizes">Sizes <span class="muted">(comma separated)</span></label>
-          <input id="p-sizes" formControlName="sizes" placeholder="5, 6, 7, 8, 9, 10" />
-        </div>
+        <section class="field full packing-section" aria-labelledby="packing-groups-title">
+          <h3 id="packing-groups-title">Assigned packing groups <span class="muted">(check or uncheck)</span></h3>
+          @if (packingGroups().length) {
+            <div class="packing-list">
+              @for (group of packingGroups(); track group.id) {
+                <label class="packing-option">
+                  <input type="checkbox" [checked]="group.active !== false" (change)="togglePackingGroup(group.id)" />
+                  <span><strong>{{ group.name }}</strong><small>{{ packingSummary(group) }}</small></span>
+                </label>
+              }
+            </div>
+            @if (!hasEnabledPackingGroups()) {
+              <div class="packing-empty">No size groups checked. You can check a group above to activate it.</div>
+            }
+            <span class="help">Unchecked groups stay assigned and can be enabled again. Add or remove assigned groups from the Packaging page.</span>
+          } @else {
+            <div class="notice packing-empty">No packing groups are assigned to this product. Assign a group from the Packaging page.</div>
+          }
+        </section>
 
         <div class="field full">
           <label>Category-wise display prices (₹)</label>
@@ -58,7 +73,7 @@
               <input id="p-c" type="number" min="0" formControlName="priceC" />
             </div>
           </div>
-          <span class="help">A blank/zero price means that customer category cannot order the product.</span>
+          <span class="help">A blank price means that customer category cannot order the product. Individual customer override takes priority.</span>
         </div>
 
         <div class="field full">

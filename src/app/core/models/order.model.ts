@@ -18,6 +18,8 @@ export interface OrderItem {
   packingGroupId?: number;
   /** Snapshot of the per-customer price at the time of ordering. */
   priceSnapshot?: number;
+  /** Internal staff-only rate saved per pair with this order line. */
+  adminRatePerPair?: number;
 }
 
 export interface Order {

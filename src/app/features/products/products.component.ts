@@ -1,10 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { finalize } from 'rxjs';
 import { Customer, Product, ProductImage, PriceTier } from '../../core/models';
 import { DataService } from '../../core/data/data.service';
 import { AppStateService } from '../../core/services/app-state.service';
 import { BrandService } from '../../core/services/brand.service';
 import { CatalogService } from '../../core/services/catalog.service';
+import { PackingGroupsService } from '../../core/services/packing-groups.service';
 import { ToastService } from '../../core/services/toast.service';
 import { AdminPhotoOrderService, AdminPhotoOrderLine } from '../../core/services/admin-photo-order.service';
 import { ProductShowcaseService, ShowcaseBanner } from '../../core/services/product-showcase.service';
@@ -31,6 +33,7 @@ interface PhotoDraft extends AdminPhotoOrderLine {}
 })
 export class ProductsComponent implements OnInit {
   private readonly catalog = inject(CatalogService);
+  private readonly packingGroups = inject(PackingGroupsService);
   private readonly brandService = inject(BrandService);
   private readonly data = inject(DataService);
   private readonly appState = inject(AppStateService);
@@ -40,8 +43,8 @@ export class ProductsComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
-  readonly loading = this.catalog.loading;
-  readonly error = this.catalog.error;
+  readonly loading = this.catalog.productsLoading;
+  readonly error = this.catalog.productsError;
   readonly role = this.appState.role;
 
   readonly search = signal('');
@@ -64,6 +67,7 @@ export class ProductsComponent implements OnInit {
 
   /** Product chosen to open the order modal, or null. */
   readonly orderProduct = signal<Product | null>(null);
+  readonly preparingOrderProductId = signal<number | null>(null);
 
   /** Product edit/add modal state. undefined = closed, null = add, Product = edit. */
   readonly editProduct = signal<Product | null | undefined>(undefined);
@@ -84,6 +88,9 @@ export class ProductsComponent implements OnInit {
   /** Customer-picker modal (opened by "＋ Create order"). */
   readonly pickerOpen = signal(false);
   readonly pickerSearch = signal('');
+  readonly selectedPickerCustomerId = signal<number | null>(null);
+  readonly customersLoading = this.catalog.customersLoading;
+  readonly customersError = this.catalog.customersError;
   readonly featureableProducts = computed(() => this.catalog.products().filter((product) => product.active && !product.archived));
   readonly showcaseOpen = signal(false);
   readonly featuredIds = signal<number[]>([]);
@@ -105,20 +112,33 @@ export class ProductsComponent implements OnInit {
   readonly pickerResults = computed(() => {
     const term = this.pickerSearch().trim().toLowerCase();
     return this.orderableCustomers().filter((c) =>
-      `${c.name} ${c.code} ${c.phone} ${c.loginId ?? ''}`.toLowerCase().includes(term),
+      `${c.name} ${c.code} ${c.phone} ${c.whatsapp ?? ''} ${c.station ?? ''} ${c.loginId ?? ''}`
+        .toLowerCase().includes(term),
     );
   });
 
   openPicker(): void {
     this.pickerSearch.set('');
+    this.selectedPickerCustomerId.set(null);
     this.pickerOpen.set(true);
+    this.catalog.loadCustomers();
   }
 
   closePicker(): void {
     this.pickerOpen.set(false);
   }
 
-  chooseCustomer(id: number): void {
+  retryCustomersLoad(): void {
+    this.catalog.loadCustomers(true);
+  }
+
+  selectPickerCustomer(id: number): void {
+    this.selectedPickerCustomerId.set(id);
+  }
+
+  confirmPickerCustomer(): void {
+    const id = this.selectedPickerCustomerId();
+    if (!id) return;
     this.appState.setStaffOrderCustomer(id);
     this.pickerOpen.set(false);
     const name = this.catalog.customerById(id)?.name ?? '';
@@ -224,7 +244,8 @@ export class ProductsComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.catalog.load();
+    this.catalog.loadProducts();
+    if (this.isCustomer() || this.isStaffOrdering()) this.catalog.loadCustomers();
     this.brandService.load();
     const query = this.route.snapshot.queryParamMap;
     const startPhotoOrder = query.get('photoOrder') === '1';
@@ -254,7 +275,7 @@ export class ProductsComponent implements OnInit {
   }
 
   retryCatalogLoad(): void {
-    this.catalog.load(true);
+    this.catalog.loadProducts(true);
     this.brandService.load(true);
   }
 
@@ -450,7 +471,13 @@ export class ProductsComponent implements OnInit {
       this.toast.show('Product unavailable or price not assigned for this customer');
       return;
     }
-    this.orderProduct.set(product);
+    this.preparingOrderProductId.set(product.id);
+    this.packingGroups.resolveProduct(product).pipe(
+      finalize(() => this.preparingOrderProductId.set(null)),
+    ).subscribe({
+      next: (resolvedProduct) => this.orderProduct.set(resolvedProduct),
+      error: () => this.toast.error('Could not load this product’s size group. Please try again.'),
+    });
   }
 
   closeOrder(): void {

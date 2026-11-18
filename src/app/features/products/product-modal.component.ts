@@ -9,7 +9,7 @@ import {
   signal,
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Product, ProductImage } from '../../core/models';
+import { Packing, Product, ProductImage } from '../../core/models';
 import { DataService } from '../../core/data/data.service';
 import { BrandService } from '../../core/services/brand.service';
 import { CatalogService } from '../../core/services/catalog.service';
@@ -44,13 +44,14 @@ export class ProductModalComponent {
 
   /** Newly added photos (data URLs) + existing ones, editable here. */
   readonly images = signal<ProductImage[]>([]);
+  readonly packingGroups = signal<Packing[]>([]);
+  readonly hasEnabledPackingGroups = computed(() => this.packingGroups().some((group) => group.active !== false));
 
   readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required]],
     code: ['', [Validators.required]],
     brand: ['', [Validators.required]],
     mrp: [0, [Validators.required, Validators.min(1)]],
-    sizes: [''], // comma-separated
     priceA: [0],
     priceB: [0],
     priceC: [0],
@@ -85,27 +86,37 @@ export class ProductModalComponent {
         code: p.code,
         brand: p.brand || firstBrand,
         mrp: p.mrp,
-        sizes: (p.sizes ?? []).join(', '),
         priceA: p.categoryPrices.A ?? 0,
         priceB: p.categoryPrices.B ?? 0,
         priceC: p.categoryPrices.C ?? 0,
         active: p.active,
       });
       this.images.set((p.images ?? []).map((i) => ({ ...i })));
+      this.packingGroups.set((p.packings ?? []).map((packing) => ({ ...packing, rows: [...packing.rows] })));
     } else {
       this.form.reset({
         name: '',
         code: '',
         brand: firstBrand,
         mrp: 0,
-        sizes: '',
         priceA: 0,
         priceB: 0,
         priceC: 0,
         active: true,
       });
       this.images.set([]);
+      this.packingGroups.set([]);
     }
+  }
+
+  togglePackingGroup(id: number): void {
+    this.packingGroups.update((groups) => groups.map((group) =>
+      group.id === id ? { ...group, active: group.active === false } : group,
+    ));
+  }
+
+  packingSummary(group: Packing): string {
+    return group.rows.map((row) => `${row.size} (${row.pairs} pairs)`).join(', ');
   }
 
   toggleImage(index: number): void {
@@ -150,11 +161,6 @@ export class ProductModalComponent {
       return;
     }
     const raw = this.form.getRawValue();
-    const sizes = raw.sizes
-      .split(',')
-      .map((s) => Number(s.trim()))
-      .filter((n) => Number.isFinite(n) && n > 0);
-
     const categoryPrices: Product['categoryPrices'] = { A: 0, B: 0, C: 0 };
     if (raw.priceA > 0) categoryPrices.A = raw.priceA;
     if (raw.priceB > 0) categoryPrices.B = raw.priceB;
@@ -177,10 +183,10 @@ export class ProductModalComponent {
       active: raw.active,
       archived: existing?.archived,
       images,
-      sizes: sizes.length ? sizes : (existing?.sizes ?? []),
-      packings: existing?.packings ?? [],
+      sizes: [...new Set(this.packingGroups().flatMap((packing) => packing.rows.map((row) => row.size)))],
+      packings: this.packingGroups(),
       packingGroupIds: existing?.packingGroupIds,
-      enabledPackingGroupIds: existing?.enabledPackingGroupIds,
+      enabledPackingGroupIds: this.packingGroups().filter((packing) => packing.active !== false).map((packing) => packing.id),
       sizeGroups: existing?.sizeGroups,
     };
 

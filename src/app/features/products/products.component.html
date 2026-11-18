@@ -180,7 +180,9 @@
               <small>{{ priceLabel(p) }}</small>
             </div>
             @if (showOrderButton()) {
-              <button class="btn small primary" (click)="openOrder(p)">Order</button>
+              <button class="btn small primary" [disabled]="preparingOrderProductId() === p.id" (click)="openOrder(p)">
+                {{ preparingOrderProductId() === p.id ? 'Loading…' : 'Order' }}
+              </button>
             } @else if (canManageProducts()) {
               <button class="btn small" (click)="openEdit(p)">Edit</button>
             }
@@ -224,20 +226,34 @@
   <div class="modal-backdrop" (click)="closePicker()">
     <div class="modal picker-modal" (click)="$event.stopPropagation()">
       <div class="modal-head">
-        <h2>Create order: choose a customer</h2>
+        <div>
+          <h2>Create order for customer</h2>
+          <label class="picker-label" for="picker-customer-search">Search customer by name, code or phone *</label>
+        </div>
         <button class="icon-btn" (click)="closePicker()" aria-label="Close">×</button>
       </div>
-      <input class="search picker-search" placeholder="Search customer name, code or phone..." [value]="pickerSearch()" (input)="pickerSearch.set($any($event.target).value)" />
+      <input id="picker-customer-search" class="search picker-search" placeholder="Type party name, customer code or phone..." [value]="pickerSearch()" (input)="pickerSearch.set($any($event.target).value)" />
+      @if (customersLoading()) {
+        <div class="empty">Loading customers...</div>
+      } @else if (customersError()) {
+        <div class="notice error">{{ customersError() }} <button class="btn small" (click)="retryCustomersLoad()">Retry</button></div>
+      } @else {
       <div class="picker-results">
         @for (c of pickerResults(); track c.id) {
-          <button class="picker-item" (click)="chooseCustomer(c.id)">
-            <strong>{{ c.name }}</strong>
-            <span>{{ c.loginId ?? c.code }} · Category {{ c.category }} · {{ c.phone }}</span>
+          <button class="picker-item" [class.selected]="selectedPickerCustomerId() === c.id" (click)="selectPickerCustomer(c.id)">
+            <strong>{{ c.name }} (Station: {{ c.station || 'Not assigned' }})</strong>
+            <span>{{ c.code }} · Category {{ c.category }} · {{ c.whatsapp || c.phone }}</span>
           </button>
         } @empty {
           <div class="empty">No active customers match.</div>
         }
       </div>
+      <div class="notice picker-note">Customer-specific category and override prices are used. Monetary order totals are not displayed here.</div>
+      <div class="picker-actions">
+        <button class="btn" (click)="closePicker()">Cancel</button>
+        <button class="btn primary" [disabled]="!selectedPickerCustomerId()" (click)="confirmPickerCustomer()">Choose products</button>
+      </div>
+      }
     </div>
   </div>
 }

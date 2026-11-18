@@ -1,142 +1,139 @@
 <div class="page-head">
   <div>
-    <h1>Carton packing setup</h1>
-    <div class="muted">Choose a product, then create or edit the carton size groups used by order entry.</div>
+    <h1>Packaging</h1>
+    <div class="muted">Create a shared size group → assign it to a product → save its carton pair quantities. Customers can order Size-wise or Carton-wise.</div>
   </div>
 </div>
 
-<div class="card picker">
-  <div class="field">
-    <label for="product-search">Search product by name or code</label>
-    <input
-      id="product-search"
-      type="search"
-      [value]="productSearch()"
-      (input)="productSearch.set($any($event.target).value)"
-      placeholder="Type product name, code or brand"
-    />
-  </div>
-  <div class="field">
-    <label for="product">Product</label>
-    <select id="product" [value]="selectedProductId() ?? 0" (change)="selectProduct($any($event.target).value)">
-      <option value="0">Select a product…</option>
-      @for (p of filteredProducts(); track p.id) {
-        <option [value]="p.id">{{ p.code }} · {{ p.name }}</option>
-      }
-    </select>
-    @if (!filteredProducts().length) {
-      <small class="muted">No products match that search.</small>
-    }
-  </div>
-</div>
-
-@if (loading()) {
-  <div class="card empty">Loading…</div>
-} @else if (error()) {
-  <div class="notice error">{{ error() }}</div>
-} @else if (selectedProduct(); as product) {
-  <div class="card">
-    <div class="card-head">
-      <div>
-        <h2>{{ product.name }}</h2>
-        <div class="muted">{{ product.code }} · {{ product.brand }}</div>
-      </div>
-      <span class="pill gold">{{ product.sizes.length }} sizes</span>
-    </div>
-
-    <div class="template-picker">
-      <button type="button" class="btn small" [class.primary]="editingPackingId() === 'new'" (click)="startNewTemplate()">
-        + New template
-      </button>
-      @for (packing of existingPackings(); track packing.id) {
-        <button
-          type="button"
-          class="btn small"
-          [class.primary]="editingPackingId() === packing.id"
-          (click)="loadTemplate(packing.id.toString())"
-        >
-          {{ packing.name }} <span class="muted">· {{ packing.rows.length }} sizes</span>
-        </button>
-      }
-      @if (!existingPackings().length && editingPackingId() !== 'new') {
-        <span class="muted">No active templates yet.</span>
-      }
-    </div>
-
-    @if (archivedPackings().length) {
-      <details class="archived-list">
-        <summary>Archived templates ({{ archivedPackings().length }})</summary>
-        @for (packing of archivedPackings(); track packing.id) {
-          <div class="archived-template">
-            <span><strong>{{ packing.name }}</strong><small>{{ rowsText(packing) }}</small></span>
-            <button class="btn small" [disabled]="saving()" (click)="restoreTemplate(packing)">Restore</button>
-          </div>
-        }
-      </details>
-    }
-  </div>
-
-  <div class="card">
-    <div class="card-head">
-      <h2>{{ editingPackingId() === 'new' ? 'Create template' : 'Edit template' }}</h2>
-      <span class="pill gold">{{ draftTotal() }} pairs/carton</span>
-    </div>
-
-    <div class="field name-field">
-      <label for="tpl-name">Template name *</label>
-      <input
-        id="tpl-name"
-        [value]="draftName()"
-        (input)="draftName.set($any($event.target).value)"
-        placeholder="e.g. 5×8 Regular"
-      />
-    </div>
-
-    <div class="rows-head">
-      <div><strong>Size-wise pairs per carton</strong><small>Each row needs a unique size and a positive whole pair count.</small></div>
-      <button class="btn small" (click)="addRow()">+ Add size</button>
-    </div>
-    <div class="packing-rows">
-      @for (row of draftRows(); track $index) {
-        <div class="packing-row">
-          <label [attr.for]="'row-size-' + $index">Size</label>
-          <input
-            [id]="'row-size-' + $index"
-            type="number"
-            min="1"
-            step="1"
-            [value]="row.size || ''"
-            (input)="setDraftSize($index, $any($event.target).value)"
-          />
-          <label [attr.for]="'row-pairs-' + $index">Pairs in carton</label>
-          <input
-            [id]="'row-pairs-' + $index"
-            type="number"
-            min="1"
-            step="1"
-            [value]="row.pairs"
-            (input)="setDraftPairs($index, $any($event.target).value)"
-          />
-          <button class="btn small danger" [disabled]="draftRows().length === 1" (click)="removeRow($index)" aria-label="Remove size row">Remove</button>
-        </div>
-      } @empty {
-        <div class="empty">Add a size row to start this template.</div>
-      }
-    </div>
-
-    <div class="distribution notice">
-      <strong>{{ draftTotal() }} pairs/carton</strong>
-      <span>{{ draftRowsText() }}</span>
-    </div>
-    <div class="actions">
-      @if (selectedTemplate(); as packing) {
-        <button class="btn danger" [disabled]="saving()" (click)="archiveTemplate(packing)">Archive template</button>
-      }
-      <button class="btn primary" [disabled]="saving()" (click)="saveTemplate()">
-        {{ saving() ? 'Saving…' : editingPackingId() === 'new' ? 'Save template' : 'Save changes' }}
-      </button>
-    </div>
-  </div>
-} @else {
-  <div class="card empty">Select a product to manage its carton templates.</div>
+@if (groupsLoading()) { <div class="muted">Loading saved groups…</div> }
+@if (groupsError()) {
+  <div class="notice error">{{ groupsError() }} <button type="button" class="btn small" (click)="retryGroups()">Retry groups</button></div>
 }
+  <section class="card setup-step">
+    <div class="step-head">
+      <h2><span class="step-number">1</span> Create size groups</h2>
+      <span class="pill gold">Shared for all products</span>
+    </div>
+    <div class="group-form">
+      <label class="field">
+        <span>Saved groups</span>
+        <select [value]="selectedGroupId() ?? 0" (change)="selectGroup($any($event.target).value)">
+          <option value="0">+ New size group</option>
+          @for (group of savedGroups(); track group.id) {
+            <option [value]="group.id">{{ group.name }} · {{ group.sizes.join(', ') }}</option>
+          }
+        </select>
+      </label>
+      <label class="field">
+        <span>Group name *</span>
+        <input [value]="groupName()" (input)="groupName.set($any($event.target).value)" placeholder="e.g. 5x8" />
+      </label>
+      <label class="field group-sizes">
+        <span>Sizes in this group * <small>(you decide)</small></span>
+        <input [value]="groupSizes()" (input)="groupSizes.set($any($event.target).value)" placeholder="e.g. 5, 6, 7, 8" />
+      </label>
+    </div>
+    <div class="step-actions">
+      @if (selectedGroupId()) {
+        <button type="button" class="btn primary" [disabled]="saving()" (click)="saveGroupChanges()">{{ saving() ? 'Saving...' : 'Save group changes' }}</button>
+        @if (!selectedGroupAssigned()) {
+          <button type="button" class="btn danger" [disabled]="saving()" (click)="deleteGroup()">Delete unused group</button>
+        }
+      } @else {
+        <button type="button" class="btn primary" [disabled]="saving()" (click)="createGroup()">{{ saving() ? 'Saving...' : '+ Create group' }}</button>
+      }
+      <button type="button" class="btn" (click)="selectGroup('0')">New group</button>
+    </div>
+    <p class="help">The name is only a label. For example, a group named 5x8 uses exactly the sizes you enter. Groups can be reused on many products.</p>
+  </section>
+
+  <section class="card setup-step">
+    <div class="step-head">
+      <h2><span class="step-number">2</span> Choose a product &amp; assign groups</h2>
+    </div>
+    @if (productsLoading()) { <p class="muted">Loading products…</p> }
+    @if (productsError()) {
+      <div class="notice error">{{ productsError() }} <button type="button" class="btn small" (click)="retryProducts()">Retry products</button></div>
+    }
+    <label class="field">
+      <span>Search product by name or code</span>
+      <input type="search" [value]="productSearch()" (input)="productSearch.set($any($event.target).value)" placeholder="Type product name or code..." />
+    </label>
+    <label class="field product-select">
+      <span>Product</span>
+      <select [value]="selectedProductId() ?? 0" (change)="selectProduct($any($event.target).value)">
+        <option value="0">Select a product...</option>
+        @for (product of filteredProducts(); track product.id) {
+          <option [value]="product.id">{{ product.code }} · {{ product.name }}</option>
+        }
+      </select>
+      @if (!filteredProducts().length) { <small class="muted">No products match that search.</small> }
+    </label>
+    @if (selectedProduct(); as product) {
+      <p class="selected-product">Selected: <strong>{{ product.code }} - {{ product.name }}</strong></p>
+      <label class="field">
+        <span>Assign a saved group to this product</span>
+        <span class="assign-row">
+          <select [value]="selectedGroupId() ?? 0" (change)="selectGroup($any($event.target).value)">
+            <option value="0">Choose a size group...</option>
+            @for (group of savedGroups(); track group.id) {
+              <option [value]="group.id">{{ group.name }} · {{ group.sizes.join(', ') }}</option>
+            }
+          </select>
+          <button type="button" class="btn primary" [disabled]="saving() || !selectedGroup()" (click)="assignGroup()">+ Assign group</button>
+        </span>
+      </label>
+      <div class="assigned-groups">
+        <span class="muted">Assigned groups for {{ product.name }} ({{ assignedGroups().length }}). Select any to edit its carton quantities:</span>
+        <div class="group-chips">
+          @for (group of assignedGroups(); track group.id) {
+            <button type="button" class="btn small" [class.primary]="editingPackingId() === group.id" (click)="selectAssignedGroup(group.id)">
+              {{ group.name }} · {{ group.sizes.join(', ') }}
+            </button>
+          } @empty {
+            <span class="muted">No groups assigned yet.</span>
+          }
+        </div>
+      </div>
+    } @else {
+      <p class="help">Select a product to assign a saved group.</p>
+    }
+  </section>
+
+  <section class="card setup-step">
+    <div class="step-head">
+      <h2><span class="step-number">3</span> Pairs per carton for selected group</h2>
+      @if (editingPackingId() !== null) { <span class="pill gold">{{ draftTotal() }} pairs/carton</span> }
+    </div>
+    @if (selectedTemplate(); as packing) {
+      @if (selectedProduct(); as product) {
+        <p class="muted">{{ product.name }} · {{ packing.name }}</p>
+        <div class="packing-rows">
+          @for (row of draftRows(); track $index) {
+            <label class="packing-row">
+              <span>Size {{ row.size }}</span>
+              <span class="pair-field">
+                <span>Pairs in carton</span>
+                <input type="number" min="0" step="1" [value]="row.pairs" (input)="setDraftPairs($index, $any($event.target).value)" aria-label="Pairs per carton" />
+              </span>
+            </label>
+          } @empty {
+            <div class="empty">This group has no sizes.</div>
+          }
+        </div>
+        <div class="distribution notice">
+          <span>Total pairs/carton: <strong>{{ draftTotal() }}</strong></span>
+          <span>{{ draftRowsText() }}</span>
+        </div>
+        @if (draftTotal() < 1) {
+          <small class="muted">Enter at least one pair per carton before saving.</small>
+        }
+        <div class="step-actions">
+          <button type="button" class="btn primary" [disabled]="saving() || draftTotal() < 1" (click)="saveTemplate()">{{ saving() ? 'Saving...' : 'Save carton packing' }}</button>
+          <button type="button" class="btn danger" [disabled]="saving()" (click)="removeGroupFromProduct()">Remove group from product</button>
+        </div>
+      }
+    } @else {
+      <p class="help">Choose a product and select one of its assigned groups above to set carton quantities.</p>
+    }
+  </section>

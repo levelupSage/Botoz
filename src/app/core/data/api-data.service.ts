@@ -207,6 +207,62 @@ export class ApiDataService extends DataService {
     );
   }
 
+  getPackingGroups(): Observable<ProductSizeGroup[]> {
+    return this.request<unknown>(this.http.get(`${this.baseUrl}/api/admin/packing-groups`)).pipe(
+      map((value) => {
+        const rows = Array.isArray(value) ? value :
+          Array.isArray(this.asJson(value)['content']) ? this.asJson(value)['content'] as unknown[] : [];
+        return rows.map((item) => {
+          const row = this.asJson(item);
+          const sizes = Array.isArray(row['sizes']) ? row['sizes'] : [];
+          return {
+            id: this.number(row['id']),
+            name: this.text(row['name']),
+            active: true,
+            sizes: sizes.map((size) => this.number(size)).filter((size) => size > 0),
+          };
+        }).filter((group) => group.id > 0 && group.name.length > 0);
+      }),
+    );
+  }
+
+  createPackingGroup(name: string, sizes: number[]): Observable<ProductSizeGroup> {
+    return this.request<Json>(this.http.post(`${this.baseUrl}/api/admin/packing-groups`, {
+      name,
+      sizes: sizes.map(String),
+    })).pipe(map((row) => {
+      const id = this.number(row['id']);
+      if (!id) throw new Error('The API did not return the created packing group ID.');
+      return {
+        id,
+        name: this.text(row['name']) || name,
+        active: true,
+        sizes: Array.isArray(row['sizes'])
+          ? (row['sizes'] as unknown[]).map((size) => this.number(size)).filter((size) => size > 0)
+          : sizes,
+      };
+    }));
+  }
+
+  updatePackingGroup(id: number, name: string, sizes: number[]): Observable<ProductSizeGroup> {
+    return this.request<Json>(this.http.put(`${this.baseUrl}/api/admin/packing-groups/${id}`, {
+      name,
+      sizes: sizes.map(String),
+    })).pipe(map((row) => ({
+      id,
+      name: this.text(row['name']) || name,
+      active: true,
+      sizes: Array.isArray(row['sizes'])
+        ? (row['sizes'] as unknown[]).map((size) => this.number(size)).filter((size) => size > 0)
+        : sizes,
+    })));
+  }
+
+  deletePackingGroup(id: number): Observable<void> {
+    return this.request<unknown>(this.http.delete(`${this.baseUrl}/api/admin/packing-groups/${id}`))
+      .pipe(map(() => undefined));
+  }
+
   saveProduct(product: Product): Observable<Product> {
     return this.ensurePackingGroups(product).pipe(
       switchMap((packings) => {
@@ -216,19 +272,20 @@ export class ApiDataService extends DataService {
           : this.http.post<ApiEnvelope<Json>>(`${this.baseUrl}/api/admin/products`, body);
 
         return this.request<Json>(request).pipe(
-          map((saved) => this.toProduct(saved)),
+          map((saved) => this.toProduct(saved, product)),
           switchMap((saved) => {
-          const cartonSaves = packings.filter((packing) => packing.rows.some((row) => row.pairs > 0)).map((packing) =>
-              this.request<Json>(
-                this.http.put(
-                  `${this.baseUrl}/api/admin/products/${saved.id}/packing-groups/${packing.id}/carton-packing`,
-                  { pairsPerCarton: Object.fromEntries(packing.rows.map((row) => [String(row.size), row.pairs])) },
-                ),
-              ),
-            );
+            const cartonSaves = packings
+              .filter((packing) => packing.rows.length > 0 && packing.rows.some((row) => row.pairs > 0))
+              .map((packing) =>
+                this.request<Json>(
+                  this.http.put(
+                    `${this.baseUrl}/api/admin/products/${saved.id}/packing-groups/${packing.id}/carton-packing`,
+                    { pairsPerCarton: Object.fromEntries(packing.rows.map((row) => [String(row.size), row.pairs])) },
+                  ),
+                ));
             return (cartonSaves.length ? forkJoin(cartonSaves) : of([])).pipe(
               switchMap(() => this.uploadNewPhotos(saved.id, product.images)),
-              map((updated) => updated ? this.toProduct(updated) : saved),
+              map((updated) => updated ? this.toProduct(updated, saved) : saved),
             );
           }),
         );
@@ -406,8 +463,7 @@ export class ApiDataService extends DataService {
           ? { packingGroupId: item.packingGroupId, numberOfCartons: item.cartons }
           : {}),
         quantities: Object.fromEntries(item.rows.map((row) => [String(row.size), row.qty])),
-        // The current UI has customer display prices but no separate admin rate field.
-        adminRatePerPair: 0,
+        adminRatePerPair: item.adminRatePerPair ?? 0,
       })),
     };
     return this.request<Json>(this.http.post(`${this.baseUrl}/api/admin/orders`, request)).pipe(
@@ -470,16 +526,27 @@ export class ApiDataService extends DataService {
   }
 
   private ensurePackingGroups(product: Product): Observable<Packing[]> {
-    const known = this.productPackingIds.get(product.id) ?? new Set<number>();
+    const known = new Set([
+      ...(this.productPackingIds.get(product.id) ?? []),
+      ...(product.packingGroupIds ?? []).filter((id) => id > 0),
+    ]);
     const requestedSizes = new Set(product.sizes);
+    const retainedGroupIds = new Set((product.packingGroupIds ?? [...known]).filter((id) => id > 0));
     const knownSizes = this.productSizes.get(product.id) ?? new Set<number>();
-    if ([...knownSizes].some((size) => !requestedSizes.has(size))) {
+    const retainedSizes = new Set<number>();
+    const groupSizes = new Map(this.productGroupSizes.get(product.id) ?? []);
+    const groupNames = new Map(this.productGroupNames.get(product.id) ?? []);
+    for (const group of product.sizeGroups ?? []) {
+      groupSizes.set(group.id, new Set(group.sizes));
+      groupNames.set(group.id, group.name);
+    }
+    for (const groupId of retainedGroupIds) {
+      for (const size of groupSizes.get(groupId) ?? []) retainedSizes.add(size);
+    }
+    if ([...knownSizes].some((size) => retainedSizes.has(size) && !requestedSizes.has(size))) {
       return throwError(() => new Error('This API shares size groups across products; removing an existing size needs a group management change.'));
     }
-    const retainedGroupIds = new Set(product.packingGroupIds ?? known);
     const assignedSizes = new Set<number>();
-    const groupSizes = this.productGroupSizes.get(product.id);
-    const groupNames = this.productGroupNames.get(product.id);
     for (const groupId of retainedGroupIds) {
       for (const size of groupSizes?.get(groupId) ?? []) assignedSizes.add(size);
     }
@@ -541,9 +608,9 @@ export class ApiDataService extends DataService {
       priceB: product.categoryPrices.B || undefined,
       priceC: product.categoryPrices.C || undefined,
       active: product.active,
-      packingGroupIds: [...new Set([...(product.packingGroupIds ?? []), ...packings.map((packing) => packing.id)])],
+      packingGroupIds: [...new Set([...(product.packingGroupIds ?? []).filter((id) => id > 0), ...packings.map((packing) => packing.id)])],
       enabledPackingGroupIds: [...new Set([
-        ...(product.enabledPackingGroupIds ?? []),
+        ...(product.enabledPackingGroupIds ?? []).filter((id) => id > 0),
         ...packings.filter((packing) => packing.active !== false).map((packing) => packing.id),
       ])],
     };
@@ -623,7 +690,7 @@ export class ApiDataService extends DataService {
     };
   }
 
-  private toProduct(value: unknown): Product {
+  private toProduct(value: unknown, fallback?: Product): Product {
     const row = this.asJson(value);
     const id = this.number(row['id']);
     const brandId = this.number(row['brandId']);
@@ -632,50 +699,83 @@ export class ApiDataService extends DataService {
       this.brandById.set(brandId, brand);
       this.brandByName.set(brand.toLowerCase(), brandId);
     }
-    const groupRows = Array.isArray(row['packingGroups']) ? row['packingGroups'] : [];
+    const groupRows = Array.isArray(row['packingGroups']) && row['packingGroups'].length
+      ? row['packingGroups']
+      : Array.isArray(row['sizeGroups']) && row['sizeGroups'].length
+        ? row['sizeGroups']
+        : fallback?.sizeGroups ?? [];
+    const nestedGroupIds = groupRows.map((group) => this.number(this.asJson(group)['id'])).filter((groupId) => groupId > 0);
+    const assignedGroupIds = [...new Set([
+      ...nestedGroupIds,
+      ...(Array.isArray(row['packingGroupIds']) ? row['packingGroupIds'].map((group) => {
+        const groupRow = this.asJson(group);
+        return this.number(groupRow['id'] ?? group);
+      }).filter((groupId) => groupId > 0) : fallback?.packingGroupIds ?? []),
+    ])];
+    const nestedEnabledGroupIds = groupRows
+        .filter((group) => this.asJson(group)['enabled'] !== false && this.asJson(group)['active'] !== false)
+      .map((group) => this.number(this.asJson(group)['id']))
+      .filter((groupId) => groupId > 0);
+    const enabledGroupIds = [...new Set([
+      ...nestedEnabledGroupIds,
+      ...(Array.isArray(row['enabledPackingGroupIds']) ? row['enabledPackingGroupIds'].map((group) => {
+        const groupRow = this.asJson(group);
+        return this.number(groupRow['id'] ?? group);
+      }).filter((groupId) => groupId > 0) : fallback?.enabledPackingGroupIds ?? []),
+    ])];
     const groupSizeMap = new Map<number, Set<number>>();
     const groupNameMap = new Map<number, string>();
     const sizeGroups: ProductSizeGroup[] = groupRows.map((item) => {
       const group = this.asJson(item);
-      groupNameMap.set(this.number(group['id']), this.text(group['name']));
+      const groupId = this.number(group['id']);
+      groupNameMap.set(groupId, this.text(group['name']));
       const sizes = Array.isArray(group['sizes']) ? group['sizes'] : [];
+      const parsedSizes = sizes.map((sizeRow) => this.productSize(sizeRow))
+        .filter((size) => Number.isFinite(size) && size > 0);
+      groupSizeMap.set(groupId, new Set(parsedSizes));
       return {
-        id: this.number(group['id']),
+        id: groupId,
         name: this.text(group['name']),
-        active: group['enabled'] !== false,
-        sizes: sizes.map((sizeRow) => this.number(this.asJson(sizeRow)['size']))
-          .filter((size) => Number.isFinite(size) && size > 0),
+        active: group['enabled'] !== false && group['active'] !== false &&
+          (!enabledGroupIds.length || enabledGroupIds.includes(groupId)),
+        sizes: parsedSizes,
       };
     });
     const packings: Packing[] = groupRows.map((item) => {
       const group = this.asJson(item);
-          const rows = Array.isArray(group['sizes']) ? group['sizes'] : [];
+      const rows = Array.isArray(group['sizes']) ? group['sizes'] : [];
+      const pairMap = this.asJson(group['pairsPerCarton'] ?? group['pairQuantities']);
       return {
         id: this.number(group['id']),
         name: this.text(group['name']),
-        active: group['enabled'] !== false,
+        active: group['enabled'] !== false && group['active'] !== false &&
+          (!enabledGroupIds.length || enabledGroupIds.includes(this.number(group['id']))),
         rows: rows.map((sizeRow) => {
           const r = this.asJson(sizeRow);
-          return { size: Number(r['size']), pairs: this.number(r['pairsPerCarton']) };
+          const size = this.productSize(sizeRow);
+          const pairs = this.number(r['pairsPerCarton'] ?? r['pairs'] ?? pairMap[String(size)]);
+          return { size, pairs };
         }).filter((r) => Number.isFinite(r.size) && r.size > 0),
       };
     }).filter((packing) => packing.rows.some((row) => row.pairs > 0));
     const sizeValues = new Set<number>();
+    const productSizes = Array.isArray(row['sizes']) ? row['sizes'] : fallback?.sizes ?? [];
+    for (const size of productSizes) {
+      const parsed = this.productSize(size);
+      if (parsed > 0) sizeValues.add(parsed);
+    }
     for (const item of groupRows) {
       const sizes = this.asJson(item)['sizes'];
       if (!Array.isArray(sizes)) continue;
       const groupId = this.number(this.asJson(item)['id']);
-      const groupSet = new Set<number>();
       for (const sizeRow of sizes) {
-        const parsed = Number(this.asJson(sizeRow)['size']);
+        const parsed = this.productSize(sizeRow);
         if (Number.isFinite(parsed) && parsed > 0) {
           sizeValues.add(parsed);
-          groupSet.add(parsed);
         }
       }
-      groupSizeMap.set(groupId, groupSet);
     }
-    this.productPackingIds.set(id, new Set(groupRows.map((item) => this.number(this.asJson(item)['id']))));
+    this.productPackingIds.set(id, new Set(assignedGroupIds));
     this.productSizes.set(id, sizeValues);
     this.productGroupSizes.set(id, groupSizeMap);
     this.productGroupNames.set(id, groupNameMap);
@@ -692,25 +792,35 @@ export class ApiDataService extends DataService {
     if (!images.length && this.text(row['coverPhotoUrl'])) {
       images.push({ name: 'Product photo', active: true, src: this.absoluteUrl(this.text(row['coverPhotoUrl'])) });
     }
+    if (!images.length && fallback?.images.length) images.push(...fallback.images);
     return {
-      id,
-      brand,
-      code: this.text(row['code']),
-      name: this.text(row['name']),
+      id: id || fallback?.id || 0,
+      brand: brand || fallback?.brand || '',
+      code: this.text(row['code']) || fallback?.code || '',
+      name: this.text(row['name']) || fallback?.name || '',
       category: '',
-      mrp: this.number(row['mrp']),
-      categoryPrices: { A: this.number(row['priceA']), B: this.number(row['priceB']), C: this.number(row['priceC']) },
-      active: row['active'] !== false,
-      archived: row['archived'] === true,
+      mrp: this.number(row['mrp']) || fallback?.mrp || 0,
+      categoryPrices: {
+        A: this.number(row['priceA']) || fallback?.categoryPrices.A || 0,
+        B: this.number(row['priceB']) || fallback?.categoryPrices.B || 0,
+        C: this.number(row['priceC']) || fallback?.categoryPrices.C || 0,
+      },
+      active: typeof row['active'] === 'boolean' ? row['active'] : fallback?.active ?? true,
+      archived: typeof row['archived'] === 'boolean' ? row['archived'] : fallback?.archived ?? false,
       images,
-      sizes: [...sizeValues].sort((a, b) => a - b),
-      packings,
-      packingGroupIds: groupRows.map((item) => this.number(this.asJson(item)['id'])),
-      enabledPackingGroupIds: groupRows
-        .filter((item) => this.asJson(item)['enabled'] !== false)
-        .map((item) => this.number(this.asJson(item)['id'])),
-      sizeGroups,
+      sizes: [...new Set([...sizeValues, ...(fallback?.sizes ?? [])])].sort((a, b) => a - b),
+      packings: packings.length ? packings : fallback?.packings ?? [],
+      packingGroupIds: assignedGroupIds.length ? assignedGroupIds : fallback?.packingGroupIds ?? [],
+      enabledPackingGroupIds: enabledGroupIds.length ? enabledGroupIds : fallback?.enabledPackingGroupIds ?? [],
+      sizeGroups: sizeGroups.length ? sizeGroups : fallback?.sizeGroups ?? [],
     };
+  }
+
+  private productSize(value: unknown): number {
+    if (value && typeof value === 'object') {
+      return this.number(this.asJson(value)['size']);
+    }
+    return this.number(value);
   }
 
   private toCustomer(value: unknown, fallback?: Customer): Customer {
@@ -756,7 +866,7 @@ export class ApiDataService extends DataService {
     const row = this.asJson(value);
     const customer = this.asJson(row['customer']);
     const lines = Array.isArray(row['lines']) ? row['lines'] : [];
-    const items: OrderItem[] = lines.map((item) => {
+    const items: OrderItem[] = lines.map((item, index) => {
       const line = this.asJson(item);
       const carton = this.text(line['orderType']).toUpperCase() === 'CARTON_WISE';
       const sizes = Array.isArray(line['sizes']) ? line['sizes'] : [];
@@ -777,6 +887,8 @@ export class ApiDataService extends DataService {
           packingGroupId: this.number(line['packingGroupId']),
         } : {}),
         priceSnapshot: this.number(line['customerUnitPrice']),
+        adminRatePerPair: this.number(line['adminRatePerPair']) ||
+          fallback?.items[index]?.adminRatePerPair || 0,
       };
     });
     const rawStatus = (this.text(row['workStatus']) || this.text(row['status'])).toUpperCase();

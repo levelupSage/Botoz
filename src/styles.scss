@@ -10,10 +10,7 @@
 @use 'bootstrap/scss/bootstrap';
 
 :root {
-  /* Force dark everywhere so the app matches the prototype's dark look and
-     stays consistent regardless of OS/browser preference. Because the scheme
-     is fixed to dark, every `light-dark(light, dark)` in the app resolves to
-     its dark branch automatically. */
+  /* The saved theme is applied to the root by ThemeService. */
   color-scheme: dark;
 
   /* Surfaces (dark) */
@@ -51,6 +48,37 @@
 
   --radius: 14px;
   --radius-sm: 9px;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --bg: #f4f5f7;
+  --panel: #ffffff;
+  --panel2: #eceef2;
+  --text: #20232a;
+  --muted: #626875;
+  --line: #d8dbe2;
+  --gold: #b58a3b;
+  --gold2: #8c6927;
+  --green: #27835f;
+  --red: #b94242;
+  --blue: #5279b8;
+  --sidebar-bg: #ffffff;
+  --sidebar-line: #dfe1e6;
+
+  --bs-primary: var(--gold);
+  --bs-secondary: var(--panel2);
+  --bs-success: var(--green);
+  --bs-danger: var(--red);
+  --bs-info: var(--blue);
+  --bs-body-bg: var(--bg);
+  --bs-body-color: var(--text);
+  --bs-border-color: var(--line);
+  --bs-card-bg: var(--panel);
+  --bs-card-border-color: var(--line);
+  --bs-modal-bg: var(--panel);
+  --bs-link-color: var(--gold2);
 }
 
 * {
@@ -143,14 +171,14 @@ h3 {
 }
 
 .btn.dark {
-  background: #25262a;
-  color: #fff;
-  border-color: #25262a;
+  background: var(--panel2);
+  color: var(--text);
+  border-color: var(--line);
 }
 
 .btn.dark:hover:not(:disabled) {
-  background: #303136;
-  border-color: #303136;
+  background: var(--panel);
+  border-color: var(--gold);
 }
 
 .btn.small {
@@ -444,6 +472,61 @@ button.card:hover {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
+}
+
+/* Shared light palette for app areas that still have prototype-specific dark values. */
+:root[data-theme='light'] app-shell .card,
+:root[data-theme='light'] app-shell [class$='-panel'],
+:root[data-theme='light'] app-shell [class$='-card'] {
+  border-color: var(--line);
+  color: var(--text);
+  background: var(--panel);
+}
+
+:root[data-theme='light'] app-shell th {
+  color: var(--muted);
+  background: var(--panel2);
+}
+
+:root[data-theme='light'] app-shell input,
+:root[data-theme='light'] app-shell select,
+:root[data-theme='light'] app-shell textarea,
+:root[data-theme='light'] app-shell .field input,
+:root[data-theme='light'] app-shell .field select,
+:root[data-theme='light'] app-shell .field textarea {
+  border-color: var(--line);
+  color: var(--text);
+  background: var(--panel);
+}
+
+:root[data-theme='light'] app-shell .team-modal,
+:root[data-theme='light'] app-shell .modal:not(.modal-backdrop) {
+  border-color: var(--line);
+  color: var(--text);
+  background: var(--panel);
+}
+
+:root[data-theme='light'] app-shell .modal-head,
+:root[data-theme='light'] app-shell .modal-actions {
+  border-color: var(--line);
+  background: var(--panel);
+}
+
+:root[data-theme='light'] app-shell .menu-choice,
+:root[data-theme='light'] app-shell .order-tabs-panel {
+  border-color: var(--line);
+  color: var(--text);
+  background: var(--panel2);
+}
+
+:root[data-theme='light'] app-shell .menu-choice:has(input:checked) {
+  border-color: var(--gold);
+  background: #f8f1e2;
+}
+
+:root[data-theme='light'] app-shell .field,
+:root[data-theme='light'] app-shell .order-tab-choice {
+  color: var(--muted);
 }
 
 /* Respect users who prefer reduced motion. */

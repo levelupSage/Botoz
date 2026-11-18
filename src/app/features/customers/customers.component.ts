@@ -55,8 +55,8 @@ export class CustomersComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   @ViewChild('businessNameInput') private businessNameInput?: ElementRef<HTMLInputElement>;
 
-  readonly loading = this.catalog.loading;
-  readonly error = this.catalog.error;
+  readonly loading = this.catalog.customersLoading;
+  readonly error = this.catalog.customersError;
   readonly customers = this.catalog.customers;
   readonly products = this.catalog.products;
   readonly brands = this.brandService.brands;
@@ -151,7 +151,7 @@ export class CustomersComponent implements OnInit {
   readonly inactiveCount = computed(() => this.customers().filter((customer) => !customer.active).length);
 
   ngOnInit(): void {
-    this.catalog.load();
+    this.catalog.loadCustomers();
     this.brandService.load();
     this.refreshStations();
     this.data.getStations().subscribe({
@@ -190,7 +190,7 @@ export class CustomersComponent implements OnInit {
   }
 
   retryCatalog(): void {
-    this.catalog.load(true);
+    this.catalog.loadCustomers(true);
   }
 
   private nextCustomerId(): string {
@@ -200,10 +200,6 @@ export class CustomersComponent implements OnInit {
 
   priceRule(c: Customer): string {
     return Object.keys(c.overrides ?? {}).length ? 'Category price + override' : 'Category price';
-  }
-
-  categoryPillClass(cat: PriceTier): string {
-    return cat === 'A' ? 'gold' : cat === 'C' ? 'gray' : 'blue';
   }
 
   openNew(): void {

@@ -8,7 +8,14 @@ import {
   output,
   signal,
 } from '@angular/core';
-import { Customer, OrderItem, OrderMode, Packing, Product } from '../../core/models';
+import {
+  Customer,
+  OrderItem,
+  OrderMode,
+  Packing,
+  Product,
+  ProductSizeGroup,
+} from '../../core/models';
 import { AppStateService } from '../../core/services/app-state.service';
 import { BasketService } from '../../core/services/basket.service';
 import { CatalogService } from '../../core/services/catalog.service';
@@ -40,12 +47,37 @@ export class OrderModalComponent {
 
   /** Size -> pairs entered by the user (size-wise mode). */
   readonly sizeQty = signal<Record<number, number>>({});
+  readonly selectedSizeGroupId = signal<number | 'all'>('all');
+  readonly adminRatePerPair = signal(0);
 
   readonly selectedPackingId = signal<number | null>(null);
   readonly cartonCount = signal<number>(1);
 
   readonly packings = computed<Packing[]>(() =>
-    (this.product().packings ?? []).filter((k) => k.active !== false),
+    (this.product().packings ?? []).filter((packing) =>
+      packing.active !== false && packing.rows.some((row) => row.pairs > 0),
+    ),
+  );
+  readonly sizes = computed(() => [...new Set([
+    ...(this.product().sizes ?? []),
+    ...(this.product().sizeGroups ?? [])
+      .filter((group) => group.active)
+      .flatMap((group) => group.sizes),
+  ])].sort((a, b) => a - b));
+  readonly sizeGroups = computed<ProductSizeGroup[]>(() =>
+    (this.product().sizeGroups ?? []).filter((group) => group.active && group.sizes.length > 0),
+  );
+  readonly visibleSizes = computed(() => {
+    const groupId = this.selectedSizeGroupId();
+    if (groupId === 'all') return this.sizes();
+    const group = this.sizeGroups().find((item) => item.id === groupId);
+    return group ? [...new Set(group.sizes)].sort((a, b) => a - b) : this.sizes();
+  });
+  readonly canAdd = computed(() =>
+    this.mode() === 'size' ? this.sizes().length > 0 : this.packings().length > 0,
+  );
+  readonly canSetAdminRate = computed(() =>
+    ['Admin', 'Super Admin'].includes(this.appState.role()),
   );
 
   private readonly customer = computed<Customer | null>(() => {
@@ -87,8 +119,9 @@ export class OrderModalComponent {
       if (!product) {
         return;
       }
+      this.selectedSizeGroupId.set('all');
       const seeded: Record<number, number> = {};
-      for (const s of product.sizes ?? []) {
+      for (const s of this.sizes()) {
         seeded[s] = 0;
       }
       this.sizeQty.set(seeded);
@@ -97,6 +130,10 @@ export class OrderModalComponent {
 
   setMode(mode: OrderMode): void {
     this.mode.set(mode);
+  }
+
+  setSizeGroup(groupId: number | 'all'): void {
+    this.selectedSizeGroupId.set(groupId);
   }
 
   updateSize(size: number, value: string): void {
@@ -113,6 +150,11 @@ export class OrderModalComponent {
     this.cartonCount.set(Number.isFinite(n) ? n : 1);
   }
 
+  onAdminRateChange(value: string): void {
+    const rate = Number(value);
+    this.adminRatePerPair.set(Number.isFinite(rate) && rate >= 0 ? rate : 0);
+  }
+
   cancel(): void {
     this.cancelled.emit();
   }
@@ -120,9 +162,10 @@ export class OrderModalComponent {
   add(): void {
     const product = this.product();
     const price = priceFor(product, this.customer());
+    const adminRatePerPair = this.canSetAdminRate() ? this.adminRatePerPair() : 0;
 
     if (this.mode() === 'size') {
-      const rows = product.sizes
+      const rows = this.visibleSizes()
         .map((size) => ({ size, qty: this.sizeQty()[size] ?? 0 }))
         .filter((r) => r.qty > 0);
 
@@ -140,6 +183,7 @@ export class OrderModalComponent {
         rows,
         total: rows.reduce((sum, r) => sum + r.qty, 0),
         priceSnapshot: price,
+        adminRatePerPair,
       };
       this.basket.addItem(item);
       this.added.emit();
@@ -166,6 +210,7 @@ export class OrderModalComponent {
       rows,
       total: rows.reduce((sum, r) => sum + r.qty, 0),
       priceSnapshot: price,
+      adminRatePerPair,
     };
     this.basket.addItem(item);
     this.added.emit();

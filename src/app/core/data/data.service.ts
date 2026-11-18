@@ -9,6 +9,7 @@ import {
   Order,
   OrderStatus,
   Product,
+  ProductSizeGroup,
   Staff,
   Station,
 } from '../models';
@@ -44,6 +45,10 @@ export abstract class DataService {
 
   // ---- Products -------------------------------------------------------
   abstract getProducts(): Observable<Product[]>;
+  abstract getPackingGroups(): Observable<ProductSizeGroup[]>;
+  abstract createPackingGroup(name: string, sizes: number[]): Observable<ProductSizeGroup>;
+  abstract updatePackingGroup(id: number, name: string, sizes: number[]): Observable<ProductSizeGroup>;
+  abstract deletePackingGroup(id: number): Observable<void>;
   abstract saveProduct(product: Product): Observable<Product>;
   abstract setProductActive(id: number, active: boolean): Observable<Product>;
   abstract setProductArchived(id: number, archived: boolean): Observable<Product>;
