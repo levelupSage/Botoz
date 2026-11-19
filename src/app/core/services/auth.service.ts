@@ -4,7 +4,6 @@ import { Router } from '@angular/router';
 import { DataService } from '../data/data.service';
 import { AuthUser, LoginCredentials, UserRole } from '../models';
 import { AuthTokenStore } from './auth-token.store';
-import { environment } from '../../../environments/environment';
 
 const STORAGE_KEY = 'botoz.auth';
 
@@ -86,10 +85,6 @@ export class AuthService {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return null;
       const session = JSON.parse(raw) as PersistedAuth;
-      if (!environment.useMockApi && session.token.startsWith('mock.')) {
-        localStorage.removeItem(STORAGE_KEY);
-        return null;
-      }
       return session;
     } catch {
       return null;

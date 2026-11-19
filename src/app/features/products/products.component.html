@@ -214,6 +214,10 @@
   <app-order-modal [product]="product" (added)="onAdded()" (cancelled)="closeOrder()" />
 }
 
+@if (reviewBasketOpen()) {
+  <app-basket-review-modal (closed)="closeBasketReview()" (addMore)="addMoreToOrder()" />
+}
+
 @if (editProduct() !== undefined) {
   <app-product-modal
     [product]="editProduct() ?? null"
@@ -325,10 +329,15 @@
 @if (photoOrderOpen()) {
   <div class="modal-backdrop" (click)="closePhotoOrder()">
     <div class="modal photo-order-modal" (click)="$event.stopPropagation()">
+      <div class="photo-order-prototype-head"><h2>Take Photo Order · Admin</h2><button class="icon-btn" (click)="closePhotoOrder()" aria-label="Close">×</button></div>
+      <div class="notice photo-order-notice">Take pictures for a selected party. These pictures will enter <strong>Picture Orders → Incoming picture requests</strong> and appear in that customer's Orders screen. Admin can review and match them to products.</div>
+      <label class="field photo-customer-field"><span>Choose customer / party *</span><select [value]="photoCustomerId()" (change)="photoCustomerId.set(+$any($event.target).value)"><option value="0">Choose customer</option>@for (customer of orderableCustomers(); track customer.id) {<option [value]="customer.id">{{ customer.name }} · {{ customer.code }}</option>}</select></label>
+      <section class="photo-capture-panel"><h3>Take or add product pictures</h3><div class="photo-capture-actions"><button type="button" class="btn primary" (click)="cameraInput.click()">📷 Take Photo</button><button type="button" class="btn" (click)="uploadInput.click()">＋ Upload Photos</button></div><input #cameraInput class="photo-file-input" type="file" accept="image/*" capture="environment" (change)="addPhotoOrderFiles($event)" /><input #uploadInput class="photo-file-input" type="file" accept="image/*" multiple (change)="addPhotoOrderFiles($event)" /><small class="muted">Camera opens on supported phones; file picker opens on computers. Up to 12 captioned photos per request.</small></section>
       <div class="modal-head"><h2>Take Photo Order</h2><button class="icon-btn" (click)="closePhotoOrder()" aria-label="Close">×</button></div>
       <label class="field"><span>Customer *</span><select [value]="photoCustomerId()" (change)="photoCustomerId.set(+$any($event.target).value)"><option value="0">Choose customer</option>@for (customer of orderableCustomers(); track customer.id) {<option [value]="customer.id">{{ customer.name }} · {{ customer.code }}</option>}</select></label>
       <div class="field photo-upload"><label for="photo-order-files">Take or upload photos</label><input id="photo-order-files" type="file" accept="image/*" capture="environment" multiple (change)="addPhotoOrderFiles($event)" /><small class="muted">Add up to 12 photos and caption each one.</small></div>
       @if (photoDraft().length) {
+        <h3 class="photo-selected-title">{{ photoDraft().length }} photo(s) selected</h3>
         <div class="photo-draft-list">
           @for (photo of photoDraft(); track $index) {
             <div class="photo-draft-item"><img [src]="photo.src" [alt]="photo.caption || photo.name" /><div class="field"><label [attr.for]="'photo-caption-' + $index">Caption *</label><input [id]="'photo-caption-' + $index" [value]="photo.caption" (input)="setPhotoCaption($index, $any($event.target).value)" placeholder="Product name or details" /></div><button class="btn small danger" (click)="removePhotoDraft($index)">Remove</button></div>

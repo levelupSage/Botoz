@@ -1,58 +1,7 @@
 <div class="page-head no-print">
   <div>
-    <h1>Catalogues</h1>
-    <div class="muted">Prepare a standard brand catalogue or a customer-specific price list.</div>
-  </div>
-  <button class="btn primary" (click)="print()" [disabled]="loading() || !!error() || !items().length || (catalogueType() === 'customer' && !selectedCustomer())">🖨 Print / Save PDF</button>
-</div>
-
-<div class="toolbar no-print">
-  <select
-    class="brand-select"
-    [value]="brandFilter()"
-    (change)="brandFilter.set($any($event.target).value)"
-  >
-    @for (b of brandOptions(); track b) {
-      <option [value]="b">{{ b }}</option>
-    }
-  </select>
-  <label class="field catalogue-type">
-    <span>Catalogue type</span>
-    <select [value]="catalogueType()" (change)="catalogueType.set($any($event.target).value)">
-      <option value="standard">Standard catalogue</option>
-      <option value="customer">Customer-specific catalogue</option>
-    </select>
-  </label>
-  @if (catalogueType() === 'customer') {
-    <label class="field customer-select">
-      <span>Customer</span>
-      <select [value]="customerId()" (change)="selectCustomer($any($event.target).value)">
-        <option value="0">Choose customer…</option>
-        @for (customer of customerOptions(); track customer.id) {
-          <option [value]="customer.id">{{ customer.name }} · Category {{ customer.category }}</option>
-        }
-      </select>
-    </label>
-  }
-  <div class="catalogue-options">
-    <label class="checkline">
-      <input type="checkbox" [checked]="includeCode()" (change)="includeCode.set($any($event.target).checked)" />
-      Product code
-    </label>
-    <label class="checkline">
-      <input type="checkbox" [checked]="includeMrp()" (change)="includeMrp.set($any($event.target).checked)" />
-      MRP
-    </label>
-    <label class="checkline">
-      <input type="checkbox" [checked]="includeSizes()" (change)="includeSizes.set($any($event.target).checked)" />
-      Active assigned size groups
-    </label>
-    @if (catalogueType() === 'customer') {
-      <label class="checkline">
-        <input type="checkbox" [checked]="includePrice()" (change)="includePrice.set($any($event.target).checked)" />
-        Customer display price
-      </label>
-    }
+    <h1>PDF catalogues</h1>
+    <div class="muted">Create a standard brand catalogue or a customer-specific catalogue with assigned display prices.</div>
   </div>
 </div>
 
@@ -61,61 +10,36 @@
 } @else if (error()) {
   <div class="notice error">{{ error() }}</div>
 } @else {
-  <div class="catalogue-pages">
-      @for (page of pages(); track page.number) {
-        <section class="catalogue-page">
-          <div class="sheet-head">
-            @if (page.number === 1) {
-              <strong>{{ brandFilter() === 'All' ? 'All brands' : brandFilter() }}</strong>
-            } @else {
-              <span></span>
-            }
-            <span>PRODUCT CATALOGUE</span>
-          </div>
-          <div class="catalogue-grid">
-            @for (p of page.products; track p.id) {
-              <article class="cat-item">
-                <div class="cat-art">
-                  <img [src]="imageSrc(p)" [alt]="p.name" />
-                </div>
-                <div class="cat-info">
-                  <strong>{{ p.name }}</strong>
-                  @if (includeCode()) {
-                    <div class="cat-meta">{{ p.code }}</div>
-                  }
-                  @if (includeMrp()) {
-                    <div class="cat-meta">MRP {{ displayMrp(p) }}</div>
-                  }
-                  @if (includePrice() && catalogueType() === 'customer') {
-                    <div class="cat-meta">Display price {{ displayPrice(p) }}</div>
-                  }
-                  @if (includeSizes()) {
-                    <div class="cat-meta cat-groups">
-                      @for (group of activeSizeGroups(p); track group.name) {
-                        <span>{{ group.name }}</span>
-                      } @empty {
-                        <span>No active assigned size group</span>
-                      }
-                    </div>
-                  }
-                </div>
-              </article>
-            }
-          </div>
-          <footer class="sheet-footer">
-            <span>@if (page.number === 1 && selectedCustomer()) { Prepared for {{ selectedCustomer()?.name }} }</span>
-            <span>Page {{ page.number }} of {{ pages().length }}</span>
-          </footer>
-        </section>
+  <div class="catalogue-workspace no-print">
+    <section class="settings-card">
+      <h2>Catalogue settings</h2>
+      <label class="field"><span>Brand</span><select [value]="brandFilter()" (change)="brandFilter.set($any($event.target).value)">@for (brand of brandOptions(); track brand) { <option [value]="brand">{{ brand }}</option> }</select></label>
+      <label class="field"><span>Catalogue type</span><select [value]="catalogueType()" (change)="catalogueType.set($any($event.target).value); previewGenerated.set(false)"><option value="standard">Standard catalogue (no customer-specific prices)</option><option value="customer">Customer-specific catalogue</option></select></label>
+      @if (catalogueType() === 'customer') {
+        <label class="field"><span>Customer</span><select [value]="customerId()" (change)="selectCustomer($any($event.target).value); previewGenerated.set(false)"><option value="0">Choose customer…</option>@for (customer of customerOptions(); track customer.id) { <option [value]="customer.id">{{ customer.name }} · Category {{ customer.category }}</option> }</select></label>
       }
-      @if (!items().length) {
-        <div class="empty no-print">
-          @if (catalogueType() === 'customer' && !selectedCustomer()) {
-            Select a customer to preview its catalogue.
-          } @else {
-            No active products with photos are available for these catalogue settings.
-          }
+      <div class="option-list">
+        <label class="checkline"><input type="checkbox" [checked]="true" disabled /> Product photo</label>
+        <label class="checkline"><input type="checkbox" [checked]="includeCode()" (change)="includeCode.set($any($event.target).checked)" /> Product code</label>
+        <label class="checkline"><input type="checkbox" [checked]="includeMrp()" (change)="includeMrp.set($any($event.target).checked)" /> MRP</label>
+        <label class="checkline"><input type="checkbox" [checked]="includeSizes()" (change)="includeSizes.set($any($event.target).checked)" /> Active assigned size groups</label>
+        @if (catalogueType() === 'customer') { <label class="checkline"><input type="checkbox" [checked]="includePrice()" (change)="includePrice.set($any($event.target).checked)" /> Display price (customer-specific only)</label> }
+      </div>
+      <div class="notice">@if (catalogueType() === 'standard') { Standard catalogues never include customer-specific prices. } @else { The selected customer's display prices are included when enabled. }</div>
+      <div class="settings-actions"><button class="btn primary" (click)="generatePreview()" [disabled]="catalogueType() === 'customer' && !selectedCustomer()">Generate preview</button><button class="btn" (click)="print()" [disabled]="!items().length || (catalogueType() === 'customer' && !selectedCustomer())">Print / Save PDF</button></div>
+    </section>
+
+    <section class="preview-card">
+      <div class="preview-head"><h2>Catalogue preview</h2><span class="pill gold">Print-ready sample</span></div>
+      @if (previewGenerated() && items().length) {
+        <div class="catalogue-page preview-sheet">
+          <div class="sheet-brand">BOTOZ <span>PRODUCT CATALOGUE</span></div><div class="sheet-title">{{ brandFilter() === 'All' ? 'BOTOZ Collection' : brandFilter() }}</div><div class="sheet-subtitle">Product range · MRP and sizes@if (selectedCustomer()) { · {{ selectedCustomer()?.name }} }</div>
+          <div class="catalogue-grid">@for (product of pages()[0].products; track product.id) { <article class="cat-item"><div class="cat-art"><img [src]="imageSrc(product)" [alt]="product.name" /></div><div class="cat-info"><strong>{{ product.name }}</strong>@if (includeCode()) { <div class="cat-meta">{{ product.code }}</div> }@if (includeMrp()) { <div class="cat-meta">MRP {{ displayMrp(product) }}</div> }@if (includePrice() && catalogueType() === 'customer') { <div class="cat-meta">Display price {{ displayPrice(product) }}</div> }@if (includeSizes()) { <div class="cat-meta cat-groups">@for (group of activeSizeGroups(product); track group.name) { <span>{{ group.name }}</span> } @empty { <span>No active assigned size group</span> }</div> }</div></article> }</div>
         </div>
-      }
+      } @else { <div class="preview-empty">Select your catalogue settings, then choose <strong>Generate preview</strong>.</div> }
+      <p class="preview-help">Print opens the browser print dialog. Production PDF sharing and delivery should be connected to the app backend.</p>
+    </section>
   </div>
+
+  <div class="print-pages">@for (page of pages(); track page.number) { <section class="catalogue-page"><div class="sheet-brand">BOTOZ <span>PRODUCT CATALOGUE</span></div><div class="sheet-title">{{ brandFilter() === 'All' ? 'BOTOZ Collection' : brandFilter() }}</div><div class="catalogue-grid">@for (product of page.products; track product.id) { <article class="cat-item"><div class="cat-art"><img [src]="imageSrc(product)" [alt]="product.name" /></div><div class="cat-info"><strong>{{ product.name }}</strong>@if (includeCode()) { <div class="cat-meta">{{ product.code }}</div> }@if (includeMrp()) { <div class="cat-meta">MRP {{ displayMrp(product) }}</div> }@if (includePrice() && catalogueType() === 'customer') { <div class="cat-meta">Display price {{ displayPrice(product) }}</div> }@if (includeSizes()) { <div class="cat-meta cat-groups">@for (group of activeSizeGroups(product); track group.name) { <span>{{ group.name }}</span> } @empty { <span>No active assigned size group</span> }</div> }</div></article> }</div></section> }</div>
 }

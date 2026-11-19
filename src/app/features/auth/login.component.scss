@@ -61,10 +61,6 @@ form { display: grid; gap: 17px; }
 .account-note { display: flex; gap: 10px; margin-top: 23px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel2); }
 .note-icon { display: grid; flex: 0 0 auto; place-items: center; width: 18px; height: 18px; border-radius: 50%; color: #121316; background: var(--gold); font-size: 11px; font-weight: 900; }
 .account-note p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.55; }
-.demo { display: grid; gap: 10px; margin-top: 20px; padding-top: 17px; border-top: 1px solid var(--line); font-size: 11px; }
-.demo-chips { display: flex; gap: 8px; flex-wrap: wrap; }
-.chip { padding: 7px 12px; border: 1px solid var(--line); border-radius: 20px; color: var(--text); background: var(--panel2); font-size: 11px; font-weight: 700; cursor: pointer; }
-.chip:hover { border-color: var(--gold); }
 .back-link { display: inline-block; margin-top: 23px; color: var(--muted); font-size: 11px; text-decoration: none; }
 .back-link:hover { color: var(--gold); }
 .mobile-brand { display: none; }

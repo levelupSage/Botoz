@@ -3,7 +3,6 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { AppStateService } from '../../core/services/app-state.service';
-import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-login',
@@ -22,7 +21,6 @@ export class LoginComponent {
   readonly loading = signal(false);
   readonly showPassword = signal(false);
   readonly error = signal<string | null>(null);
-  readonly useMockApi = environment.useMockApi;
 
   readonly form = this.fb.nonNullable.group({
     email: ['', [Validators.required]],
@@ -50,10 +48,6 @@ export class LoginComponent {
     });
   }
 
-  /** Fills demo credentials so reviewers can try each role quickly. */
-  useDemo(email: string): void {
-    this.form.setValue({ email, password: 'botoz' });
-  }
 
   togglePassword(): void {
     this.showPassword.update((show) => !show);

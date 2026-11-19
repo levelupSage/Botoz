@@ -1,75 +1,39 @@
 <div class="page-head">
   <div>
-    <h1>Photo Orders</h1>
-    <p>Review product photos and captions captured for customer orders.</p>
+    <h1>Picture Orders</h1>
+    <div class="subtitle">Review customer photo requests first. Choose a request to prepare its regular customer order.</div>
   </div>
-  <button class="btn gold" (click)="startPhotoOrder()">📸 Take Photo Order</button>
+  <div class="head-actions"><span class="pill gold">{{ newCount() }} awaiting review</span><button class="btn gold" (click)="startPhotoOrder()">＋ Create Photo Order</button></div>
 </div>
 
-<section class="summary-grid" aria-label="Photo order status summary">
-  <article class="card summary-card">
-    <span>New</span>
-    <strong>{{ newCount() }}</strong>
-  </article>
-  <article class="card summary-card">
-    <span>Reviewed</span>
-    <strong>{{ reviewedCount() }}</strong>
-  </article>
-  <article class="card summary-card">
-    <span>Done</span>
-    <strong>{{ doneCount() }}</strong>
-  </article>
+<div class="toolbar"><input class="search" placeholder="Search request, customer or caption…" [value]="search()" (input)="search.set($any($event.target).value)" /></div>
+
+<section class="card queue-card">
+  <div class="card-head"><div><h2>Incoming picture requests</h2><div class="muted">Customer uploads are requests, not live staff orders.</div></div><span class="pill blue">{{ incoming().length }} new</span></div>
+  @if (incoming().length) {
+    <div class="table-wrap"><table><thead><tr><th>REQUEST</th><th>CUSTOMER / DATE</th><th>PHOTOS</th><th>THUMBNAILS · CLICK TO ENLARGE</th><th>REVIEW</th><th></th></tr></thead><tbody>
+      @for (request of incoming(); track request.id) {
+        <tr><td><strong>{{ request.id }}</strong></td><td><strong>{{ request.customerName }}</strong><div class="muted">{{ formatDate(request.createdAt) }}</div></td><td>{{ request.items.length }}</td><td><div class="thumbs">@for (photo of request.items; track $index) { <button class="thumb" type="button" (click)="openPreview(photo.src)"><img [src]="photo.src" [alt]="photo.caption || photo.name" /></button> }</div></td><td><span class="pill blue">0 / {{ request.items.length }} reviewed</span></td><td><button class="btn small primary" (click)="review(request)">Review pictures</button></td></tr>
+      }
+    </tbody></table></div>
+  } @else { <div class="empty">No incoming picture requests.</div> }
 </section>
 
-@if (requests().length) {
-  <div class="request-list">
-    @for (request of requests(); track request.id) {
-      <article class="card request-card">
-        <header class="request-head">
-          <div>
-            <span class="request-id">{{ request.id }}</span>
-            <h2>{{ request.customerName }}</h2>
-            <small>{{ formatDate(request.createdAt) }} · {{ request.items.length }} photo(s)</small>
-          </div>
-          <div class="request-controls">
-            <label class="status-field">
-              <span>Status</span>
-              <select
-                [value]="request.status"
-                (change)="changeStatus(request, $any($event.target).value)"
-              >
-                <option value="New">New</option>
-                <option value="Reviewed">Reviewed</option>
-                <option value="Done">Done</option>
-              </select>
-            </label>
-            <button class="btn small danger" (click)="remove(request)">Delete</button>
-          </div>
-        </header>
+<section class="card queue-card">
+  <div class="card-head"><div><h2>Pending Picture Orders</h2><div class="muted">Reviewed requests stay here until staff starts the regular order workflow.</div></div><span class="pill">{{ pending().length }} pending</span></div>
+  @if (pending().length) {
+    <div class="table-wrap"><table><thead><tr><th>PENDING ORDER</th><th>CUSTOMER / DATE</th><th>PHOTOS</th><th>THUMBNAILS · CLICK TO ENLARGE</th><th>STATUS</th><th></th></tr></thead><tbody>
+      @for (request of pending(); track request.id) {
+        <tr><td><strong>{{ request.id }}</strong></td><td><strong>{{ request.customerName }}</strong><div class="muted">{{ formatDate(request.createdAt) }}</div></td><td>{{ request.items.length }}</td><td><div class="thumbs">@for (photo of request.items; track $index) { <button class="thumb" type="button" (click)="openPreview(photo.src)"><img [src]="photo.src" [alt]="photo.caption || photo.name" /></button> }</div></td><td><span class="pill gold">Ready for order</span></td><td><button class="btn small primary" (click)="createOrder(request)">Create order</button></td></tr>
+      }
+    </tbody></table></div>
+  } @else { <div class="empty">No pending picture orders. Review an incoming request to place it here.</div> }
+</section>
 
-        <div class="photo-grid">
-          @for (photo of request.items; track $index) {
-            <figure class="photo-item">
-              <img [src]="photo.src" [alt]="photo.caption || photo.name" />
-              <figcaption>
-                <strong>{{ photo.caption }}</strong>
-                <small>{{ photo.name }}</small>
-              </figcaption>
-            </figure>
-          }
-        </div>
-      </article>
-    }
-  </div>
-} @else {
-  <section class="card empty-state">
-    <div class="empty-icon">📷</div>
-    <h2>No photo orders yet</h2>
-    <p>Take or upload product photos for a customer to start a request.</p>
-    <button class="btn gold" (click)="startPhotoOrder()">Start a photo order</button>
-  </section>
+<details class="processed"><summary>Processed picture requests ({{ doneCount() }})</summary>
+  @if (processed().length) { <div class="processed-list">@for (request of processed(); track request.id) { <div><strong>{{ request.id }}</strong> · {{ request.customerName }} · {{ request.items.length }} photo(s)<button class="btn small danger" (click)="remove(request)">Delete</button></div> }</div> } @else { <p class="muted">No processed picture requests.</p> }
+</details>
+
+@if (previewSrc(); as src) {
+  <div class="modal-backdrop" (click)="closePreview()"><div class="preview-modal" (click)="$event.stopPropagation()"><button class="icon-btn" (click)="closePreview()" aria-label="Close">×</button><img [src]="src" alt="Photo order preview" /></div></div>
 }
-
-<p class="storage-note">
-  Photo order requests are saved on this device and do not sync between devices.
-</p>

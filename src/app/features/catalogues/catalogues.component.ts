@@ -29,6 +29,7 @@ export class CataloguesComponent implements OnInit {
   readonly includeMrp = signal(true);
   readonly includeSizes = signal(true);
   readonly includePrice = signal(false);
+  readonly previewGenerated = signal(false);
 
   readonly brandOptions = computed(() => ['All', ...this.brandService.activeBrands().map((b) => b.name)]);
   readonly customerOptions = this.catalog.activeCustomers;
@@ -97,6 +98,10 @@ export class CataloguesComponent implements OnInit {
 
   selectCustomer(value: string): void {
     this.customerId.set(Number(value));
+  }
+
+  generatePreview(): void {
+    this.previewGenerated.set(true);
   }
 
   print(): void {

@@ -112,7 +112,7 @@ export class OrderModalComponent {
   readonly money = money;
 
   constructor() {
-    // Seed the size->qty map with 0 for every size of the chosen product so
+    // Initialize the size-to-quantity map with 0 for every chosen product size so
     // the inputs render "0" and the record is always fully populated.
     effect(() => {
       const product = this.product();

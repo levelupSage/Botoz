@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard, roleGuard } from './core/guards/auth.guard';
+import { CataloguesComponent } from './features/catalogues/catalogues.component';
 
 export const routes: Routes = [
   // ---- Public ---------------------------------------------------------
@@ -88,8 +89,9 @@ export const routes: Routes = [
         path: 'catalogues',
         canActivate: [roleGuard],
         data: { roles: ['Super Admin', 'Admin', 'Backend User'], menu: 'Catalogues' },
-        loadComponent: () =>
-          import('./features/catalogues/catalogues.component').then((m) => m.CataloguesComponent),
+        // Keep this route AOT-linked. It must never depend on the JIT compiler
+        // in the production browser bundle.
+        component: CataloguesComponent,
       },
       {
         path: 'order-history',

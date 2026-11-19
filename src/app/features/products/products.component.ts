@@ -13,6 +13,7 @@ import { ProductShowcaseService, ShowcaseBanner } from '../../core/services/prod
 import { activeImageSrc, hasActiveImage, isOrderableFor, money, priceFor } from '../../core/utils/pricing.util';
 import { OrderModalComponent } from './order-modal.component';
 import { ProductModalComponent } from './product-modal.component';
+import { BasketReviewModalComponent } from '../basket/basket-review-modal.component';
 
 type StatusFilter = 'All' | 'Active' | 'Archived' | 'Deactivated';
 type ProductSort = 'Relevance' | 'A–Z' | 'MRP: low to high' | 'MRP: high to low';
@@ -26,7 +27,7 @@ interface PhotoDraft extends AdminPhotoOrderLine {}
  */
 @Component({
   selector: 'app-products',
-  imports: [OrderModalComponent, ProductModalComponent],
+  imports: [OrderModalComponent, ProductModalComponent, BasketReviewModalComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './products.component.html',
   styleUrl: './products.component.scss',
@@ -68,6 +69,7 @@ export class ProductsComponent implements OnInit {
   /** Product chosen to open the order modal, or null. */
   readonly orderProduct = signal<Product | null>(null);
   readonly preparingOrderProductId = signal<number | null>(null);
+  readonly reviewBasketOpen = signal(false);
 
   /** Product edit/add modal state. undefined = closed, null = add, Product = edit. */
   readonly editProduct = signal<Product | null | undefined>(undefined);
@@ -486,7 +488,7 @@ export class ProductsComponent implements OnInit {
 
   onAdded(): void {
     this.orderProduct.set(null);
-    this.toast.show(this.isCustomer() ? 'Added to your basket' : 'Added to order draft');
+    this.reviewBasketOpen.set(true);
   }
 
   money = money;
@@ -496,7 +498,15 @@ export class ProductsComponent implements OnInit {
       this.toast.error('Ordering is disabled for this account.');
       return;
     }
-    this.router.navigate(['/app', 'basket']);
+    this.reviewBasketOpen.set(true);
+  }
+
+  closeBasketReview(): void {
+    this.reviewBasketOpen.set(false);
+  }
+
+  addMoreToOrder(): void {
+    this.reviewBasketOpen.set(false);
   }
 
   // ---- Product management (Admin / Super Admin) -----------------------
