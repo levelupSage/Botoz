@@ -9,6 +9,17 @@ npm install
 npm start
 ```
 
+## Run with Docker
+
+Build and start the production container:
+
+```bash
+docker build -t botoz-app .
+docker run --rm -p 8080:80 botoz-app
+```
+
+Open `http://localhost:8080`. The image serves the production Angular build through Nginx, including fallback routing for client-side routes. The API URL and mock/API mode are compiled into the bundle from `src/environments/environment.ts`; change those values before building the image if needed.
+
 Sign in with an account provisioned by the API. The API must allow browser requests from `http://localhost:4200` (CORS). For local mock data, set `useMockApi: true` in `src/environments/environment.ts`; the demo password is `botoz`.
 
 ## API integration currently wired
