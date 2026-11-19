@@ -20,7 +20,7 @@ export class BrandsComponent implements OnInit {
   readonly loading = this.brandService.loading;
   readonly error = this.brandService.error;
   readonly saving = signal(false);
-  readonly deletingBrandId = signal<number | null>(null);
+  readonly deletingLogoId = signal<number | null>(null);
   readonly addOpen = signal(false);
   readonly editingBrand = signal<Brand | null>(null);
   readonly brands = this.brandService.brands;
@@ -130,18 +130,18 @@ export class BrandsComponent implements OnInit {
     });
   }
 
-  deleteBrand(brand: Brand): void {
-    if (!window.confirm(`Delete "${brand.name}"? This action cannot be undone.`)) return;
+  deleteLogo(brand: Brand): void {
+    if (!window.confirm(`Remove the logo for "${brand.name}"?`)) return;
 
-    this.deletingBrandId.set(brand.id);
-    this.brandService.delete(brand.id).subscribe({
+    this.deletingLogoId.set(brand.id);
+    this.brandService.deleteLogo(brand).subscribe({
       next: () => {
-        this.deletingBrandId.set(null);
-        this.toast.success(`${brand.name} deleted successfully.`);
+        this.deletingLogoId.set(null);
+        this.toast.success('Brand logo removed successfully.');
       },
       error: (error: unknown) => {
-        this.deletingBrandId.set(null);
-        this.apiFailure(error, 'Could not delete the brand.');
+        this.deletingLogoId.set(null);
+        this.apiFailure(error, 'Could not remove the brand logo.');
       },
     });
   }

@@ -58,7 +58,13 @@
   <article class="card brand-card">
     <div class="brand-main">
       @if (brand.logoUrl) {
-      <img class="brand-logo" [src]="brand.logoUrl" [alt]="brand.name + ' logo'" />
+      <div class="logo-control">
+        <img class="brand-logo" [src]="brand.logoUrl" [alt]="brand.name + ' logo'" />
+        <button class="logo-delete" type="button" [disabled]="deletingLogoId() === brand.id"
+          [attr.aria-label]="'Remove ' + brand.name + ' logo'" (click)="deleteLogo(brand)">
+          {{ deletingLogoId() === brand.id ? '…' : '×' }}
+        </button>
+      </div>
       } @else {
       <div class="brand-logo initial">{{ initial(brand.name) }}</div>
       }
@@ -107,13 +113,6 @@
         Lock sizes
         }
       </button>
-      <button class="btn small delete-brand" [disabled]="deletingBrandId() !== null" (click)="deleteBrand(brand)">
-        <svg class="action-icon" viewBox="0 0 20 20" aria-hidden="true">
-          <path d="M3 5.5h14M7 5.5V3.8h6v1.7m-8.5 0 .8 11h9.4l.8-11M8 8.5v5m4-5v5" />
-        </svg>
-        {{ deletingBrandId() === brand.id ? 'Deleting...' : 'Delete' }}
-      </button>
-
     </div>
     @if (brand.sizeLocked) {
     <div class="brand-lock-message" role="status">

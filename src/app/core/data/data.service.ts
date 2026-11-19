@@ -18,8 +18,7 @@ import {
  * Abstract data layer for the whole app.
  *
  * Components and feature services depend ONLY on this abstraction (via DI),
- * never on a concrete implementation. The provider selects `ApiDataService`
- * by default; `MockDataService` remains available for local UI development.
+ * never on a concrete implementation. The provider uses `ApiDataService`.
  *
  * Upsert convention: pass an entity with `id === 0` to create (a new id is
  * assigned and returned), or an existing id to update in place.
@@ -42,6 +41,7 @@ export abstract class DataService {
   abstract deleteBrand(id: number): Observable<void>;
   abstract setBrandSizeLock(brand: Brand, locked: boolean): Observable<Brand>;
   abstract uploadBrandLogo(brand: Brand, file: File): Observable<Brand>;
+  abstract deleteBrandLogo(brand: Brand): Observable<Brand>;
 
   // ---- Products -------------------------------------------------------
   abstract getProducts(): Observable<Product[]>;

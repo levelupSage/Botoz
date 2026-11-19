@@ -204,17 +204,67 @@
   margin-bottom: 12px;
 }
 
+.logo-control {
+  position: relative;
+  flex: 0 0 82px;
+  width: 82px;
+  height: 74px;
+  border-radius: 13px;
+}
+
 .brand-logo {
   display: grid;
   place-items: center;
-  flex: 0 0 82px;
   width: 82px;
   height: 74px;
   border: 1px solid var(--gold);
   border-radius: 13px;
   background: #111214;
   object-fit: contain;
+  transition: transform 160ms ease, box-shadow 160ms ease;
 }
+
+.logo-control:hover .brand-logo,
+.logo-control:focus-within .brand-logo {
+  position: relative;
+  z-index: 2;
+  transform: scale(1.22);
+  box-shadow: 0 10px 25px rgb(0 0 0 / 48%);
+}
+
+.logo-delete {
+  position: absolute;
+  z-index: 3;
+  top: -8px;
+  right: -8px;
+  display: grid;
+  width: 25px;
+  height: 25px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid #b6535b;
+  border-radius: 50%;
+  color: #fff;
+  background: #9c3c45;
+  box-shadow: 0 3px 10px rgb(0 0 0 / 45%);
+  cursor: pointer;
+  font-size: 19px;
+  line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(.8);
+  transition: opacity 160ms ease, transform 160ms ease, background 160ms ease;
+}
+
+.logo-control:hover .logo-delete,
+.logo-control:focus-within .logo-delete {
+  opacity: 1;
+  pointer-events: auto;
+  transform: scale(1);
+}
+
+.logo-delete:hover:not(:disabled) { background: #c74e5b; }
+.logo-delete:disabled { cursor: wait; opacity: .8; }
 
 .brand-logo.initial {
   color: var(--gold);
@@ -281,23 +331,6 @@
   border-color: #77623d;
   color: var(--gold2);
   background: #27251f;
-}
-
-.brand-actions .delete-brand {
-  border-color: #55363a;
-  color: #f09a9a;
-  background: #281d20;
-}
-
-.brand-actions .delete-brand:hover:not(:disabled) {
-  border-color: #a34d55;
-  color: #ffd0d0;
-  background: #46272c;
-}
-
-.brand-actions .delete-brand:disabled {
-  cursor: wait;
-  opacity: 0.7;
 }
 
 .brand-lock-message {

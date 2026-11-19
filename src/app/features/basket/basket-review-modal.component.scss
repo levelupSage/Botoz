@@ -1,0 +1,9 @@
+.modal-backdrop { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 16px; background: #0009; }
+.modal { width: min(900px, 100%); max-height: 92vh; overflow: auto; padding: 24px; border: 1px solid var(--line); border-radius: 18px; background: var(--panel); box-shadow: 0 25px 80px #0008; }
+.modal-head, .section-head, .modal-actions { display: flex; align-items: center; gap: 12px; }
+.modal-head, .section-head { justify-content: space-between; }
+.modal-head { margin-bottom: 20px; }.modal-head h2 { font-size: 23px; }.section-head { margin-bottom: 14px; }.section-head h3 { font-size: 16px; }
+.icon-btn { width: 36px; height: 36px; border: 0; border-radius: 9px; background: var(--panel2); color: var(--text); font-size: 20px; }
+.selected-products { padding: 18px; border: 1px solid var(--line); border-radius: 15px; }.table-wrap { overflow: auto; } table { width: 100%; border-collapse: collapse; font-size: 12px; } th { padding: 12px 10px; text-align: left; color: var(--muted); background: var(--panel2); font-size: 10px; white-space: nowrap; } td { padding: 14px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }.notice { margin-top: 14px; }.empty { padding: 18px 0; color: var(--muted); }
+.modal-actions { margin-top: 21px; }.review-actions { justify-content: space-between; }.confirmation { padding: 22px 14px 4px; text-align: center; }.tick { color: var(--green); font-size: 48px; }.confirmation h3 { margin: 6px 0; font-size: 18px; }.order-id { margin: 8px 0 14px; font-size: 26px; font-weight: 900; }.confirmation .notice { text-align: left; }.confirmation-actions { justify-content: flex-end; }
+@media (max-width: 620px) { .modal { padding: 17px; }.selected-products { padding: 12px; }.modal-actions { flex-wrap: wrap; }.review-actions .btn { flex: 1; } }

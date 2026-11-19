@@ -13,6 +13,8 @@ interface LiveBasket {
   items: OrderItem[];
 }
 
+type QueueTab = 'new' | 'not-billed' | 'dispatched' | 'pending' | 'basket';
+
 /**
  * Orders list + detail. Customers see only their own orders; staff see all.
  * Customer order history never displays any monetary total.
@@ -37,6 +39,8 @@ export class OrdersComponent implements OnInit {
   readonly supportsOrderStatusUpdate = this.data.supportsOrderStatusUpdate;
   readonly error = signal<string | null>(null);
   readonly search = signal('');
+  readonly categoryFilter = signal<'All' | 'A' | 'B' | 'C'>('All');
+  readonly queueTab = signal<QueueTab>('new');
   readonly selected = signal<Order | null>(null);
   readonly statusDraft = signal<OrderStatus>('Confirmed');
   readonly savingStatus = signal(false);
@@ -94,6 +98,46 @@ export class OrdersComponent implements OnInit {
       return `${o.id} ${o.customer} ${o.date} ${items}`.toLowerCase().includes(term);
     });
   });
+
+  readonly queueOrders = computed<Order[]>(() => {
+    const tab = this.queueTab();
+    const term = this.search().trim().toLowerCase();
+    const category = this.categoryFilter();
+    return this.orders().filter((order) => {
+      if (!this.inQueue(order, tab)) return false;
+      const customer = this.catalog.customerById(order.customerId);
+      if (category !== 'All' && customer?.category !== category) return false;
+      if (!term) return true;
+      const items = order.items.map((item) => `${item.productName} ${item.code}`).join(' ');
+      return `${order.id} ${order.customer} ${order.date} ${items}`.toLowerCase().includes(term);
+    });
+  });
+
+  queueCount(tab: QueueTab): number {
+    if (tab === 'basket') return this.liveBasketTotal();
+    return this.orders().filter((order) => this.inQueue(order, tab)).length;
+  }
+
+  selectQueue(tab: QueueTab): void {
+    this.queueTab.set(tab);
+  }
+
+  customerMeta(order: Order): string {
+    const customer = this.catalog.customerById(order.customerId);
+    return customer ? `${customer.code} · Category ${customer.category}` : `Customer #${order.customerId}`;
+  }
+
+  assignmentLabel(order: Order): string {
+    return order.createdBy && order.createdBy !== 'API' ? order.createdBy : 'Unassigned';
+  }
+
+  private inQueue(order: Order, tab: QueueTab): boolean {
+    if (tab === 'basket') return false;
+    if (tab === 'new') return !['Processing', 'Dispatched', 'Delivered'].includes(order.status);
+    if (tab === 'not-billed') return order.status === 'Processing';
+    if (tab === 'dispatched') return ['Dispatched', 'Delivered'].includes(order.status);
+    return order.status === 'Pending';
+  }
 
   ngOnInit(): void {
     this.catalog.load();

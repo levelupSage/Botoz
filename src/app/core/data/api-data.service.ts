@@ -200,6 +200,12 @@ export class ApiDataService extends DataService {
     )).pipe(map((body) => this.toBrand(body, brand)));
   }
 
+  deleteBrandLogo(brand: Brand): Observable<Brand> {
+    return this.request<Json>(this.http.delete(
+      `${this.baseUrl}/api/admin/brands/${brand.id}/logo`,
+    )).pipe(map((body) => this.toBrand(body, { ...brand, logoUrl: '' })));
+  }
+
   // ---- Products -------------------------------------------------------
   getProducts(): Observable<Product[]> {
     return this.paged<Json>('/api/admin/products', { status: 'ALL' }).pipe(

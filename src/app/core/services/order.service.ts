@@ -26,7 +26,7 @@ export class OrderService {
     const createdBy = this.auth.user()?.role ?? 'Customer';
 
     const order: Order = {
-      // The API generates the order number; the mock assigns one on save.
+      // The API generates the order number on save.
       id: '',
       customerId: customer.id,
       customer: customer.name,

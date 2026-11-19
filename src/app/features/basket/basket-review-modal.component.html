@@ -1,0 +1,42 @@
+<div class="modal-backdrop" (click)="close()">
+  <section class="modal" role="dialog" aria-modal="true" aria-labelledby="review-title" (click)="$event.stopPropagation()">
+    <header class="modal-head">
+      <h2 id="review-title">{{ confirmedId() ? 'Order confirmed' : 'Review basket' }}</h2>
+      <button class="icon-btn" type="button" (click)="close()" [disabled]="submitting()" aria-label="Close">×</button>
+    </header>
+
+    @if (confirmedId(); as id) {
+      <div class="confirmation">
+        <div class="tick">✓</div>
+        <h3>Order submitted successfully</h3>
+        <div class="muted">Order number</div>
+        <div class="order-id">{{ id }}</div>
+        <div class="notice">Your order is confirmed. Product quantities and carton selections have been saved; no monetary total is displayed.</div>
+      </div>
+      <footer class="modal-actions confirmation-actions"><button class="btn primary" type="button" (click)="done()">Done</button></footer>
+    } @else {
+      <section class="selected-products">
+        <div class="section-head"><h3>Selected products</h3><span class="pill gold">{{ items().length }} line(s)</span></div>
+        @if (items().length) {
+          <div class="table-wrap"><table>
+            <thead><tr><th>PRODUCT</th><th>ORDER TYPE</th><th>SIZE DISTRIBUTION</th><th>QUANTITY</th><th></th></tr></thead>
+            <tbody>
+              @for (item of items(); track $index) {
+                <tr>
+                  <td><strong>{{ item.productName }}</strong><div class="muted">{{ item.code }}</div></td>
+                  <td>{{ typeLabel(item) }}</td><td>{{ distribution(item) }}</td><td>{{ item.total }} pairs</td>
+                  <td><button class="btn small danger" type="button" [disabled]="submitting()" (click)="remove($index)">Remove</button></td>
+                </tr>
+              }
+            </tbody>
+          </table></div>
+          <div class="notice">No subtotal or order total is displayed. Confirming submits the order immediately.</div>
+        } @else { <div class="empty">Your basket is empty. Add a product before confirming.</div> }
+      </section>
+      <footer class="modal-actions review-actions">
+        <button class="btn primary" type="button" [disabled]="!items().length || submitting()" (click)="confirm()">{{ submitting() ? 'Submitting…' : 'Confirm order' }}</button>
+        <button class="btn" type="button" [disabled]="submitting()" (click)="continueShopping()">Add more</button>
+      </footer>
+    }
+  </section>
+</div>

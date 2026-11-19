@@ -19,7 +19,6 @@ import { BasketService } from '../../core/services/basket.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { CustomerOrderRightsService } from '../../core/services/customer-order-rights.service';
 import { ToastService } from '../../core/services/toast.service';
-import { environment } from '../../../environments/environment';
 
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const phoneNumberValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
@@ -80,7 +79,6 @@ export class CustomersComponent implements OnInit {
   readonly stationSaving = signal(false);
   private scrollToOverrides = false;
   readonly supportsProductPriceOverrides = this.data.supportsProductPriceOverrides;
-  readonly mockMode = environment.useMockApi;
   readonly canDeleteCustomers = computed(() => this.appState.role() === 'Super Admin');
   readonly customerCanOrder = this.appState.customerCanOrder;
 
@@ -101,9 +99,7 @@ export class CustomersComponent implements OnInit {
       '',
       [
         Validators.required,
-        Validators.pattern(environment.useMockApi
-          ? /^\d{4}$/
-          : /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,72}$/),
+        Validators.pattern(/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,72}$/),
       ],
     ],
     station: ['', [Validators.required]],

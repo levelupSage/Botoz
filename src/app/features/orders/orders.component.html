@@ -1,199 +1,69 @@
-<div class="page-head">
-  <div>
-    <h1>{{ isCustomer() ? 'My orders' : isNewOrdersView() ? 'New Orders' : 'Orders & customer baskets' }}</h1>
-    <div class="subtitle">
-      Submitted orders confirm immediately; active customer baskets are shown to staff.
+@if (isNewOrdersView() && !isCustomer()) {
+  <div class="page-head">
+    <div>
+      <h1>New Orders</h1>
+      <div class="subtitle">Five separate order queues. Your current tab is shown below; submitted orders remain API-backed.</div>
     </div>
+    <button class="btn primary" (click)="newOrder()">＋ Create order</button>
   </div>
-  <button class="btn primary" (click)="newOrder()">
-    ＋ {{ isCustomer() ? 'New order' : 'Create order' }}
-  </button>
-</div>
 
-@if (!isCustomer()) {
-  <div class="card live-baskets">
-    <div class="card-head">
-      <h2>🧺 Customer baskets · Live view</h2>
-      <span class="pill gold">{{ liveBasketTotal() }} lines</span>
-    </div>
-    @if (!liveBaskets().length) {
-      <div class="empty">
-        No customer baskets have items yet. Start an order for a customer to see it here.
-      </div>
-    } @else {
-      @for (b of liveBaskets(); track b.customer.id) {
-        <div class="live-basket">
-          <div class="live-basket-head">
-            <strong>{{ b.customer.name }}</strong>
-            <span class="pill gray">{{ b.items.length }} lines</span>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>PRODUCT</th>
-                  <th>SIZE / CARTON</th>
-                  <th>PAIRS</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (it of b.items; track $index) {
-                  <tr>
-                    <td>
-                      <strong>{{ it.productName }}</strong>
-                      <div class="muted">{{ it.code }}</div>
-                    </td>
-                    <td>{{ typeLabel(it) }} · {{ distribution(it) }}</td>
-                    <td>{{ it.total }}</td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        </div>
-      }
-    }
+  <div class="priority-notice"><strong>Order processing priority:</strong> Open Category A work is listed first, followed by B, then C. Completed orders move below open work.</div>
+
+  <div class="queue-tabs" role="tablist" aria-label="Order queues">
+    <button class="queue-tab" [class.active]="queueTab() === 'new'" (click)="selectQueue('new')">New Orders <span>{{ queueCount('new') }}</span></button>
+    <button class="queue-tab" [class.active]="queueTab() === 'not-billed'" (click)="selectQueue('not-billed')">Not Billed <span>{{ queueCount('not-billed') }}</span></button>
+    <button class="queue-tab" [class.active]="queueTab() === 'dispatched'" (click)="selectQueue('dispatched')">Dispatched <span>{{ queueCount('dispatched') }}</span></button>
+    <button class="queue-tab" [class.active]="queueTab() === 'pending'" (click)="selectQueue('pending')">Pending <span>{{ queueCount('pending') }}</span></button>
+    <button class="queue-tab" [class.active]="queueTab() === 'basket'" (click)="selectQueue('basket')">Customer Basket <span>{{ queueCount('basket') }}</span></button>
   </div>
-}
 
-<div class="toolbar">
-  <input
-    class="search"
-    placeholder="Search order ID, customer, date or product…"
-    [value]="search()"
-    (input)="search.set($any($event.target).value)"
-  />
-</div>
-
-@if (loading()) {
-  <div class="card empty">Loading orders…</div>
-} @else if (error()) {
-  <div class="notice error">{{ error() }}</div>
-} @else {
-  <div class="card">
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>ORDER</th>
-            <th>CUSTOMER</th>
-            <th>DATE</th>
-            <th>STATUS</th>
-            <th>LINES</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (o of filtered(); track o.id) {
-            <tr>
-              <td><strong>{{ o.id }}</strong></td>
-              <td>{{ o.customer }}</td>
-              <td>{{ o.date }}</td>
-              <td><span class="pill" [class]="'pill ' + statusClass(o.status)">{{ o.status }}</span></td>
-              <td>{{ o.items.length }}</td>
-              <td><button class="btn small" (click)="open(o)">Details</button></td>
-            </tr>
-          } @empty {
-            <tr>
-              <td colspan="6" class="empty">No orders found.</td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
-    <div class="notice">
-      Orders keep item/size/packing snapshots. Customer order history never displays a total.
-    </div>
+  <div class="toolbar queue-toolbar">
+    <input class="search" placeholder="Search order, customer or product…" [value]="search()" (input)="search.set($any($event.target).value)" />
+    <select class="category-filter" [value]="categoryFilter()" (change)="categoryFilter.set($any($event.target).value)">
+      <option value="All">All</option><option value="A">Category A</option><option value="B">Category B</option><option value="C">Category C</option>
+    </select>
   </div>
-}
 
-@if (selected(); as o) {
-  <div class="modal-backdrop" (click)="close()">
-    <div class="modal" (click)="$event.stopPropagation()">
-      <div class="modal-head">
-        <h2>Order {{ o.id }}</h2>
-        <button class="icon-btn" (click)="close()" aria-label="Close">✕</button>
-      </div>
-
-      <div class="split">
-        <div>
-          <div class="muted label">Customer</div>
-          <strong>{{ o.customer }}</strong>
-        </div>
-        <div>
-          <div class="muted label">Status</div>
-          <span class="pill" [class]="'pill ' + statusClass(o.status)">{{ o.status }}</span>
-        </div>
-        <div>
-          <div class="muted label">Date</div>
-          <strong>{{ o.date }}</strong>
-        </div>
-        <div>
-          <div class="muted label">Order lines</div>
-          <strong>{{ o.items.length }}</strong>
-        </div>
-      </div>
-
-      <div class="table-wrap detail-table">
-        <table>
-          <thead>
-            <tr>
-              <th>PRODUCT</th>
-              <th>ORDER TYPE</th>
-              <th>SIZE DISTRIBUTION</th>
-              <th>PAIRS</th>
-              @if (canViewAdminRate()) {
-                <th>ADMIN RATE / PAIR</th>
-              }
-            </tr>
-          </thead>
-          <tbody>
-            @for (it of o.items; track $index) {
-              <tr>
-                <td>
-                  <strong>{{ it.productName }}</strong>
-                  <div class="muted">{{ it.code }}</div>
-                </td>
-                <td>{{ typeLabel(it) }}</td>
-                <td>{{ distribution(it) }}</td>
-                <td>{{ it.total }}</td>
-                @if (canViewAdminRate()) {
-                  <td>{{ it.adminRatePerPair ? '₹' + it.adminRatePerPair : '—' }}</td>
-                }
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-
-      @if (!isCustomer() && supportsOrderStatusUpdate) {
-        <div class="status-editor">
-          <label class="field" for="order-status">
-            <span>Update order status</span>
-            <select
-              id="order-status"
-              [value]="statusDraft()"
-              (change)="statusDraft.set($any($event.target).value)"
-            >
-              @for (status of ['Pending', 'Confirmed', 'Processing', 'Dispatched', 'Delivered']; track status) {
-                <option [value]="status">{{ status }}</option>
-              }
-            </select>
-          </label>
-          @if (statusError()) {
-            <div class="notice error" role="alert">{{ statusError() }}</div>
-          }
-        </div>
-      }
-
-      <div class="modal-actions">
-        <button class="btn" (click)="close()">Close</button>
-        @if (!isCustomer() && supportsOrderStatusUpdate) {
-          <button class="btn primary" (click)="saveStatus()" [disabled]="savingStatus()">
-            {{ savingStatus() ? 'Saving…' : 'Save status' }}
-          </button>
+  @if (queueTab() === 'basket') {
+    <section class="card queue-card">
+      <div class="queue-card-head"><div><h2>Customer Basket</h2><div class="muted">In-progress browser drafts for staff-created customer orders.</div></div><span class="pill gold">{{ liveBasketTotal() }} lines</span></div>
+      @if (!liveBaskets().length) {
+        <div class="empty">No customer baskets have items yet. Start an order for a customer to see it here.</div>
+      } @else {
+        @for (basket of liveBaskets(); track basket.customer.id) {
+          <div class="live-basket"><div class="live-basket-head"><strong>{{ basket.customer.name }}</strong><span class="pill gray">{{ basket.items.length }} lines</span></div><div class="table-wrap"><table><thead><tr><th>PRODUCT</th><th>SIZE / CARTON</th><th>PAIRS</th></tr></thead><tbody>@for (item of basket.items; track $index) { <tr><td><strong>{{ item.productName }}</strong><div class="muted">{{ item.code }}</div></td><td>{{ typeLabel(item) }} · {{ distribution(item) }}</td><td>{{ item.total }}</td></tr> }</tbody></table></div></div>
         }
-      </div>
-    </div>
-  </div>
+      }
+    </section>
+  } @else if (loading()) {
+    <div class="card empty">Loading orders…</div>
+  } @else if (error()) {
+    <div class="notice error">{{ error() }}</div>
+  } @else {
+    <section class="card queue-card">
+      <div class="queue-card-head"><div><h2>{{ queueTab() === 'new' ? 'New Orders' : queueTab() === 'not-billed' ? 'Not Billed' : queueTab() === 'dispatched' ? 'Dispatched' : 'Pending' }}</h2><div class="muted">Each row has an API order ID, customer, submitted status and order details.</div></div><span class="pill gold">{{ queueOrders().length }} order(s)</span></div>
+      <div class="table-wrap"><table class="queue-table"><thead><tr><th>ORDER</th><th>CUSTOMER / ID</th><th>DATE</th><th>STATUS</th><th>ASSIGNED TO</th><th>LINES</th><th></th></tr></thead><tbody>
+        @for (order of queueOrders(); track order.id) {
+          <tr><td><strong>{{ order.id }}</strong></td><td><strong>{{ order.customer }}</strong><div class="muted">{{ customerMeta(order) }}</div></td><td>{{ order.date }}</td><td><span class="pill" [class]="'pill ' + statusClass(order.status)">{{ order.status }}</span></td><td><span>{{ assignmentLabel(order) }}</span><div class="muted queue-hint">{{ order.items.length }} open line(s)</div></td><td>{{ order.items.length }}</td><td><button class="btn small" (click)="open(order)">Open order</button></td></tr>
+        } @empty {
+          <tr><td colspan="7" class="empty">No orders found in this queue.</td></tr>
+        }
+      </tbody></table></div>
+    </section>
+  }
+} @else {
+  <div class="page-head"><div><h1>{{ isCustomer() ? 'My orders' : 'Orders' }}</h1><div class="subtitle">Submitted orders are shown below.</div></div><button class="btn primary" (click)="newOrder()">＋ {{ isCustomer() ? 'New order' : 'Create order' }}</button></div>
+  <div class="toolbar"><input class="search" placeholder="Search order ID, customer, date or product…" [value]="search()" (input)="search.set($any($event.target).value)" /></div>
+  @if (loading()) { <div class="card empty">Loading orders…</div> } @else if (error()) { <div class="notice error">{{ error() }}</div> } @else {
+    <div class="card"><div class="table-wrap"><table><thead><tr><th>ORDER</th><th>CUSTOMER</th><th>DATE</th><th>STATUS</th><th>LINES</th><th></th></tr></thead><tbody>@for (order of filtered(); track order.id) { <tr><td><strong>{{ order.id }}</strong></td><td>{{ order.customer }}</td><td>{{ order.date }}</td><td><span class="pill" [class]="'pill ' + statusClass(order.status)">{{ order.status }}</span></td><td>{{ order.items.length }}</td><td><button class="btn small" (click)="open(order)">Details</button></td></tr> } @empty { <tr><td colspan="6" class="empty">No orders found.</td></tr> }</tbody></table></div></div>
+  }
+}
+
+@if (selected(); as order) {
+  <div class="modal-backdrop" (click)="close()"><div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-head"><h2>Order {{ order.id }}</h2><button class="icon-btn" (click)="close()" aria-label="Close">×</button></div>
+    <div class="split"><div><div class="muted label">Customer</div><strong>{{ order.customer }}</strong></div><div><div class="muted label">Status</div><span class="pill" [class]="'pill ' + statusClass(order.status)">{{ order.status }}</span></div><div><div class="muted label">Date</div><strong>{{ order.date }}</strong></div><div><div class="muted label">Order lines</div><strong>{{ order.items.length }}</strong></div></div>
+    <div class="table-wrap detail-table"><table><thead><tr><th>PRODUCT</th><th>ORDER TYPE</th><th>SIZE DISTRIBUTION</th><th>PAIRS</th>@if (canViewAdminRate()) { <th>ADMIN RATE / PAIR</th> }</tr></thead><tbody>@for (item of order.items; track $index) { <tr><td><strong>{{ item.productName }}</strong><div class="muted">{{ item.code }}</div></td><td>{{ typeLabel(item) }}</td><td>{{ distribution(item) }}</td><td>{{ item.total }}</td>@if (canViewAdminRate()) { <td>{{ item.adminRatePerPair ? '₹' + item.adminRatePerPair : '—' }}</td> }</tr> }</tbody></table></div>
+    <div class="modal-actions"><button class="btn" (click)="close()">Close</button></div>
+  </div></div>
 }

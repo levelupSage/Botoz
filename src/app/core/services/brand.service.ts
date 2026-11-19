@@ -52,6 +52,10 @@ export class BrandService {
     return this.data.uploadBrandLogo(brand, file).pipe(tap((saved) => this.merge(saved)));
   }
 
+  deleteLogo(brand: Brand): Observable<Brand> {
+    return this.data.deleteBrandLogo(brand).pipe(tap((saved) => this.merge(saved)));
+  }
+
   private merge(saved: Brand): void {
     this._brands.update((brands) => {
       const index = brands.findIndex((brand) => brand.id === saved.id);

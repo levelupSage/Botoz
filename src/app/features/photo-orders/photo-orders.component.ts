@@ -16,12 +16,34 @@ export class PhotoOrdersComponent {
   private readonly toast = inject(ToastService);
 
   readonly requests = signal(this.store.list());
+  readonly search = signal('');
+  readonly previewSrc = signal<string | null>(null);
   readonly newCount = computed(() => this.requests().filter((item) => item.status === 'New').length);
   readonly reviewedCount = computed(() => this.requests().filter((item) => item.status === 'Reviewed').length);
   readonly doneCount = computed(() => this.requests().filter((item) => item.status === 'Done').length);
+  readonly incoming = computed(() => this.filterRequests('New'));
+  readonly pending = computed(() => this.filterRequests('Reviewed'));
+  readonly processed = computed(() => this.filterRequests('Done'));
 
   startPhotoOrder(): void {
     this.router.navigate(['/app/products'], { queryParams: { photoOrder: '1' } });
+  }
+
+  review(request: AdminPhotoOrderRequest): void {
+    this.changeStatus(request, 'Reviewed');
+  }
+
+  createOrder(request: AdminPhotoOrderRequest): void {
+    this.router.navigate(['/app/products'], { queryParams: { createOrder: '1' } });
+    this.toast.show(`Choose products to create the order for ${request.customerName}.`);
+  }
+
+  openPreview(src: string): void {
+    this.previewSrc.set(src);
+  }
+
+  closePreview(): void {
+    this.previewSrc.set(null);
   }
 
   changeStatus(request: AdminPhotoOrderRequest, status: AdminPhotoOrderRequest['status']): void {
@@ -52,5 +74,12 @@ export class PhotoOrdersComponent {
 
   private refresh(): void {
     this.requests.set(this.store.list());
+  }
+
+  private filterRequests(status: AdminPhotoOrderRequest['status']): AdminPhotoOrderRequest[] {
+    const term = this.search().trim().toLowerCase();
+    return this.requests().filter((request) => request.status === status && (
+      !term || `${request.id} ${request.customerName} ${request.items.map((item) => `${item.name} ${item.caption}`).join(' ')}`.toLowerCase().includes(term)
+    ));
   }
 }

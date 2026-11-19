@@ -186,21 +186,21 @@
             }
           </div>
           <div class="field">
-            <label for="c-pass">{{ mockMode ? '4-digit login password *' : 'Login password *' }}</label>
+            <label for="c-pass">Login password *</label>
             <input
               id="c-pass"
               type="password"
               autocomplete="new-password"
-              [attr.inputmode]="mockMode ? 'numeric' : 'text'"
-              [maxlength]="mockMode ? 4 : 72"
+              inputmode="text"
+              maxlength="72"
               formControlName="loginPassword"
-              [placeholder]="mockMode ? '4 digits' : 'Choose a strong password'"
+              placeholder="Choose a strong password"
             />
             <span class="help">
-              {{ mockMode ? 'Set a 4-digit demo password.' : 'Use 8+ characters with uppercase, lowercase, number, and symbol. The API requires a password on each save.' }}
+              Use 8+ characters with uppercase, lowercase, number, and symbol. The API requires a password on each save.
             </span>
             @if (form.controls.loginPassword.touched && form.controls.loginPassword.invalid) {
-              <small class="err">{{ mockMode ? 'Enter a 4-digit password.' : 'Enter a strong password that meets the requirements.' }}</small>
+              <small class="err">Enter a strong password that meets the requirements.</small>
             }
           </div>
 
