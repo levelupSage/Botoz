@@ -13,7 +13,7 @@
         <div class="order-id">{{ id }}</div>
         <div class="notice">Your order is confirmed. Product quantities and carton selections have been saved; no monetary total is displayed.</div>
       </div>
-      <footer class="modal-actions confirmation-actions"><button class="btn primary" type="button" (click)="done()">Done</button></footer>
+      <footer class="modal-actions confirmation-actions"><button class="btn primary" type="button" (click)="done()"><span class="action-icon" aria-hidden="true">✓</span>Done</button></footer>
     } @else {
       <section class="selected-products">
         <div class="section-head"><h3>Selected products</h3><span class="pill gold">{{ items().length }} line(s)</span></div>
@@ -25,7 +25,7 @@
                 <tr>
                   <td><strong>{{ item.productName }}</strong><div class="muted">{{ item.code }}</div></td>
                   <td>{{ typeLabel(item) }}</td><td>{{ distribution(item) }}</td><td>{{ item.total }} pairs</td>
-                  <td><button class="btn small danger" type="button" [disabled]="submitting()" (click)="remove($index)">Remove</button></td>
+                  <td><button class="btn small danger" type="button" [disabled]="submitting()" (click)="remove($index)"><span class="action-icon" aria-hidden="true">×</span>Remove</button></td>
                 </tr>
               }
             </tbody>
@@ -34,8 +34,8 @@
         } @else { <div class="empty">Your basket is empty. Add a product before confirming.</div> }
       </section>
       <footer class="modal-actions review-actions">
-        <button class="btn primary" type="button" [disabled]="!items().length || submitting()" (click)="confirm()">{{ submitting() ? 'Submitting…' : 'Confirm order' }}</button>
-        <button class="btn" type="button" [disabled]="submitting()" (click)="continueShopping()">Add more</button>
+        <button class="btn primary" type="button" [disabled]="!items().length || submitting()" (click)="confirm()"><span class="action-icon" aria-hidden="true">✓</span>{{ submitting() ? 'Submitting…' : 'Confirm order' }}</button>
+        <button class="btn" type="button" [disabled]="submitting()" (click)="continueShopping()"><span class="action-icon" aria-hidden="true">＋</span>Add more</button>
       </footer>
     }
   </section>

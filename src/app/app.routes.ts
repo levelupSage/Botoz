@@ -67,7 +67,7 @@ export const routes: Routes = [
       {
         path: 'photo-order',
         canActivate: [roleGuard],
-        data: { roles: ['Super Admin', 'Admin'], menu: 'Photo Order' },
+        data: { roles: ['Super Admin', 'Admin', 'Backend User'], menu: 'Photo Order' },
         loadComponent: () =>
           import('./features/photo-orders/photo-orders.component').then((m) => m.PhotoOrdersComponent),
       },

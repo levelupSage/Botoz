@@ -7,11 +7,16 @@ import {
   RegisterAccountRequest,
   RegistrationMenuOption,
   Order,
+  OrderItem,
   OrderStatus,
   Product,
   ProductSizeGroup,
   Staff,
   Station,
+  PictureOrderRequest,
+  PictureOrderCounts,
+  PictureOrderDecision,
+  BackendUserOption,
 } from '../models';
 
 /**
@@ -74,4 +79,16 @@ export abstract class DataService {
 
   /** Reserve and return the next sequential order id (e.g. "BT-26042"). */
   abstract nextOrderId(): Observable<string>;
+
+  // ---- Persisted baskets ---------------------------------------------
+  abstract getBasket(customerId?: number): Observable<OrderItem[]>;
+  abstract saveBasket(lines: OrderItem[], customerId?: number): Observable<OrderItem[]>;
+
+  // ---- Picture orders -------------------------------------------------
+  abstract createPictureOrder(customerId: number, files: File[], captions: string[]): Observable<PictureOrderRequest>;
+  abstract getPictureOrders(status: 'INCOMING' | 'PENDING' | 'PROCESSED', search?: string): Observable<PictureOrderRequest[]>;
+  abstract getPictureOrderCounts(): Observable<PictureOrderCounts>;
+  abstract reviewPictureOrder(id: number, decisions: PictureOrderDecision[]): Observable<PictureOrderRequest>;
+  abstract getPictureOrderBackendUsers(): Observable<BackendUserOption[]>;
+  abstract assignPictureOrder(id: number, backendUserId: number, lines: OrderItem[]): Observable<PictureOrderRequest>;
 }

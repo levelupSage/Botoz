@@ -36,6 +36,7 @@ export class BasketReviewModalComponent {
 
   constructor() {
     this.catalog.load();
+    this.basket.loadCurrent().subscribe({ error: () => this.toast.error('Could not load the saved basket.') });
   }
 
   distribution(item: OrderItem): string {
@@ -51,11 +52,13 @@ export class BasketReviewModalComponent {
   }
 
   close(): void {
-    if (!this.submitting()) this.closed.emit();
+    if (this.submitting()) return;
+    this.persistThen(() => this.closed.emit());
   }
 
   continueShopping(): void {
-    if (!this.submitting()) this.addMore.emit();
+    if (this.submitting()) return;
+    this.persistThen(() => this.addMore.emit());
   }
 
   confirm(): void {
@@ -88,5 +91,16 @@ export class BasketReviewModalComponent {
   done(): void {
     this.closed.emit();
     this.router.navigate(['/app', this.isCustomer() ? 'orders' : 'new-orders']);
+  }
+
+  private persistThen(next: () => void): void {
+    this.submitting.set(true);
+    this.basket.saveCurrent().subscribe({
+      next: () => { this.submitting.set(false); next(); },
+      error: (error: unknown) => {
+        this.submitting.set(false);
+        this.toast.error(error instanceof Error ? error.message : 'Could not save the basket.');
+      },
+    });
   }
 }

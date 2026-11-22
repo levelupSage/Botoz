@@ -24,6 +24,9 @@
   /* Brand */
   --gold: #c8a45d;
   --gold2: #e4c77f;
+  --primary-ink: #17140d;
+  --focus-tint: rgb(200 164 93 / 14%);
+  --elevation: 0 12px 30px rgb(0 0 0 / 18%);
   --green: #27835f;
   --red: #bf5454;
   --blue: #5279b8;
@@ -53,19 +56,23 @@
 :root[data-theme='light'] {
   color-scheme: light;
 
-  --bg: #f4f5f7;
-  --panel: #ffffff;
-  --panel2: #eceef2;
-  --text: #20232a;
-  --muted: #626875;
-  --line: #d8dbe2;
-  --gold: #b58a3b;
-  --gold2: #8c6927;
+  /* Light is the blue counterpart to the dark black/gold theme. */
+  --bg: #dce3ea;
+  --panel: #f1f4f7;
+  --panel2: #e1e7ee;
+  --text: #182433;
+  --muted: #5c6b7d;
+  --line: #c1ccd8;
+  --gold: #3f95e8;
+  --gold2: #216fb8;
+  --primary-ink: #ffffff;
+  --focus-tint: rgb(90 170 247 / 20%);
+  --elevation: 0 14px 30px rgb(31 65 103 / 15%);
   --green: #27835f;
   --red: #b94242;
-  --blue: #5279b8;
-  --sidebar-bg: #ffffff;
-  --sidebar-line: #dfe1e6;
+  --blue: #3e94e9;
+  --sidebar-bg: #e8edf2;
+  --sidebar-line: #c1ccd8;
 
   --bs-primary: var(--gold);
   --bs-secondary: var(--panel2);
@@ -149,6 +156,24 @@ h3 {
     box-shadow 0.15s ease;
 }
 
+.btn:focus-visible {
+  box-shadow: 0 0 0 3px var(--focus-tint);
+}
+
+.action-icon {
+  display: inline-grid;
+  width: 1.1em;
+  margin-right: 6px;
+  place-items: center;
+  font-size: 1.08em;
+  line-height: 1;
+  vertical-align: -0.08em;
+}
+
+.btn.small .action-icon {
+  margin-right: 4px;
+}
+
 .btn:hover:not(:disabled) {
   border-color: var(--gold);
   background: var(--panel2);
@@ -159,15 +184,15 @@ h3 {
 }
 
 .btn.primary {
-  background: var(--gold);
+  background: linear-gradient(135deg, var(--gold), color-mix(in srgb, var(--gold) 76%, var(--gold2)));
   border-color: var(--gold);
-  color: #17140d;
+  color: var(--primary-ink);
 }
 
 .btn.primary:hover:not(:disabled) {
   background: var(--gold2);
   border-color: var(--gold2);
-  box-shadow: 0 4px 14px rgba(200, 164, 93, 0.25);
+  box-shadow: 0 4px 14px var(--focus-tint);
 }
 
 .btn.dark {
@@ -211,6 +236,19 @@ h3 {
     border-color 0.15s ease,
     box-shadow 0.15s ease,
     transform 0.15s ease;
+}
+
+:root[data-theme='light'] .card {
+  box-shadow: 0 5px 16px rgb(35 69 108 / 7%);
+}
+
+:root[data-theme='light'] .btn:not(.primary):not(.danger) {
+  background: color-mix(in srgb, var(--panel) 60%, #fff);
+}
+
+:root[data-theme='light'] .btn:not(.primary):not(.danger):hover:not(:disabled) {
+  background: var(--panel2);
+  box-shadow: 0 4px 12px rgb(31 77 125 / 10%);
 }
 
 /* ---- Pills ----------------------------------------------------------- */
@@ -258,7 +296,7 @@ input:focus,
 select:focus,
 textarea:focus {
   border-color: var(--gold);
-  box-shadow: 0 0 0 2px #c5a15a22;
+  box-shadow: 0 0 0 2px var(--focus-tint);
 }
 
 button:focus-visible,
@@ -521,12 +559,49 @@ button.card:hover {
 
 :root[data-theme='light'] app-shell .menu-choice:has(input:checked) {
   border-color: var(--gold);
-  background: #f8f1e2;
+  background: #d8e4f0;
+}
+
+/* Light-mode counterparts for the gold-only prototype details. */
+:root[data-theme='light'] .pill.gold,
+:root[data-theme='light'] app-shell .count-pill,
+:root[data-theme='light'] app-shell .feature-chip.full {
+  color: var(--gold2);
+  background: #dbe7f3;
+}
+
+:root[data-theme='light'] .notice:not(.error) {
+  color: #245f99;
+  background: #e0ebf5;
+  border-color: #b8d1e9;
 }
 
 :root[data-theme='light'] app-shell .field,
 :root[data-theme='light'] app-shell .order-tab-choice {
   color: var(--muted);
+}
+
+:root[data-theme='light'] app-shell .nav a {
+  color: #405a78;
+}
+
+:root[data-theme='light'] app-shell .ico {
+  display: grid;
+  place-items: center;
+  height: 22px;
+  border-radius: 7px;
+  color: var(--gold2);
+  background: #d8e4ef;
+}
+
+:root[data-theme='light'] app-shell .nav a.active {
+  color: var(--text);
+  background: linear-gradient(90deg, #d1e6fb, #e5ebf1);
+}
+
+:root[data-theme='light'] app-shell .nav a.active .ico {
+  color: #fff;
+  background: var(--gold);
 }
 
 /* Respect users who prefer reduced motion. */
@@ -560,7 +635,8 @@ button.card:hover {
   place-items: center;
   overflow-y: auto;
   padding: 16px;
-  background: #0009;
+  background: rgb(6 17 31 / 66%);
+  backdrop-filter: blur(4px);
   opacity: 1;
   z-index: 1060 !important;
 }
@@ -586,7 +662,7 @@ button.card:hover {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 17px;
-  box-shadow: 0 25px 80px #0008;
+  box-shadow: 0 25px 80px #0008, 0 0 0 1px rgb(255 255 255 / 4%);
 }
 
 .modal-head {
@@ -595,6 +671,8 @@ button.card:hover {
   align-items: center;
   gap: 12px;
   margin-bottom: 17px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
 }
 
 .modal-head h2 {
@@ -612,9 +690,22 @@ button.card:hover {
   color: var(--text);
   background: var(--panel2);
   border: 1px solid var(--line);
-  border-radius: 9px;
+  border-radius: 10px;
+  transition: background .15s ease, border-color .15s ease, transform .15s ease;
 }
 
 .icon-btn:hover {
   border-color: var(--gold);
+  background: var(--focus-tint);
+  transform: rotate(4deg);
+}
+
+.modal-actions {
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+:root[data-theme='light'] .modal-backdrop > .modal {
+  background: linear-gradient(145deg, #f7f9fb, var(--panel));
+  box-shadow: 0 28px 80px rgb(14 38 68 / 42%), 0 0 0 1px rgb(255 255 255 / 45%);
 }

@@ -218,6 +218,11 @@ main {
   font-weight: 800;
 }
 
+:host-context(:root[data-theme='light']) .avatar {
+  background: #bedaf5;
+  color: #145d9e;
+}
+
 @media (max-width: 700px) {
   .theme-toggle {
     width: 36px;

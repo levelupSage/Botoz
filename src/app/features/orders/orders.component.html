@@ -4,7 +4,7 @@
       <h1>New Orders</h1>
       <div class="subtitle">Five separate order queues. Your current tab is shown below; submitted orders remain API-backed.</div>
     </div>
-    <button class="btn primary" (click)="newOrder()">＋ Create order</button>
+    <button class="btn primary" (click)="newOrder()"><span class="action-icon" aria-hidden="true">＋</span>Create order</button>
   </div>
 
   <div class="priority-notice"><strong>Order processing priority:</strong> Open Category A work is listed first, followed by B, then C. Completed orders move below open work.</div>
@@ -52,7 +52,7 @@
     </section>
   }
 } @else {
-  <div class="page-head"><div><h1>{{ isCustomer() ? 'My orders' : 'Orders' }}</h1><div class="subtitle">Submitted orders are shown below.</div></div><button class="btn primary" (click)="newOrder()">＋ {{ isCustomer() ? 'New order' : 'Create order' }}</button></div>
+  <div class="page-head"><div><h1>{{ isCustomer() ? 'My orders' : 'Orders' }}</h1><div class="subtitle">Submitted orders are shown below.</div></div><button class="btn primary" (click)="newOrder()"><span class="action-icon" aria-hidden="true">＋</span>{{ isCustomer() ? 'New order' : 'Create order' }}</button></div>
   <div class="toolbar"><input class="search" placeholder="Search order ID, customer, date or product…" [value]="search()" (input)="search.set($any($event.target).value)" /></div>
   @if (loading()) { <div class="card empty">Loading orders…</div> } @else if (error()) { <div class="notice error">{{ error() }}</div> } @else {
     <div class="card"><div class="table-wrap"><table><thead><tr><th>ORDER</th><th>CUSTOMER</th><th>DATE</th><th>STATUS</th><th>LINES</th><th></th></tr></thead><tbody>@for (order of filtered(); track order.id) { <tr><td><strong>{{ order.id }}</strong></td><td>{{ order.customer }}</td><td>{{ order.date }}</td><td><span class="pill" [class]="'pill ' + statusClass(order.status)">{{ order.status }}</span></td><td>{{ order.items.length }}</td><td><button class="btn small" (click)="open(order)">Details</button></td></tr> } @empty { <tr><td colspan="6" class="empty">No orders found.</td></tr> }</tbody></table></div></div>

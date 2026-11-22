@@ -13,16 +13,16 @@
   </div>
   <div class="head-actions">
     @if (orderingMode() && (!isCustomer() || customerCanOrder())) {
-      <button class="btn" (click)="goToBasket()">Open basket</button>
+      <button class="btn" (click)="goToBasket()"><span class="action-icon" aria-hidden="true">▣</span>Open basket</button>
     }
     @if (canCreateOrders() && !isStaffOrdering() && !canManage()) {
-      <button class="btn" (click)="openPicker()">＋ Create order</button>
+      <button class="btn" (click)="openPicker()"><span class="action-icon" aria-hidden="true">＋</span>Create order</button>
     }
     @if (canManage() && !isStaffOrdering()) {
-      @if (canTakePhotoOrder()) { <button class="btn" (click)="openPhotoOrder()">Take photo order</button> }
-      <button class="btn" (click)="openShowcase()">Fast-selling &amp; schemes</button>
-      @if (canCreateOrders()) { <button class="btn" (click)="openPicker()">Create order</button> }
-      @if (canManageProducts()) { <button class="btn primary" (click)="openAdd()">Add product</button> }
+      @if (canTakePhotoOrder()) { <button class="btn" (click)="openPhotoOrder()"><span class="action-icon" aria-hidden="true">▧</span>Take photo order</button> }
+      <button class="btn" (click)="openShowcase()"><span class="action-icon" aria-hidden="true">★</span>Fast-selling &amp; schemes</button>
+      @if (canCreateOrders()) { <button class="btn" (click)="openPicker()"><span class="action-icon" aria-hidden="true">＋</span>Create order</button> }
+      @if (canManageProducts()) { <button class="btn primary" (click)="openAdd()"><span class="action-icon" aria-hidden="true">＋</span>Add product</button> }
     }
   </div>
 </div>
@@ -181,10 +181,11 @@
             </div>
             @if (showOrderButton()) {
               <button class="btn small primary" [disabled]="preparingOrderProductId() === p.id" (click)="openOrder(p)">
+                <span class="action-icon" aria-hidden="true">＋</span>
                 {{ preparingOrderProductId() === p.id ? 'Loading…' : 'Order' }}
               </button>
             } @else if (canManageProducts()) {
-              <button class="btn small" (click)="openEdit(p)">Edit</button>
+              <button class="btn small" (click)="openEdit(p)"><span class="action-icon" aria-hidden="true">✎</span>Edit</button>
             }
           </div>
 
@@ -333,9 +334,6 @@
       <div class="notice photo-order-notice">Take pictures for a selected party. These pictures will enter <strong>Picture Orders → Incoming picture requests</strong> and appear in that customer's Orders screen. Admin can review and match them to products.</div>
       <label class="field photo-customer-field"><span>Choose customer / party *</span><select [value]="photoCustomerId()" (change)="photoCustomerId.set(+$any($event.target).value)"><option value="0">Choose customer</option>@for (customer of orderableCustomers(); track customer.id) {<option [value]="customer.id">{{ customer.name }} · {{ customer.code }}</option>}</select></label>
       <section class="photo-capture-panel"><h3>Take or add product pictures</h3><div class="photo-capture-actions"><button type="button" class="btn primary" (click)="cameraInput.click()">📷 Take Photo</button><button type="button" class="btn" (click)="uploadInput.click()">＋ Upload Photos</button></div><input #cameraInput class="photo-file-input" type="file" accept="image/*" capture="environment" (change)="addPhotoOrderFiles($event)" /><input #uploadInput class="photo-file-input" type="file" accept="image/*" multiple (change)="addPhotoOrderFiles($event)" /><small class="muted">Camera opens on supported phones; file picker opens on computers. Up to 12 captioned photos per request.</small></section>
-      <div class="modal-head"><h2>Take Photo Order</h2><button class="icon-btn" (click)="closePhotoOrder()" aria-label="Close">×</button></div>
-      <label class="field"><span>Customer *</span><select [value]="photoCustomerId()" (change)="photoCustomerId.set(+$any($event.target).value)"><option value="0">Choose customer</option>@for (customer of orderableCustomers(); track customer.id) {<option [value]="customer.id">{{ customer.name }} · {{ customer.code }}</option>}</select></label>
-      <div class="field photo-upload"><label for="photo-order-files">Take or upload photos</label><input id="photo-order-files" type="file" accept="image/*" capture="environment" multiple (change)="addPhotoOrderFiles($event)" /><small class="muted">Add up to 12 photos and caption each one.</small></div>
       @if (photoDraft().length) {
         <h3 class="photo-selected-title">{{ photoDraft().length }} photo(s) selected</h3>
         <div class="photo-draft-list">
@@ -348,7 +346,7 @@
         <details class="saved-photo-requests">
           <summary>Saved photo requests on this device ({{ photoRequests().length }})</summary>
           @for (request of photoRequests(); track request.id) {
-            <div class="saved-photo-request"><strong>{{ request.id }} · {{ request.customerName }}</strong><span>{{ request.items.length }} photo(s) · {{ formatPhotoDate(request.createdAt) }}</span></div>
+            <div class="saved-photo-request"><strong>#{{ request.id }} · {{ request.customerName }}</strong><span>{{ request.photos.length }} photo(s) · {{ formatPhotoDate(request.createdAt) }}</span></div>
           }
         </details>
       }
