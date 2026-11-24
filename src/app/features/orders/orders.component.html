@@ -41,10 +41,27 @@
     <div class="notice error">{{ error() }}</div>
   } @else {
     <section class="card queue-card">
-      <div class="queue-card-head"><div><h2>{{ queueTab() === 'new' ? 'New Orders' : queueTab() === 'not-billed' ? 'Not Billed' : queueTab() === 'dispatched' ? 'Dispatched' : 'Pending' }}</h2><div class="muted">Each row has an API order ID, customer, submitted status and order details.</div></div><span class="pill gold">{{ queueOrders().length }} order(s)</span></div>
-      <div class="table-wrap"><table class="queue-table"><thead><tr><th>ORDER</th><th>CUSTOMER / ID</th><th>DATE</th><th>STATUS</th><th>ASSIGNED TO</th><th>LINES</th><th></th></tr></thead><tbody>
+      <div class="queue-card-head"><div><h2>{{ queueTab() === 'new' ? 'New Orders' : queueTab() === 'not-billed' ? 'Not Billed' : queueTab() === 'dispatched' ? 'Dispatched' : 'Pending' }}</h2><div class="muted">Each row has a real order ID, assignment, booking/work status and order details.</div></div><span class="pill gold">{{ queueOrders().length }} order(s)</span></div>
+      <div class="table-wrap"><table class="queue-table"><colgroup><col class="order-col" /><col class="customer-col" /><col class="date-col" /><col class="status-col" /><col class="assignee-col" /><col class="lines-col" /><col class="actions-col" /></colgroup><thead><tr><th>ORDER</th><th>CUSTOMER / ID</th><th>DATE</th><th>STATUS</th><th>ASSIGNED TO</th><th>LINES</th><th></th></tr></thead><tbody>
         @for (order of queueOrders(); track order.id) {
-          <tr><td><strong>{{ order.id }}</strong></td><td><strong>{{ order.customer }}</strong><div class="muted">{{ customerMeta(order) }}</div></td><td>{{ order.date }}</td><td><span class="pill" [class]="'pill ' + statusClass(order.status)">{{ order.status }}</span></td><td><span>{{ assignmentLabel(order) }}</span><div class="muted queue-hint">{{ order.items.length }} open line(s)</div></td><td>{{ order.items.length }}</td><td><button class="btn small" (click)="open(order)">Open order</button></td></tr>
+          <tr>
+            <td><strong>{{ order.id }}</strong></td>
+            <td><strong>{{ customerLabel(order) }}</strong><div class="muted">{{ customerMeta(order) }}</div></td>
+            <td>{{ order.date }}</td>
+            <td><span class="booking-pill">{{ bookingLabel(order) }}</span><div class="muted queue-hint">{{ workLabel(order) }}</div></td>
+            <td>
+              <select class="assignment-control" [value]="order.assignedUserId ?? 0" title="Available Backend Users are loaded from the API.">
+                <option value="0">{{ order.assignedUserId ? assignmentLabel(order) : 'Unassigned' }}</option>
+                @for (user of backendUsers(); track user.id) { <option [value]="user.id">{{ user.fullName }} · {{ user.loginId }}</option> }
+              </select>
+            </td>
+            <td>{{ order.items.length }}</td>
+            <td class="order-actions">
+              <button class="btn small assign-action" disabled title="Picture requests are assigned in Picture Orders before their BT order is created."><span aria-hidden="true">☐</span> Assign</button>
+              <button class="btn small" (click)="open(order)">Open order</button>
+              <button class="btn small danger" disabled title="Order deletion API is not available yet.">Delete</button>
+            </td>
+          </tr>
         } @empty {
           <tr><td colspan="7" class="empty">No orders found in this queue.</td></tr>
         }
@@ -60,10 +77,36 @@
 }
 
 @if (selected(); as order) {
-  <div class="modal-backdrop" (click)="close()"><div class="modal" (click)="$event.stopPropagation()">
+  <div class="modal-backdrop" (click)="close()"><div class="modal order-detail-modal" (click)="$event.stopPropagation()">
     <div class="modal-head"><h2>Order {{ order.id }}</h2><button class="icon-btn" (click)="close()" aria-label="Close">×</button></div>
-    <div class="split"><div><div class="muted label">Customer</div><strong>{{ order.customer }}</strong></div><div><div class="muted label">Status</div><span class="pill" [class]="'pill ' + statusClass(order.status)">{{ order.status }}</span></div><div><div class="muted label">Date</div><strong>{{ order.date }}</strong></div><div><div class="muted label">Order lines</div><strong>{{ order.items.length }}</strong></div></div>
-    <div class="table-wrap detail-table"><table><thead><tr><th>PRODUCT</th><th>ORDER TYPE</th><th>SIZE DISTRIBUTION</th><th>PAIRS</th>@if (canViewAdminRate()) { <th>ADMIN RATE / PAIR</th> }</tr></thead><tbody>@for (item of order.items; track $index) { <tr><td><strong>{{ item.productName }}</strong><div class="muted">{{ item.code }}</div></td><td>{{ typeLabel(item) }}</td><td>{{ distribution(item) }}</td><td>{{ item.total }}</td>@if (canViewAdminRate()) { <td>{{ item.adminRatePerPair ? '₹' + item.adminRatePerPair : '—' }}</td> }</tr> }</tbody></table></div>
-    <div class="modal-actions"><button class="btn" (click)="close()">Close</button></div>
+
+    <div class="prototype-order-summary">
+      <div><div class="muted label">Customer</div><strong>{{ customerLabel(order) }}</strong><div class="muted label summary-gap">Assigned to</div><strong>{{ assignmentLabel(order) }}</strong></div>
+      <div><div class="muted label">Order status</div><span class="booking-pill">{{ bookingLabel(order) }}</span><div class="muted label summary-gap">Work status</div><span class="pill" [class]="'pill ' + statusClass(order.workStatus ?? order.status)">{{ workStatusLabel(order) }}</span></div>
+    </div>
+
+    @if (order.assignedUserId) {
+      <div class="assignment-notice"><span aria-hidden="true">&#128274;</span> Assigned to {{ assignmentLabel(order) }}. New Order sizes are frozen while packaging work is assigned.</div>
+    } @else {
+      <div class="assignment-notice neutral">No Backend User is assigned to this order yet.</div>
+    }
+
+    <div class="table-wrap detail-table"><table class="detail-order-table"><colgroup><col class="detail-product-col" />@if (canViewAdminRate()) { <col class="detail-rate-col" /> }<col class="detail-brand-col" /><col class="detail-type-col" /><col class="detail-size-col" /><col class="detail-ready-col" /><col class="detail-work-col" /><col class="detail-done-col" /></colgroup><thead><tr><th>PRODUCT LINE</th>@if (canViewAdminRate()) { <th>ADMIN RATE / PAIR</th> }<th>BRAND</th><th>ORDER TYPE</th><th>SIZE / CARTON</th><th>READY PAIRS</th><th>WORK STATUS</th><th>DONE</th></tr></thead><tbody>
+      @for (item of order.items; track $index; let lineIndex = $index) {
+        <tr>
+          <td><div class="detail-product-line"><div class="line-photo">@if (productImage(item); as image) { <img [src]="image" [alt]="item.productName" /> } @else { <span aria-hidden="true">&#128094;</span> }</div><div><strong>{{ item.productName }}</strong><div class="muted">{{ item.code }}</div></div></div></td>
+          @if (canViewAdminRate()) { <td class="rate-cell">{{ item.adminRatePerPair ? '₹' + item.adminRatePerPair : '—' }}</td> }
+          <td><span class="brand-pill">{{ productBrand(item) }}</span></td>
+          <td>{{ typeLabel(item) }}</td>
+          <td><div class="size-readout">@for (row of item.rows; track row.size) { <div class="size-card"><strong>Size {{ row.size }}:</strong><span class="size-qty">{{ row.qty }}</span><div class="size-markers"><label class="size-choice ready" title="Mark {{ row.qty }} pair(s) ready"><input type="radio" [name]="'size-disposition-' + order.id + '-' + lineIndex + '-' + row.size" [checked]="isSizeReady(order, lineIndex, row.size)" (change)="setSizeDisposition(order, lineIndex, row.size, 'ready')" /><span class="size-marker" aria-hidden="true"></span><span class="sr-only">Ready</span></label><label class="size-choice pending" title="Keep {{ row.qty }} pair(s) pending"><input type="radio" [name]="'size-disposition-' + order.id + '-' + lineIndex + '-' + row.size" [checked]="!isSizeReady(order, lineIndex, row.size)" (change)="setSizeDisposition(order, lineIndex, row.size, 'pending')" /><span class="size-marker" aria-hidden="true"></span><span class="sr-only">Pending</span></label></div></div> } @empty { <span class="size-empty">{{ distribution(item) || '—' }}</span> }</div></td>
+          <td class="ready-pairs">{{ readyPairs(order, item, lineIndex) }}</td>
+          <td><span class="pill" [class]="'pill ' + lineWorkStatusClass(order, item, lineIndex)">{{ lineWorkStatus(order, item, lineIndex) }}</span></td>
+          <td><button class="btn small primary" disabled title="The order work-status update API is not available yet.">Done</button></td>
+        </tr>
+      }
+    </tbody></table></div>
+
+    <div class="notice order-readonly-note">Line status follows fulfilment: Booked when received, Not dispatched while work is in progress, and Dispatched after the line is Done. Size status and Done will become live when the backend exposes the required order work APIs.</div>
+    <div class="modal-actions"><button class="btn primary" disabled title="Bill API is not available yet."><span aria-hidden="true">&#128438;</span> View Bill</button><button class="btn" (click)="close()">Close</button></div>
   </div></div>
 }

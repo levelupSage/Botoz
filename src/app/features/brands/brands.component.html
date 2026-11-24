@@ -7,7 +7,7 @@
 </div>
 
 @if (addOpen()) {
-<div class="modal-backdrop" (click)="closeAdd()" (keydown)="onModalKeydown($event)">
+<div class="modal-backdrop" (click)="closeAdd()">
   <section class="add-modal" role="dialog" aria-modal="true" aria-labelledby="add-brand-title"
     aria-describedby="brand-modal-description" (click)="$event.stopPropagation()">
     <div class="modal-head">
@@ -26,13 +26,13 @@
           autocomplete="off" [attr.aria-invalid]="form.controls.name.touched && form.controls.name.invalid"
           [attr.aria-describedby]="form.controls.name.touched && form.controls.name.invalid ? 'brand-name-hint brand-name-error' : 'brand-name-hint'" />
         <div class="field-meta">
-          <small id="brand-name-hint">Use the name customers will recognize.</small>
+          <small id="brand-name-hint">Letters, numbers, spaces, and periods only.</small>
           <small>{{ form.controls.name.value.length }}/120</small>
         </div>
         @if (form.controls.name.touched && form.controls.name.invalid) {
-        <small class="err" id="brand-name-error">
-          @if (form.controls.name.hasError('required') || form.controls.name.hasError('pattern')) { Enter a brand name.
-          }
+        <small class="err" id="brand-name-error" role="alert"><span aria-hidden="true">!</span>
+          @if (form.controls.name.hasError('required')) { Enter a brand name. }
+          @else if (form.controls.name.hasError('brandName')) { Use only letters, numbers, spaces, and periods. }
           @else { Brand name must be 120 characters or fewer. }
         </small>
         }
@@ -71,7 +71,7 @@
       <div class="brand-info">
         <strong>{{ brand.name }}</strong>
       </div>
-      <span class="pill" [class.inactive]="!brand.active" [attr.aria-label]="brand.active ? 'Active' : 'Inactive'">
+      <span class="pill" [class.gray]="!brand.active" [attr.aria-label]="brand.active ? 'Active' : 'Inactive'">
         {{ brand.active ? 'ACTIVE' : 'INACTIVE' }}
       </span>
     </div>

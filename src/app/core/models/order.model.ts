@@ -30,6 +30,12 @@ export interface Order {
   customer: string;
   date: string;
   status: OrderStatus;
+  /** The API booking state, shown separately from fulfilment work state. */
+  bookingStatus?: string;
+  /** The API fulfilment state, when returned. */
+  workStatus?: OrderStatus;
+  /** API id of the Backend User assigned to this order, when assigned. */
+  assignedUserId?: number;
   createdBy: string;
   items: OrderItem[];
 }

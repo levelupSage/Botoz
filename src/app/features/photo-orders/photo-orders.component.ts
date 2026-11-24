@@ -27,6 +27,7 @@ export class PhotoOrdersComponent {
   readonly loading = signal(false);
   readonly saving = signal(false);
   readonly reviewRequest = signal<PictureOrderRequest | null>(null);
+  readonly detailRequest = signal<PictureOrderRequest | null>(null);
   readonly assignRequest = signal<PictureOrderRequest | null>(null);
   readonly decisions = signal<Record<number, 'GREEN' | 'RED'>>({});
   readonly lineDrafts = signal<Record<number, { productId: number; size: number; qty: number }>>({});
@@ -38,11 +39,13 @@ export class PhotoOrdersComponent {
   readonly reviewedCount = computed(() => this.counts().pending);
   readonly doneCount = computed(() => this.counts().processed);
 
-  constructor() { this.catalog.loadProducts(); this.refresh(); }
+  constructor() { this.catalog.load(); this.refresh(); }
 
   startPhotoOrder(): void { this.router.navigate(['/app/products'], { queryParams: { photoOrder: '1' } }); }
   openPreview(src: string): void { this.previewSrc.set(src); }
   closePreview(): void { this.previewSrc.set(null); }
+  openDetails(request: PictureOrderRequest): void { this.detailRequest.set(request); }
+  closeDetails(): void { this.detailRequest.set(null); }
 
   refresh(): void {
     this.loading.set(true);
@@ -101,8 +104,14 @@ export class PhotoOrdersComponent {
     if (!request || !this.assigneeId() || lines.length !== request.photos.length) { this.toast.error('Choose a Backend User, product, size and quantity for every photo.'); return; }
     this.saving.set(true);
     this.api.assign(request.id, this.assigneeId(), lines).subscribe({
-      next: () => { this.saving.set(false); this.assignRequest.set(null); this.toast.success(`Picture order #${request.id} assigned.`); this.refresh(); },
-      error: (error: unknown) => { this.saving.set(false); this.toast.error(error instanceof Error ? error.message : 'Could not assign the picture order.'); },
+      next: (updated) => {
+        this.saving.set(false);
+        this.assignRequest.set(null);
+        const orderText = updated.orderNumber ? ` Regular order ${updated.orderNumber} created.` : '';
+        this.toast.success(`Picture order #${request.id} released to the Backend User.${orderText}`);
+        this.refresh();
+      },
+      error: (error: unknown) => { this.saving.set(false); this.toast.error(error instanceof Error ? error.message : 'Could not release the picture order.'); },
     });
   }
 
@@ -111,10 +120,23 @@ export class PhotoOrdersComponent {
     return Number.isNaN(date.getTime()) ? value : date.toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   }
 
+  photoStatusLabel(status: string): string {
+    return status.replace(/_/g, ' ').toLowerCase().replace(/(^|\s)\S/g, (letter) => letter.toUpperCase());
+  }
+
+  sizesForPhoto(photoId: number): number[] {
+    const productId = this.lineDrafts()[photoId]?.productId;
+    return this.products().find((product) => product.id === productId)?.sizes ?? [];
+  }
+
+  lineIsComplete(photoId: number): boolean {
+    return this.lineFor(photoId) !== null;
+  }
+
   private lineFor(photoId: number): OrderItem | null {
     const draft = this.lineDrafts()[photoId];
     const product = this.products().find((item) => item.id === draft?.productId);
-    if (!draft || !product || draft.size <= 0 || draft.qty <= 0) return null;
+    if (!draft || !product || !product.sizes.includes(draft.size) || !Number.isInteger(draft.qty) || draft.qty <= 0) return null;
     return { productId: product.id, productName: product.name, code: product.code, mode: 'size', total: draft.qty, rows: [{ size: draft.size, qty: draft.qty }], adminRatePerPair: 0 };
   }
 }

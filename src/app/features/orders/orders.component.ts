@@ -1,7 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { DataService } from '../../core/data/data.service';
-import { Customer, Order, OrderItem, OrderStatus } from '../../core/models';
+import { BackendUserOption, Customer, Order, OrderItem, OrderStatus } from '../../core/models';
+import { AdminPhotoOrderService } from '../../core/services/admin-photo-order.service';
 import { AppStateService } from '../../core/services/app-state.service';
 import { AuthService } from '../../core/services/auth.service';
 import { BasketService } from '../../core/services/basket.service';
@@ -14,6 +15,7 @@ interface LiveBasket {
 }
 
 type QueueTab = 'new' | 'not-billed' | 'dispatched' | 'pending' | 'basket';
+type SizeDisposition = 'ready' | 'pending';
 
 /**
  * Orders list + detail. Customers see only their own orders; staff see all.
@@ -34,6 +36,7 @@ export class OrdersComponent implements OnInit {
   private readonly basket = inject(BasketService);
   private readonly catalog = inject(CatalogService);
   private readonly toast = inject(ToastService);
+  private readonly photoOrders = inject(AdminPhotoOrderService);
 
   readonly loading = signal(true);
   readonly supportsOrderStatusUpdate = this.data.supportsOrderStatusUpdate;
@@ -45,8 +48,10 @@ export class OrdersComponent implements OnInit {
   readonly statusDraft = signal<OrderStatus>('Confirmed');
   readonly savingStatus = signal(false);
   readonly statusError = signal<string | null>(null);
+  readonly sizeDispositions = signal<Record<string, SizeDisposition>>({});
 
   private readonly orders = signal<Order[]>([]);
+  readonly backendUsers = signal<BackendUserOption[]>([]);
 
   readonly isCustomer = computed(() => this.appState.role() === 'Customer');
   readonly canViewAdminRate = computed(() => ['Admin', 'Super Admin'].includes(this.appState.role()));
@@ -127,8 +132,73 @@ export class OrdersComponent implements OnInit {
     return customer ? `${customer.code} · Category ${customer.category}` : `Customer #${order.customerId}`;
   }
 
+  customerLabel(order: Order): string {
+    const station = this.catalog.customerById(order.customerId)?.station?.trim();
+    return station ? `${order.customer} (Station: ${station.toUpperCase()})` : order.customer;
+  }
+
   assignmentLabel(order: Order): string {
+    if (order.assignedUserId) {
+      const user = this.backendUsers().find((item) => item.id === order.assignedUserId);
+      return user ? `${user.fullName} · ${user.loginId}` : `Backend User #${order.assignedUserId}`;
+    }
     return order.createdBy && order.createdBy !== 'API' ? order.createdBy : 'Unassigned';
+  }
+
+  bookingLabel(order: Order): string {
+    const value = order.bookingStatus?.trim();
+    if (!value) return order.status;
+    return value.toLowerCase().replace(/(^|[_\s-])\w/g, (letter) => letter.toUpperCase().replace(/[_-]/, ' '));
+  }
+
+  workLabel(order: Order): string {
+    return `Work: ${order.workStatus ?? order.status}`;
+  }
+
+  workStatusLabel(order: Order): string {
+    return order.workStatus ?? order.status;
+  }
+
+  productBrand(item: OrderItem): string {
+    return item.brand || this.catalog.products().find((product) => product.id === item.productId)?.brand || '—';
+  }
+
+  productImage(item: OrderItem): string | null {
+    const product = this.catalog.productById(item.productId);
+    return product?.images.find((image) => image.active && !image.archived)?.src
+      ?? product?.images.find((image) => !image.archived)?.src
+      ?? null;
+  }
+
+  isSizeReady(order: Order, lineIndex: number, size: number): boolean {
+    return this.sizeDispositions()[this.sizeDispositionKey(order, lineIndex, size)] === 'ready';
+  }
+
+  setSizeDisposition(order: Order, lineIndex: number, size: number, disposition: SizeDisposition): void {
+    const key = this.sizeDispositionKey(order, lineIndex, size);
+    this.sizeDispositions.update((current) => ({ ...current, [key]: disposition }));
+  }
+
+  readyPairs(order: Order, item: OrderItem, lineIndex: number): number {
+    return item.rows.reduce(
+      (total, row) => total + (this.isSizeReady(order, lineIndex, row.size) ? row.qty : 0),
+      0,
+    );
+  }
+
+  lineWorkStatus(order: Order, item: OrderItem, lineIndex: number): string {
+    const ready = this.readyPairs(order, item, lineIndex);
+    if (ready === 0) return 'Pending';
+    if (ready < item.total) return 'In progress';
+    return 'Ready';
+  }
+
+  lineWorkStatusClass(order: Order, item: OrderItem, lineIndex: number): string {
+    return this.lineWorkStatus(order, item, lineIndex) === 'In progress' ? 'blue' : '';
+  }
+
+  private sizeDispositionKey(order: Order, lineIndex: number, size: number): string {
+    return `${order.id}:${lineIndex}:${size}`;
   }
 
   private inQueue(order: Order, tab: QueueTab): boolean {
@@ -150,6 +220,11 @@ export class OrdersComponent implements OnInit {
         this.error.set('Could not load orders.');
         this.loading.set(false);
       },
+    });
+    this.photoOrders.backendUsers().subscribe({
+      next: (users) => this.backendUsers.set(users),
+      // The orders list must still work when the user list is unavailable.
+      error: () => undefined,
     });
   }
 
@@ -178,6 +253,7 @@ export class OrdersComponent implements OnInit {
 
   open(order: Order): void {
     this.selected.set(order);
+    this.sizeDispositions.set({});
     this.statusDraft.set(order.status);
     this.statusError.set(null);
   }

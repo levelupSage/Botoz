@@ -82,35 +82,37 @@
                 <div class="muted">Price category {{ c.category }}</div>
               </td>
               <td>{{ priceRule(c) }}</td>
-              <td>
-                <span class="pill customer-status-pill" [class.deactivated]="!c.active">
+              <td class="text-center">
+                <span class="pill" [class.gray]="!c.active">
                   {{ c.active ? 'Active' : 'Deactivated' }}
                 </span>
               </td>
-              <td class="row-actions">
-                <button class="btn small" [disabled]="loadingDetails() || saving()" (click)="openEdit(c)">
-                  {{ loadingDetails() ? 'Loading...' : 'Edit' }}
-                </button>
-                <button class="btn small primary" [disabled]="!c.active || updatingStatusId() !== null" (click)="startOrder(c)">
-                  + Take order
-                </button>
-                <button
-                  class="btn small"
-                  [attr.title]="supportsProductPriceOverrides ? 'Edit per-product price overrides' : 'Not supported by the connected API'"
-                  (click)="openPriceOverrides(c)"
-                >Price overrides</button>
-                <button class="btn small" [disabled]="updatingStatusId() !== null" (click)="setCustomerStatus(c, !c.active)">
-                  {{ updatingStatusId() === c.id ? 'Saving...' : c.active ? 'Deactivate' : 'Activate' }}
-                </button>
-                @if (canDeleteCustomers()) {
-                  <button
-                    class="btn small danger"
-                    [disabled]="deletingCustomerId() !== null"
-                    (click)="deleteCustomer(c)"
-                  >
-                    {{ deletingCustomerId() === c.id ? 'Deleting...' : 'Delete' }}
+              <td>
+                <div class="row-actions">
+                  <button class="btn small" [disabled]="loadingDetails() || saving()" (click)="openEdit(c)">
+                    {{ loadingDetails() ? 'Loading...' : 'Edit' }}
                   </button>
-                }
+                  <button class="btn small primary" [disabled]="!c.active || updatingStatusId() !== null" (click)="startOrder(c)">
+                    + Take order
+                  </button>
+                  <button
+                    class="btn small"
+                    [attr.title]="supportsProductPriceOverrides ? 'Edit per-product price overrides' : 'Not supported by the connected API'"
+                    (click)="openPriceOverrides(c)"
+                  >Price overrides</button>
+                  <button class="btn small" [disabled]="updatingStatusId() !== null" (click)="setCustomerStatus(c, !c.active)">
+                    {{ updatingStatusId() === c.id ? 'Saving...' : c.active ? 'Deactivate' : 'Activate' }}
+                  </button>
+                  @if (canDeleteCustomers()) {
+                    <button
+                      class="btn small danger"
+                      [disabled]="deletingCustomerId() !== null"
+                      (click)="deleteCustomer(c)"
+                    >
+                      {{ deletingCustomerId() === c.id ? 'Deleting...' : 'Delete' }}
+                    </button>
+                  }
+                </div>
               </td>
             </tr>
           } @empty {
@@ -144,13 +146,13 @@
         <button type="button" class="icon-btn" [disabled]="saving()" (click)="close()" aria-label="Close dialog">×</button>
       </div>
 
-      <form [formGroup]="form" (ngSubmit)="save()" novalidate>
+      <form #customerForm [formGroup]="form" (ngSubmit)="save()" novalidate>
         @if (customerSaveError()) {
           <div class="notice error customer-save-error" role="alert">{{ customerSaveError() }}</div>
         }
         <div class="form-grid">
           <div class="field">
-            <label for="c-name">Business name *</label>
+            <label for="c-name">Business name <span class="required" aria-hidden="true">*</span></label>
             <input
               #businessNameInput
               id="c-name"
@@ -158,9 +160,15 @@
               placeholder="Business name"
               maxlength="120"
               autocomplete="organization"
+              [attr.aria-invalid]="form.controls.name.touched && form.controls.name.invalid"
+              [attr.aria-describedby]="form.controls.name.touched && form.controls.name.invalid ? 'c-name-error' : null"
             />
+            <span class="help">Use the business name customers recognize.</span>
             @if (form.controls.name.touched && form.controls.name.invalid) {
-              <small class="err">Enter a business name up to 120 characters.</small>
+              <small class="err" id="c-name-error" role="alert">
+                @if (form.controls.name.hasError('required') || form.controls.name.hasError('pattern')) { Enter a business name. }
+                @else { Business name must be 120 characters or fewer. }
+              </small>
             }
           </div>
           <div class="field">
@@ -170,23 +178,27 @@
           </div>
 
           <div class="field">
-            <label for="c-login">Login ID *</label>
+            <label for="c-login">Login ID <span class="required" aria-hidden="true">*</span></label>
             <input
               id="c-login"
               formControlName="loginId"
               autocomplete="username"
               maxlength="80"
               placeholder="Enter a unique login ID"
+              [attr.aria-invalid]="form.controls.loginId.touched && form.controls.loginId.invalid"
+              [attr.aria-describedby]="form.controls.loginId.touched && form.controls.loginId.invalid ? 'c-login-error' : null"
             />
             <span class="help">Give this Login ID to the customer for signing in.</span>
             @if (form.controls.loginId.touched && form.controls.loginId.invalid) {
-              <small class="err">
-                {{ form.controls.loginId.hasError('duplicate') ? 'This Login ID is already in use.' : 'Enter a unique Login ID.' }}
+              <small class="err" id="c-login-error" role="alert">
+                @if (form.controls.loginId.hasError('duplicate')) { This Login ID is already in use. }
+                @else if (form.controls.loginId.hasError('required')) { Login ID is required. }
+                @else { Use 3–80 letters, numbers, periods, underscores, or hyphens. }
               </small>
             }
           </div>
           <div class="field">
-            <label for="c-pass">Login password *</label>
+            <label for="c-pass">Login password @if (!editing()) { <span class="required" aria-hidden="true">*</span> }</label>
             <input
               id="c-pass"
               type="password"
@@ -195,19 +207,26 @@
               maxlength="72"
               formControlName="loginPassword"
               placeholder="Choose a strong password"
+              [attr.aria-invalid]="form.controls.loginPassword.touched && form.controls.loginPassword.invalid"
+              [attr.aria-describedby]="form.controls.loginPassword.touched && form.controls.loginPassword.invalid ? 'c-pass-error' : null"
             />
             <span class="help">
-              Use 8+ characters with uppercase, lowercase, number, and symbol. The API requires a password on each save.
+              @if (editing()) { Leave blank to keep the current password. }
+              @else { Use 8+ characters with uppercase, lowercase, number, and symbol. }
             </span>
             @if (form.controls.loginPassword.touched && form.controls.loginPassword.invalid) {
-              <small class="err">Enter a strong password that meets the requirements.</small>
+              <small class="err" id="c-pass-error" role="alert">
+                @if (form.controls.loginPassword.hasError('required')) { Login password is required for a new customer. }
+                @else { Use 8–72 characters with uppercase, lowercase, number, and symbol. }
+              </small>
             }
           </div>
 
           <div class="field">
-            <label for="c-station">Station *</label>
+            <label for="c-station">Station <span class="required" aria-hidden="true">*</span></label>
             <div class="station-row">
-              <select id="c-station" formControlName="station">
+              <select id="c-station" formControlName="station"
+                [attr.aria-invalid]="form.controls.station.touched && form.controls.station.invalid">
                 <option value="">Select station...</option>
                 @for (s of stations(); track s) {
                   <option [value]="s">{{ s }}</option>
@@ -223,6 +242,7 @@
                   maxlength="100"
                   required
                   [value]="stationDraft()"
+                  [attr.aria-invalid]="!!stationDraftError()"
                   (input)="updateStationDraft($any($event.target).value)"
                   (keydown.enter)="$event.preventDefault(); saveStation()"
                 />
@@ -237,21 +257,26 @@
             }
             <span class="help">A station groups customers located at the same place.</span>
             @if (form.controls.station.touched && form.controls.station.invalid) {
-              <small class="err">Station is required.</small>
+              <small class="err" role="alert">Select or add a station.</small>
             }
           </div>
           <div class="field">
-            <label for="c-cat">Price category *</label>
-            <select id="c-cat" formControlName="category">
+            <label for="c-cat">Price category <span class="required" aria-hidden="true">*</span></label>
+            <select id="c-cat" formControlName="category"
+              [attr.aria-invalid]="form.controls.category.touched && form.controls.category.invalid">
+              <option value="" disabled>Select price category...</option>
               @for (t of tiers; track t) {
                 <option [value]="t">Category {{ t }}</option>
               }
             </select>
             <span class="help">Used for A/B/C product display pricing.</span>
+            @if (form.controls.category.touched && form.controls.category.invalid) {
+              <small class="err" role="alert">Select a price category.</small>
+            }
           </div>
 
           <div class="field">
-            <label for="c-whatsapp">WhatsApp No. *</label>
+            <label for="c-whatsapp">WhatsApp No. <span class="required" aria-hidden="true">*</span></label>
             <input
               id="c-whatsapp"
               type="tel"
@@ -261,9 +286,10 @@
               formControlName="whatsapp"
               placeholder="10-digit WhatsApp number"
               (input)="fillPhoneFromWhatsapp()"
+              [attr.aria-invalid]="form.controls.whatsapp.touched && form.controls.whatsapp.invalid"
             />
             @if (form.controls.whatsapp.touched && form.controls.whatsapp.invalid) {
-              <small class="err">
+              <small class="err" role="alert">
                 @if (form.controls.whatsapp.hasError('required')) { WhatsApp number is required. }
                 @else if (form.controls.whatsapp.hasError('phoneFormat')) { Enter digits only. }
                 @else if (form.controls.whatsapp.hasError('phoneStart')) { Indian mobile number must start with 6, 7, 8 or 9. }
@@ -273,9 +299,10 @@
           </div>
           <div class="field">
             <label for="c-phone">Phone No.</label>
-            <input id="c-phone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="10" formControlName="phone" placeholder="Optional, 10 digits" />
+            <input id="c-phone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="10" formControlName="phone" placeholder="Optional, 10 digits"
+              [attr.aria-invalid]="form.controls.phone.touched && form.controls.phone.invalid" />
             @if (form.controls.phone.touched && form.controls.phone.invalid) {
-              <small class="err">
+              <small class="err" role="alert">
                 @if (form.controls.phone.hasError('phoneFormat')) { Enter digits only. }
                 @else if (form.controls.phone.hasError('phoneStart')) { Indian mobile number must start with 6, 7, 8 or 9. }
                 @else { Enter a 10-digit Indian mobile number. }
@@ -285,36 +312,56 @@
 
           <div class="field">
             <label for="c-email">Email</label>
-            <input id="c-email" type="email" formControlName="email" placeholder="name@example.com" />
+            <input id="c-email" type="email" formControlName="email" placeholder="name@example.com"
+              [attr.aria-invalid]="form.controls.email.touched && form.controls.email.invalid" />
             @if (form.controls.email.touched && form.controls.email.invalid) {
-              <small class="err">Enter a valid email.</small>
+              <small class="err" role="alert">Enter a valid email address.</small>
             }
           </div>
           <div class="field">
             <label for="c-contact">Contact person</label>
-            <input id="c-contact" formControlName="contact" placeholder="Contact name" />
+            <input id="c-contact" formControlName="contact" placeholder="Contact name" maxlength="120"
+              [attr.aria-invalid]="form.controls.contact.touched && form.controls.contact.invalid" />
+            @if (form.controls.contact.touched && form.controls.contact.invalid) {
+              <small class="err" role="alert">Contact name must be 120 characters or fewer.</small>
+            }
           </div>
 
           <div class="field full">
             <label for="c-address">Shipping address</label>
-            <textarea id="c-address" rows="2" formControlName="address" placeholder="Shipping address"></textarea>
+            <textarea id="c-address" rows="2" formControlName="address" placeholder="Shipping address" maxlength="300"
+              [attr.aria-invalid]="form.controls.address.touched && form.controls.address.invalid"></textarea>
+            @if (form.controls.address.touched && form.controls.address.invalid) {
+              <small class="err" role="alert">Shipping address must be 300 characters or fewer.</small>
+            }
           </div>
 
-          <div class="field">
+          <div class="field ">
             <label for="c-reminder">Weekly payment reminder day</label>
-            <select id="c-reminder" formControlName="reminderDay">
+            <select id="c-reminder" formControlName="reminderDay"
+              [attr.aria-invalid]="form.controls.reminderDay.touched && form.controls.reminderDay.invalid">
+              <option value="" disabled>Select reminder day...</option>
               @for (d of weekdays; track d) {
                 <option [value]="d">{{ d }}</option>
               }
             </select>
             <span class="help">Customer receives a payment reminder every week on this day.</span>
+            @if (form.controls.reminderDay.touched && form.controls.reminderDay.invalid) {
+              <small class="err" role="alert">Select a payment reminder day.</small>
+            }
           </div>
           <div class="field">
-            <label for="c-status">Status</label>
-            <select id="c-status" formControlName="active">
-              <option [ngValue]="true">Active</option>
-              <option [ngValue]="false">Inactive</option>
+            <label for="c-status">Status <span class="required" aria-hidden="true">*</span></label>
+            <select id="c-status" formControlName="active"
+              [attr.aria-invalid]="form.controls.active.touched && form.controls.active.invalid">
+              <option value="" disabled>Select status...</option>
+              <option value="ACTIVE">Active</option>
+              <option value="INACTIVE">Inactive</option>
             </select>
+            <span class="help">Inactive customers cannot place orders until reactivated.</span>
+            @if (form.controls.active.touched && form.controls.active.invalid) {
+              <small class="err" role="alert">Select the customer status.</small>
+            }
           </div>
         </div>
 
@@ -338,6 +385,7 @@
                   [value]="selectedDiscountBrand()"
                   (change)="selectDiscountBrand($any($event.target).value)"
                 >
+                  <option value="" disabled>Select brand...</option>
                   @for (b of brands(); track b.id) {
                     <option [value]="b.name">{{ b.name }}{{ hasBrandDiscount(b.name) ? ' (configured)' : '' }}</option>
                   }
@@ -393,7 +441,7 @@
                   <div class="override-name">
                     <strong>{{ p.name }}</strong>
                     <span class="muted">{{ p.code }} · Cat {{ form.controls.category.value }}
-                      {{ p.categoryPrices[form.controls.category.value] }}</span>
+                      {{ productCategoryPrice(p) }}</span>
                   </div>
                   <input
                     type="number"
@@ -409,20 +457,9 @@
         }
 
         <div class="modal-actions">
-          <button
-            type="button"
-            class="btn order-rights-toggle"
-            [class.enabled]="orderRights()"
-            [class.disabled]="!orderRights()"
-            [attr.aria-pressed]="orderRights()"
-            [disabled]="saving()"
-            (click)="toggleOrderRights()"
-          >
-            Order Rights: {{ orderRights() ? 'ON' : 'OFF' }}
-          </button>
           <button type="button" class="btn" [disabled]="saving()" (click)="close()">Cancel</button>
           <button type="submit" class="btn primary" [disabled]="saving()">
-            {{ saving() ? 'Saving...' : editing() ? 'Save customer' : 'Add customer' }}
+            {{ saving() ? 'Saving...' : editing() ? 'Edit customer' : 'Add customer' }}
           </button>
         </div>
       </form>

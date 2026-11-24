@@ -43,6 +43,15 @@ import { DataService } from './data.service';
 import { environment } from '../../../environments/environment';
 
 type Json = Record<string, unknown>;
+const WEEKDAY_BY_API_VALUE: Readonly<Record<string, string>> = {
+  monday: 'Monday',
+  tuesday: 'Tuesday',
+  wednesday: 'Wednesday',
+  thursday: 'Thursday',
+  friday: 'Friday',
+  saturday: 'Saturday',
+  sunday: 'Sunday',
+};
 
 interface ApiPage<T> {
   items: T[];
@@ -724,7 +733,7 @@ export class ApiDataService extends DataService {
 
   private customerRequest(customer: Customer, stationId: number): Json {
     const password = customer.loginPassword?.trim();
-    if (!password) throw new Error('Enter a password; the API requires it when saving a customer.');
+    if (!customer.id && !password) throw new Error('Enter a password when creating a customer.');
     const brandDiscounts = Object.entries(customer.brandDiscounts ?? []).flatMap(([name, discountPercent]) => {
       const brandId = this.brandByName.get(name.toLowerCase());
       return brandId && discountPercent > 0 ? [{ brandId, discountPercent, lockSize: false }] : [];
@@ -732,7 +741,7 @@ export class ApiDataService extends DataService {
     return {
       businessName: customer.name,
       loginId: customer.loginId || customer.code,
-      password,
+      ...(password ? { password } : {}),
       stationId,
       priceCategory: customer.category,
       whatsappNumber: customer.whatsapp || customer.phone,
@@ -922,7 +931,9 @@ export class ApiDataService extends DataService {
       station,
       stationId,
       contact: this.text(row['contactPerson']) || fallback?.contact,
-      reminderDay: this.text(row['weeklyReminderDay']) || fallback?.reminderDay,
+      reminderDay: WEEKDAY_BY_API_VALUE[this.text(row['weeklyReminderDay']).toLowerCase()]
+        ?? fallback?.reminderDay
+        ?? 'Tuesday',
       active: typeof row['active'] === 'boolean'
         ? row['active']
         : row['status'] != null
@@ -979,11 +990,18 @@ export class ApiDataService extends DataService {
     return {
       id: this.number(row['id']), customerId: this.number(row['customerId']), customerName: this.text(row['customerName']),
       customerCode: this.text(row['customerCode']), customerLoginId: this.text(row['customerLoginId']) || undefined,
-      status: this.pictureStatus(this.text(row['status'])), createdAt: this.text(row['createdAt']), reviewedAt: this.text(row['reviewedAt']) || undefined,
+      status: this.pictureStatus(this.text(row['status'])), createdAt: this.text(row['createdAt']),
+      reviewedAt: this.text(row['reviewedAt']) || undefined,
+      releasedAt: this.text(row['releasedAt'] ?? row['assignedAt']) || undefined,
+      assignedToId: this.number(row['assignedToId'] ?? row['backendUserId']) || undefined,
+      assignedToName: this.text(row['assignedToName'] ?? row['backendUserName']) || undefined,
+      orderId: this.number(row['orderId'] ?? row['createdOrderId']) || undefined,
+      orderNumber: this.text(row['orderNumber'] ?? row['createdOrderNumber']) || undefined,
       photos: photos.map((value) => {
         const photo = this.asJson(value);
         return { id: this.number(photo['id']), imageUrl: this.absoluteUrl(this.text(photo['imageUrl'])), caption: this.text(photo['caption']),
-          status: this.picturePhotoStatus(this.text(photo['status'])), orderId: this.number(photo['orderId']) || undefined, createdAt: this.text(photo['createdAt']) || undefined };
+          status: this.picturePhotoStatus(this.text(photo['status'])), orderId: this.number(photo['orderId']) || undefined,
+          orderNumber: this.text(photo['orderNumber']) || undefined, createdAt: this.text(photo['createdAt']) || undefined };
       }),
     };
   }
@@ -1017,14 +1035,18 @@ export class ApiDataService extends DataService {
           fallback?.items[index]?.adminRatePerPair || 0,
       };
     });
-    const rawStatus = (this.text(row['workStatus']) || this.text(row['status'])).toUpperCase();
+    const rawBookingStatus = this.text(row['status']).toUpperCase();
+    const rawWorkStatus = this.text(row['workStatus']).toUpperCase();
     return {
       id: this.text(row['orderNumber']) || fallback?.id || String(this.number(row['id'])),
       apiId: this.number(row['id']) || fallback?.apiId,
       customerId: this.number(customer['id']) || fallback?.customerId || 0,
       customer: this.text(customer['name']) || this.text(customer['businessName']) || fallback?.customer || '',
       date: this.formatDate(this.text(row['createdAt'])) || fallback?.date || '',
-      status: this.orderStatus(rawStatus),
+      status: this.orderStatus(rawWorkStatus || rawBookingStatus),
+      bookingStatus: rawBookingStatus || undefined,
+      workStatus: rawWorkStatus ? this.orderStatus(rawWorkStatus) : undefined,
+      assignedUserId: this.number(row['assignedUserId']) || undefined,
       createdBy: fallback?.createdBy || 'API',
       items: items.length ? items : fallback?.items || [],
     };

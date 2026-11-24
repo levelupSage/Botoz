@@ -124,31 +124,33 @@
 </div>
 
 @if (!orderingMode() && !loading() && !error()) {
-  <div class="status-tabs">
-    <button class="status-tab" [class.active]="statusFilter() === 'All'" (click)="statusFilter.set('All')">
-      All products ({{ counts().all }})
+  <div class="status-tabs" role="group" aria-label="Filter products by status">
+    <button type="button" class="status-tab all" [class.selected]="statusFilter() === 'All'" (click)="statusFilter.set('All')">
+      All <span>{{ counts().all }}</span>
     </button>
     <button
-      class="status-tab active-tab"
-      [class.active]="statusFilter() === 'Active'"
+      type="button"
+      class="status-tab active"
+      [class.selected]="statusFilter() === 'Active'"
       (click)="statusFilter.set('Active')"
     >
-      Activated ({{ counts().active }})
+      <span class="status-dot"></span> Active <span>{{ counts().active }}</span>
     </button>
     <button
-      class="status-tab archived-tab"
-      [class.active]="statusFilter() === 'Archived'"
+      type="button"
+      class="status-tab archived"
+      [class.selected]="statusFilter() === 'Archived'"
       (click)="statusFilter.set('Archived')"
     >
-      Archived ({{ counts().archived }})
+      <span class="status-dot"></span> Archived <span>{{ counts().archived }}</span>
     </button>
     <button
-      class="status-tab"
-      [class.deactivated-tab]="true"
-      [class.active]="statusFilter() === 'Deactivated'"
+      type="button"
+      class="status-tab inactive"
+      [class.selected]="statusFilter() === 'Deactivated'"
       (click)="statusFilter.set('Deactivated')"
     >
-      Deactivated ({{ counts().deactivated }})
+      <span class="status-dot"></span> Deactivated <span>{{ counts().deactivated }}</span>
     </button>
   </div>
   <div class="status-help muted">Archived and deactivated are separate statuses. Archive / Restore remains unchanged.</div>
@@ -283,23 +285,20 @@
   <div class="modal-backdrop" (click)="closePhotoManager()">
     <div class="modal photo-manager-modal" (click)="$event.stopPropagation()">
       <div class="modal-head"><h2>Manage product photos</h2><button class="icon-btn" (click)="closePhotoManager()" aria-label="Close">×</button></div>
-      <p class="muted">{{ product.name }} · If all photos are archived, the item is hidden from customer ordering.</p>
-      @if (!supportsPhotoArchive) { <div class="notice">Photo archive/restore is not supported by the connected API. You can still upload photos here.</div> }
-      <label class="field"><span>Add photos</span><input type="file" accept="image/*" multiple (change)="addProductPhotos($event)" /></label>
+      <p class="photo-manager-description">{{ product.name }} · If all photos are archived, this item is hidden from the customer catalogue. Historical orders remain intact.</p>
+      @if (!supportsPhotoArchive) { <p class="photo-manager-api-note">Photo archive/restore will be enabled when the connected API supports it.</p> }
       <div class="photo-manager-list">
         @for (photo of photoDraftImages(); track $index) {
-          <div class="photo-manager-item">
+          <div class="photo-manager-item" [class.archived]="!photo.active">
             <img [src]="photo.src" [alt]="photo.name" />
-            <span>{{ photo.name }}</span>
-            <button class="btn small" [disabled]="!supportsPhotoArchive" (click)="togglePhoto($index)">{{ photo.active ? 'Archive' : 'Restore' }}</button>
-            <button class="btn small danger" [disabled]="!photo.id" (click)="removeDraftPhoto($index)">Remove</button>
-            @if (photo.id) { <button class="btn small danger" (click)="deleteProductPhoto(product, photo)">Delete</button> }
+            <div class="photo-manager-meta"><strong>{{ photo.name }}</strong><span>{{ photo.active ? 'Active photo' : 'Archived photo' }}</span></div>
+            <button type="button" class="btn small" [disabled]="!supportsPhotoArchive || photosSaving()" (click)="togglePhoto($index)">{{ photo.active ? 'Archive' : 'Restore' }}</button>
           </div>
         } @empty {
           <div class="empty">No photos added yet.</div>
         }
       </div>
-      <div class="modal-actions"><button class="btn" (click)="closePhotoManager()">Cancel</button><button class="btn primary" [disabled]="photosSaving()" (click)="savePhotoChanges()">{{ photosSaving() ? 'Saving...' : 'Save photos' }}</button></div>
+      <div class="modal-actions"><button class="btn" [disabled]="photosSaving()" (click)="savePhotoChanges()">{{ photosSaving() ? 'Saving...' : 'Done' }}</button></div>
     </div>
   </div>
 }

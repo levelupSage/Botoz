@@ -32,5 +32,73 @@
       <article><strong>{{ item.title }}</strong><p>{{ item.description }}</p></article>
     }
   </div>
-  <div class="notice">Photo order requests and showcase settings are saved in this browser only; they do not sync between devices.</div>
+  <div class="notice">Picture Orders are API-backed and shared between authorized users. Featured-product and showcase-banner settings remain device-local until their backend API is added.</div>
+</section>
+
+<section class="card payment-card">
+  <div class="payment-head">
+    <h2>Customer payment help details</h2>
+    <span>Shown on Customer → Payments</span>
+  </div>
+  <p class="payment-intro">Enter your real business bank and contact details. These values will be shown to customers on their payment help card.</p>
+
+  <form class="payment-form" [formGroup]="paymentForm" (ngSubmit)="savePaymentDetails()" novalidate>
+    <label class="payment-field">
+      <span>Account holder / business name <b aria-hidden="true">*</b></span>
+      <input formControlName="accountHolder" maxlength="120" autocomplete="organization" placeholder="Business or account holder name"
+        [attr.aria-invalid]="paymentForm.controls.accountHolder.touched && paymentForm.controls.accountHolder.invalid" />
+      @if (paymentForm.controls.accountHolder.touched && paymentForm.controls.accountHolder.invalid) {
+        <small>Enter a business or account-holder name.</small>
+      }
+    </label>
+
+    <label class="payment-field">
+      <span>Bank name <b aria-hidden="true">*</b></span>
+      <input formControlName="bankName" maxlength="120" autocomplete="off" placeholder="Bank name"
+        [attr.aria-invalid]="paymentForm.controls.bankName.touched && paymentForm.controls.bankName.invalid" />
+      @if (paymentForm.controls.bankName.touched && paymentForm.controls.bankName.invalid) {
+        <small>Enter the bank name.</small>
+      }
+    </label>
+
+    <label class="payment-field">
+      <span>Account number <b aria-hidden="true">*</b></span>
+      <input formControlName="accountNumber" inputmode="numeric" autocomplete="off" maxlength="18" placeholder="Bank account number"
+        [attr.aria-invalid]="paymentForm.controls.accountNumber.touched && paymentForm.controls.accountNumber.invalid" />
+      @if (paymentForm.controls.accountNumber.touched && paymentForm.controls.accountNumber.invalid) {
+        <small>Enter a 9–18 digit account number.</small>
+      }
+    </label>
+
+    <label class="payment-field">
+      <span>IFSC <b aria-hidden="true">*</b></span>
+      <input formControlName="ifsc" autocomplete="off" maxlength="11" placeholder="IFSC code" (blur)="normalizeIfsc()"
+        [attr.aria-invalid]="paymentForm.controls.ifsc.touched && paymentForm.controls.ifsc.invalid" />
+      @if (paymentForm.controls.ifsc.touched && paymentForm.controls.ifsc.invalid) {
+        <small>Enter a valid 11-character IFSC code.</small>
+      }
+    </label>
+
+    <label class="payment-field">
+      <span>Phone number</span>
+      <input formControlName="phoneNumber" type="tel" inputmode="numeric" autocomplete="tel" maxlength="10" placeholder="Business phone"
+        [attr.aria-invalid]="paymentForm.controls.phoneNumber.touched && paymentForm.controls.phoneNumber.invalid" />
+      @if (paymentForm.controls.phoneNumber.touched && paymentForm.controls.phoneNumber.invalid) {
+        <small>Use a valid 10-digit mobile number.</small>
+      }
+    </label>
+
+    <label class="payment-field">
+      <span>WhatsApp number</span>
+      <input formControlName="whatsappNumber" type="tel" inputmode="numeric" autocomplete="tel" maxlength="10" placeholder="Business WhatsApp"
+        [attr.aria-invalid]="paymentForm.controls.whatsappNumber.touched && paymentForm.controls.whatsappNumber.invalid" />
+      @if (paymentForm.controls.whatsappNumber.touched && paymentForm.controls.whatsappNumber.invalid) {
+        <small>Use a valid 10-digit mobile number.</small>
+      }
+    </label>
+
+    <div class="payment-actions">
+      <button type="submit" class="btn primary">Save payment help details</button>
+    </div>
+  </form>
 </section>

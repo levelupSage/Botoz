@@ -1,8 +1,16 @@
-import { ChangeDetectionStrategy, Component, effect, ElementRef, inject, OnInit, signal, ViewChild } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, effect, ElementRef, HostListener, inject, OnInit, signal, ViewChild } from '@angular/core';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Brand } from '../../core/models';
 import { BrandService } from '../../core/services/brand.service';
 import { ToastService } from '../../core/services/toast.service';
+
+const BRAND_NAME_PATTERN = /^[\p{L}\p{N}](?:[\p{L}\p{N} .]*[\p{L}\p{N}.])?$/u;
+
+function brandNameValidator(control: AbstractControl): ValidationErrors | null {
+  const name = String(control.value ?? '').trim().replace(/\s+/g, ' ');
+  if (!name) return { required: true };
+  return BRAND_NAME_PATTERN.test(name) ? null : { brandName: true };
+}
 
 @Component({
   selector: 'app-brands',
@@ -31,7 +39,7 @@ export class BrandsComponent implements OnInit {
   });
 
   readonly form = this.fb.nonNullable.group({
-    name: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(120)]],
+    name: ['', [brandNameValidator, Validators.maxLength(120)]],
   });
 
   ngOnInit(): void {
@@ -67,11 +75,11 @@ export class BrandsComponent implements OnInit {
     this.form.reset({ name: '' });
   }
 
-  onModalKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      this.closeAdd();
-    }
+  @HostListener('document:keydown.escape', ['$event'])
+  onEscape(event: Event): void {
+    if (!this.addOpen() || this.saving()) return;
+    event.preventDefault();
+    this.closeAdd();
   }
 
   private focusBrandName(): void {
@@ -87,7 +95,7 @@ export class BrandsComponent implements OnInit {
       this.form.markAllAsTouched();
       return;
     }
-    const name = this.form.getRawValue().name.trim();
+    const name = this.normaliseName(this.form.getRawValue().name);
     if (!name) {
       this.form.controls.name.setErrors({ required: true });
       return;
@@ -176,5 +184,9 @@ export class BrandsComponent implements OnInit {
   private apiFailure(error: unknown, fallback: string): void {
     const message = error instanceof Error ? error.message.trim() : '';
     this.toast.error(message && !message.startsWith('Http failure response') ? message : fallback);
+  }
+
+  private normaliseName(value: string): string {
+    return value.trim().replace(/\s+/g, ' ');
   }
 }

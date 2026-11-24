@@ -137,6 +137,8 @@
 
 .add-modal input[aria-invalid='true'] {
   border-color: #d26d6d;
+  background: #24191c;
+  box-shadow: 0 0 0 3px rgb(210 109 109 / 14%);
 }
 
 .field-meta {
@@ -167,22 +169,26 @@
   min-width: 142px !important;
 }
 
-.btn.gold {
-  border-color: var(--gold);
-  color: #17140d;
-  background: var(--gold);
-  font-weight: 750;
-}
-
-.btn.gold:hover:not(:disabled) {
-  border-color: var(--gold2);
-  background: var(--gold2);
-  box-shadow: 0 4px 16px rgb(200 164 93 / 22%);
-}
-
 .err {
-  color: #ff9292;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 1px;
+  color: #ff9da3;
   font-size: 12px;
+  font-weight: 650;
+}
+
+.err span {
+  display: grid;
+  width: 16px;
+  height: 16px;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: #ba5059;
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .brand-grid {
@@ -235,25 +241,31 @@
 .logo-delete {
   position: absolute;
   z-index: 3;
-  top: -8px;
-  right: -8px;
-  display: grid;
-  width: 25px;
-  height: 25px;
+  bottom: 70px;
+  left: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 21px;
   padding: 0;
-  place-items: center;
-  border: 1px solid #b6535b;
+  box-sizing: border-box;
+  border: 1px solid rgb(255 255 255 / 38%);
   border-radius: 50%;
   color: #fff;
-  background: #9c3c45;
+  background: rgb(156 60 69 / 94%);
   box-shadow: 0 3px 10px rgb(0 0 0 / 45%);
   cursor: pointer;
-  font-size: 19px;
+  font-family: Arial, sans-serif;
+  font-size: 20px;
+  font-weight: 400;
   line-height: 1;
   opacity: 0;
   pointer-events: none;
   transform: scale(.8);
-  transition: opacity 160ms ease, transform 160ms ease, background 160ms ease;
+  transition: opacity 160ms ease,
+    transform 160ms ease,
+    background 160ms ease;
 }
 
 .logo-control:hover .logo-delete,
@@ -263,8 +275,23 @@
   transform: scale(1);
 }
 
-.logo-delete:hover:not(:disabled) { background: #c74e5b; }
-.logo-delete:disabled { cursor: wait; opacity: .8; }
+.logo-delete:hover:not(:disabled) {
+  background: #c74e5b;
+  transform: scale(1.08);
+}
+
+.logo-delete:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: scale(1);
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.logo-delete:disabled {
+  cursor: wait;
+  opacity: .8;
+}
 
 .brand-logo.initial {
   color: var(--gold);
@@ -287,17 +314,7 @@
   white-space: nowrap;
 }
 
-.pill {
-  flex: none;
-  color: #8fd3b4;
-  background: #1e3b30;
-}
-
-.pill.inactive {
-  border: 1px solid #71383d;
-  color: #ff9b9b;
-  background: #482629;
-}
+.brand-main .pill { flex: none; }
 
 .brand-actions {
   display: flex;
@@ -369,6 +386,85 @@
   border-color: light-dark(#e9b1b1, #5a2e2e);
   color: light-dark(#8c3030, #f0b4b4);
   background: light-dark(#fbeaea, #3a2020);
+}
+
+/* The global modal rules set light header/footer surfaces. Keep this modal as
+   one calm, warm panel in light mode instead of splitting it into white strips. */
+:host-context(:root[data-theme='light']) .add-modal {
+  border-color: #e4d9c5;
+  color: #241e16;
+  background: linear-gradient(145deg, #fffdf9 0%, #faf6ef 100%);
+  box-shadow: 0 28px 90px rgb(59 42 18 / 24%);
+}
+
+:host-context(:root[data-theme='light']) .add-modal .modal-head,
+:host-context(:root[data-theme='light']) .add-modal .modal-actions {
+  border-color: #e7ddcb;
+  background: transparent !important;
+}
+
+:host-context(:root[data-theme='light']) .add-modal .modal-kicker {
+  color: #8a682c;
+}
+
+:host-context(:root[data-theme='light']) .add-modal .modal-head h2 {
+  color: #211b14;
+}
+
+:host-context(:root[data-theme='light']) .add-modal .modal-title-wrap p,
+:host-context(:root[data-theme='light']) .add-modal .field-meta {
+  color: #7a7063;
+}
+
+:host-context(:root[data-theme='light']) .add-modal .field label {
+  color: #40362a;
+}
+
+:host-context(:root[data-theme='light']) .add-modal input {
+  border-color: #d9ccb6;
+  color: #211b14;
+  background: #fffefa;
+}
+
+:host-context(:root[data-theme='light']) .add-modal input::placeholder {
+  color: #938877;
+}
+
+:host-context(:root[data-theme='light']) .add-modal input[aria-invalid='true'] {
+  border-color: #bd5960;
+  background: #fff7f6;
+  box-shadow: 0 0 0 3px rgb(189 89 96 / 12%);
+}
+
+:host-context(:root[data-theme='light']) .add-modal .err {
+  color: #a33d45;
+}
+
+:host-context(:root[data-theme='light']) .add-modal .err span {
+  background: #b64c55;
+}
+
+:host-context(:root[data-theme='light']) .add-modal .modal-close {
+  border-color: #dfd3bf;
+  color: #5a4a32;
+  background: #f4ede0;
+}
+
+:host-context(:root[data-theme='light']) .add-modal .modal-close:hover:not(:disabled) {
+  border-color: var(--gold);
+  color: #3e2e12;
+  background: #eee0c5;
+}
+
+:host-context(:root[data-theme='light']) .add-modal .modal-actions .btn:not(.gold) {
+  border-color: #dfd3bf;
+  color: #352b1f;
+  background: #fffefa;
+}
+
+:host-context(:root[data-theme='light']) .add-modal .modal-actions .btn:not(.gold):hover:not(:disabled) {
+  border-color: var(--gold);
+  background: #f7eedf;
 }
 
 @media (max-width: 1200px) {

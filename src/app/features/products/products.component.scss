@@ -202,63 +202,97 @@
 /* ---- Status tabs ----------------------------------------------------- */
 .status-tabs {
   display: flex;
-  gap: 8px;
   flex-wrap: wrap;
-  margin: 0 0 8px;
+  gap: 8px;
+  margin: 2px 0 14px;
 }
 
 .status-tab {
-  border: 1px solid var(--line);
-  background: var(--panel);
-  color: var(--muted);
-  padding: 7px 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 7px 13px;
   border-radius: 10px;
+  border: 1px solid transparent;
+  color: #f5f5f6;
   font-size: 12px;
-  font-weight: 700;
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease,
-    color 0.15s ease;
+  font-weight: 750;
+  background: var(--panel2);
 }
 
-.status-tab:hover {
+.status-tab span:last-child {
+  opacity: 0.8;
+}
+
+.status-tab.all.selected {
   border-color: var(--gold);
-  color: var(--text);
+  color: var(--gold2);
+  background: #30291b;
 }
 
 .status-tab.active {
-  background: #542228;
-  border-color: var(--gold);
-  color: #ffb6bd;
-  box-shadow: 0 0 0 2px var(--gold);
+  background: #176b41;
 }
 
-.status-tab.active-tab {
-  background: var(--green);
-  border-color: var(--green);
-  color: #fff;
+.status-tab.active.selected {
+  border-color: #38a86c;
 }
 
-.status-tab.archived-tab {
+.status-tab.archived {
   background: var(--panel2);
   border-color: var(--line);
-  color: var(--text);
 }
 
-.status-tab.deactivated-tab {
-  background: var(--red);
-  border-color: var(--red);
-  color: #fff;
+.status-tab.archived.selected {
+  border-color: var(--gold);
 }
 
-.status-tab.active-tab.active,
-.status-tab.archived-tab.active,
-.status-tab.deactivated-tab.active {
-  box-shadow: 0 0 0 2px var(--gold);
+.status-tab.inactive {
+  background: #a91f27;
+}
+
+.status-tab.inactive.selected {
+  border-color: #ed6870;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  flex: none;
+  border-radius: 50%;
+  background: #70dda0;
+  box-shadow: 0 0 0 3px rgb(112 221 160 / 15%);
+}
+
+.status-tab.archived .status-dot {
+  background: #b9bec8;
+  box-shadow: 0 0 0 3px rgb(185 190 200 / 14%);
+}
+
+.status-tab.inactive .status-dot {
+  background: #ff858b;
+  box-shadow: 0 0 0 3px rgb(255 133 139 / 15%);
+}
+
+:host-context(:root[data-theme='light']) .status-tab.all {
+  color: #5d4a2d;
+  background: #f4ecdc;
+}
+
+:host-context(:root[data-theme='light']) .status-tab.all.selected {
+  border-color: #bc913f;
+  color: #5d431f;
+  background: #eee1c8;
+}
+
+:host-context(:root[data-theme='light']) .status-tab.archived {
+  color: #504b42;
+  background: #f3efe7;
 }
 
 .status-help {
-  margin: 0 0 14px 4px;
+  margin: 0 0 14px;
   font-size: 12px;
 }
 
@@ -296,58 +330,70 @@
   margin-bottom: 10px;
 }
 
-.photo-manager-upload {
-  margin: 14px 0;
+.photo-manager-description {
+  margin: -6px 0 14px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
 }
 
-.managed-photos {
+.photo-manager-api-note {
+  margin: -6px 0 14px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.photo-manager-list {
   display: grid;
   gap: 8px;
   max-height: 360px;
+  margin: 14px 0;
   overflow: auto;
+  padding-right: 2px;
 }
 
-.managed-photo {
-  display: flex;
+.photo-manager-item {
+  display: grid;
+  grid-template-columns: 60px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
   min-width: 0;
-  padding: 8px;
+  padding: 9px;
   border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-}
-
-.managed-photo-thumb {
-  width: 62px;
-  height: 52px;
-  display: grid;
-  place-items: center;
-  flex: none;
+  border-radius: 10px;
   background: var(--panel2);
-  border-radius: 6px;
-  overflow: hidden;
 }
 
-.managed-photo-thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
+.photo-manager-item.archived {
+  opacity: 0.65;
 }
 
-.managed-photo-info {
+.photo-manager-item > img {
+  display: block;
+  width: 60px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--panel);
+}
+
+.photo-manager-meta {
   display: grid;
+  gap: 2px;
   min-width: 0;
-  flex: 1;
 }
 
-.managed-photo-info strong {
+.photo-manager-meta strong {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 12px;
+  font-weight: 700;
 }
 
-.managed-photo-info small {
+.photo-manager-meta span {
   color: var(--muted);
+  font-size: 11px;
 }
 
 .showcase-modal > p {
@@ -648,8 +694,12 @@
   .price-editor-grid {
     grid-template-columns: 1fr;
   }
-  .managed-photo {
-    flex-wrap: wrap;
+  .photo-manager-item {
+    grid-template-columns: 56px minmax(0, 1fr) auto;
+  }
+  .photo-manager-item > img {
+    width: 56px;
+    height: 44px;
   }
   .product-info {
     padding: 10px;

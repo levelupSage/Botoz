@@ -247,7 +247,9 @@ export class ProductsComponent implements OnInit {
 
   ngOnInit(): void {
     this.catalog.loadProducts();
-    if (this.isCustomer() || this.isStaffOrdering()) this.catalog.loadCustomers();
+    // Admin/Super Admin can open the photo-order modal directly from this page.
+    // Load its customer picker here as well, rather than relying on a prior route.
+    if (this.isCustomer() || this.isStaffOrdering() || this.canTakePhotoOrder()) this.catalog.loadCustomers();
     this.brandService.load();
     const query = this.route.snapshot.queryParamMap;
     const startPhotoOrder = query.get('photoOrder') === '1';
@@ -565,21 +567,6 @@ export class ProductsComponent implements OnInit {
     this.photoDraftImages.update((images) => images.map((image, i) =>
       i === index ? { ...image, active: !image.active } : image,
     ));
-  }
-
-  async addProductPhotos(event: Event): Promise<void> {
-    const input = event.target as HTMLInputElement;
-    const files = [...(input.files ?? [])];
-    for (const file of files) {
-      if (!file.type.startsWith('image/')) continue;
-      try {
-        const src = await this.readImageFile(file);
-        this.photoDraftImages.update((images) => [...images, { name: file.name, active: true, src }]);
-      } catch {
-        this.toast.error(`Could not read ${file.name}.`);
-      }
-    }
-    input.value = '';
   }
 
   savePhotoChanges(): void {
