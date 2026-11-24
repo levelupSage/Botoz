@@ -76,7 +76,7 @@
                 }
               </td>
               <td>
-                <span class="status-pill" [class.inactive]="!account.active">
+                <span class="pill" [class.gray]="!account.active">
                   {{ account.active ? 'Active' : 'Inactive' }}
                 </span>
               </td>
@@ -110,9 +110,7 @@
     >
       <header class="modal-head">
         <div>
-          <h2 [id]="editing() ? 'edit-staff-title' : 'add-staff-title'">
-            {{ editing() ? 'Edit credentials' : 'Add staff' }}
-          </h2>
+          <h2 [id]="editing() ? 'edit-staff-title' : 'add-staff-title'">{{ editing() ? 'Edit staff' : 'Add staff' }}</h2>
           <p>
             {{ editing() ? 'Update login details and account status.' : 'Create a staff login, choose a role, and set its access.' }}
           </p>
@@ -123,47 +121,63 @@
       <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
         <div class="form-grid">
           <label class="field">
-            <span>Full name *</span>
-            <input formControlName="fullName" placeholder="e.g. Aarav Sharma" />
+            <span>Full name <b aria-hidden="true">*</b></span>
+            <input formControlName="fullName" placeholder="e.g. Aarav Sharma" maxlength="120"
+              [attr.aria-invalid]="form.controls.fullName.touched && form.controls.fullName.invalid" />
+            <small class="help">Use the staff member's full name.</small>
             @if (form.controls.fullName.touched && form.controls.fullName.invalid) {
-              <small>Enter at least 3 characters.</small>
+              <small class="err">Enter a name between 3 and 120 characters.</small>
             }
           </label>
           <label class="field">
-            <span>Login ID *</span>
-            <input formControlName="loginId" placeholder="Choose a login ID" />
-            @if (form.controls.loginId.touched && form.controls.loginId.invalid) {
-              <small>Use at least 3 characters.</small>
-            }
-          </label>
-          <label class="field">
-            <span>Email *</span>
-            <input type="email" formControlName="email" placeholder="name@company.com" />
+            <span>Email <b aria-hidden="true">*</b></span>
+            <input type="email" formControlName="email" placeholder="name@company.com" maxlength="180" autocapitalize="none"
+              [attr.aria-invalid]="form.controls.email.touched && form.controls.email.invalid" />
+            <small class="help">Used for account communication and recovery.</small>
             @if (form.controls.email.touched && form.controls.email.invalid) {
-              <small>Enter a valid email.</small>
+              <small class="err">Enter a valid email address.</small>
             }
           </label>
           <label class="field">
-            <span>Password {{ editing() ? '(leave blank to keep current)' : '*' }}</span>
-            <input
-              type="password"
-              formControlName="password"
-              autocomplete="new-password"
-              [placeholder]="editing() ? 'No change' : '8+ characters, mixed case, number and symbol'"
-            />
+            <span>Login ID <b aria-hidden="true">*</b></span>
+            <input formControlName="loginId" placeholder="Choose a login ID" maxlength="100" autocapitalize="none"
+              [attr.aria-invalid]="form.controls.loginId.touched && form.controls.loginId.invalid" />
+            <small class="help">3–100 letters, numbers, dots, underscores, or hyphens.</small>
+            @if (form.controls.loginId.touched && form.controls.loginId.invalid) {
+              <small class="err">Enter a valid unique login ID.</small>
+            }
           </label>
-          @if (!editing()) {
-            <label class="field">
-              <span>Role</span>
-              <select formControlName="role">
-                @for (role of roleOptions(); track role.value) {
-                  <option [value]="role.value">{{ role.label }}</option>
-                }
-              </select>
-            </label>
-          }
           <label class="field">
-            <span>Status</span>
+            <span>Password @if (!editing()) { <b aria-hidden="true">*</b> }</span>
+            <div class="password-control">
+              <input
+                [type]="showPassword() ? 'text' : 'password'"
+                formControlName="password"
+                autocomplete="new-password"
+                [placeholder]="editing() ? 'No change' : '8+ characters, mixed case, number and symbol'"
+                maxlength="72"
+                [attr.aria-invalid]="form.controls.password.touched && form.controls.password.invalid"
+              />
+              <button type="button" class="btn small password-toggle" (click)="togglePassword()"
+                [attr.aria-pressed]="showPassword()" [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'">
+                {{ showPassword() ? 'Hide' : 'Show' }}
+              </button>
+            </div>
+            <small class="help">{{ editing() ? 'Leave blank to keep the current password.' : '8–72 characters: uppercase, lowercase, number, and symbol.' }}</small>
+            @if (form.controls.password.touched && form.controls.password.invalid) {
+              <small class="err">{{ editing() ? 'Use a valid strong password or leave it blank.' : 'A strong password is required.' }}</small>
+            }
+          </label>
+          <label class="field">
+            <span>Role <b aria-hidden="true">*</b></span>
+            <select formControlName="role" [disabled]="!!editing()">
+              @for (role of roleOptions(); track role.value) {
+                <option [value]="role.value">{{ role.label }}</option>
+              }
+            </select>
+          </label>
+          <label class="field">
+            <span>Status <b aria-hidden="true">*</b></span>
             <select [value]="form.controls.active.value ? 'ACTIVE' : 'INACTIVE'" (change)="setStatus($any($event.target).value)">
               <option value="ACTIVE">Active</option>
               <option value="INACTIVE">Inactive</option>
@@ -171,14 +185,13 @@
           </label>
         </div>
 
-        @if (!editing()) {
-          <section class="permissions">
+          <section class="permissions" [class.editing-permissions]="!!editing()">
             <div class="permissions-head">
               <div>
-                <h3>Allowed features</h3>
-                <p>Select the workspace sections this account can access.</p>
+                <h3>Allowed features and tabs</h3>
+                @if (!editing()) { <p>Select the workspace sections this account can access.</p> }
               </div>
-              <span>{{ selectedMenuIds().length }} selected</span>
+              @if (!editing()) { <span>{{ selectedMenuIds().length }} selected</span> }
             </div>
 
             @if (loadingMenus()) {
@@ -195,6 +208,7 @@
                     <input
                       type="checkbox"
                       [checked]="hasMenu(menu.id)"
+                      [disabled]="!!editing()"
                       (change)="toggleMenu(menu.id, $any($event.target).checked)"
                     />
                     <span>
@@ -219,7 +233,7 @@
                   <div class="order-tab-list">
                     @for (tab of orderTabs(); track tab.id) {
                       <label class="order-tab-choice">
-                        <input type="checkbox" [checked]="hasTab(tab.id)" (change)="toggleTab(tab.id, $any($event.target).checked)" />
+                        <input type="checkbox" [checked]="hasTab(tab.id)" [disabled]="!!editing() || !ordersFeatureSelected()" (change)="toggleTab(tab.id, $any($event.target).checked)" />
                         <span>{{ tab.title }}</span>
                       </label>
                     }
@@ -227,8 +241,10 @@
                 </section>
               }
             }
+            @if (!editing() && permissionError()) {
+              <p class="permissions-error" role="alert">Select at least one allowed feature.</p>
+            }
           </section>
-        }
 
         <footer class="modal-actions">
           <button type="button" class="btn" (click)="closeModal()">Cancel</button>

@@ -13,16 +13,16 @@
   </div>
   <div class="head-actions">
     @if (orderingMode() && (!isCustomer() || customerCanOrder())) {
-      <button class="btn" (click)="goToBasket()">Open basket</button>
+      <button class="btn" (click)="goToBasket()"><span class="action-icon" aria-hidden="true">▣</span>Open basket</button>
     }
     @if (canCreateOrders() && !isStaffOrdering() && !canManage()) {
-      <button class="btn" (click)="openPicker()">＋ Create order</button>
+      <button class="btn" (click)="openPicker()"><span class="action-icon" aria-hidden="true">＋</span>Create order</button>
     }
     @if (canManage() && !isStaffOrdering()) {
-      @if (canTakePhotoOrder()) { <button class="btn" (click)="openPhotoOrder()">Take photo order</button> }
-      <button class="btn" (click)="openShowcase()">Fast-selling &amp; schemes</button>
-      @if (canCreateOrders()) { <button class="btn" (click)="openPicker()">Create order</button> }
-      @if (canManageProducts()) { <button class="btn primary" (click)="openAdd()">Add product</button> }
+      @if (canTakePhotoOrder()) { <button class="btn" (click)="openPhotoOrder()"><span class="action-icon" aria-hidden="true">▧</span>Take photo order</button> }
+      <button class="btn" (click)="openShowcase()"><span class="action-icon" aria-hidden="true">★</span>Fast-selling &amp; schemes</button>
+      @if (canCreateOrders()) { <button class="btn" (click)="openPicker()"><span class="action-icon" aria-hidden="true">＋</span>Create order</button> }
+      @if (canManageProducts()) { <button class="btn primary" (click)="openAdd()"><span class="action-icon" aria-hidden="true">＋</span>Add product</button> }
     }
   </div>
 </div>
@@ -124,31 +124,33 @@
 </div>
 
 @if (!orderingMode() && !loading() && !error()) {
-  <div class="status-tabs">
-    <button class="status-tab" [class.active]="statusFilter() === 'All'" (click)="statusFilter.set('All')">
-      All products ({{ counts().all }})
+  <div class="status-tabs" role="group" aria-label="Filter products by status">
+    <button type="button" class="status-tab all" [class.selected]="statusFilter() === 'All'" (click)="statusFilter.set('All')">
+      All <span>{{ counts().all }}</span>
     </button>
     <button
-      class="status-tab active-tab"
-      [class.active]="statusFilter() === 'Active'"
+      type="button"
+      class="status-tab active"
+      [class.selected]="statusFilter() === 'Active'"
       (click)="statusFilter.set('Active')"
     >
-      Activated ({{ counts().active }})
+      <span class="status-dot"></span> Active <span>{{ counts().active }}</span>
     </button>
     <button
-      class="status-tab archived-tab"
-      [class.active]="statusFilter() === 'Archived'"
+      type="button"
+      class="status-tab archived"
+      [class.selected]="statusFilter() === 'Archived'"
       (click)="statusFilter.set('Archived')"
     >
-      Archived ({{ counts().archived }})
+      <span class="status-dot"></span> Archived <span>{{ counts().archived }}</span>
     </button>
     <button
-      class="status-tab"
-      [class.deactivated-tab]="true"
-      [class.active]="statusFilter() === 'Deactivated'"
+      type="button"
+      class="status-tab inactive"
+      [class.selected]="statusFilter() === 'Deactivated'"
       (click)="statusFilter.set('Deactivated')"
     >
-      Deactivated ({{ counts().deactivated }})
+      <span class="status-dot"></span> Deactivated <span>{{ counts().deactivated }}</span>
     </button>
   </div>
   <div class="status-help muted">Archived and deactivated are separate statuses. Archive / Restore remains unchanged.</div>
@@ -181,10 +183,11 @@
             </div>
             @if (showOrderButton()) {
               <button class="btn small primary" [disabled]="preparingOrderProductId() === p.id" (click)="openOrder(p)">
+                <span class="action-icon" aria-hidden="true">＋</span>
                 {{ preparingOrderProductId() === p.id ? 'Loading…' : 'Order' }}
               </button>
             } @else if (canManageProducts()) {
-              <button class="btn small" (click)="openEdit(p)">Edit</button>
+              <button class="btn small" (click)="openEdit(p)"><span class="action-icon" aria-hidden="true">✎</span>Edit</button>
             }
           </div>
 
@@ -282,23 +285,20 @@
   <div class="modal-backdrop" (click)="closePhotoManager()">
     <div class="modal photo-manager-modal" (click)="$event.stopPropagation()">
       <div class="modal-head"><h2>Manage product photos</h2><button class="icon-btn" (click)="closePhotoManager()" aria-label="Close">×</button></div>
-      <p class="muted">{{ product.name }} · If all photos are archived, the item is hidden from customer ordering.</p>
-      @if (!supportsPhotoArchive) { <div class="notice">Photo archive/restore is not supported by the connected API. You can still upload photos here.</div> }
-      <label class="field"><span>Add photos</span><input type="file" accept="image/*" multiple (change)="addProductPhotos($event)" /></label>
+      <p class="photo-manager-description">{{ product.name }} · If all photos are archived, this item is hidden from the customer catalogue. Historical orders remain intact.</p>
+      @if (!supportsPhotoArchive) { <p class="photo-manager-api-note">Photo archive/restore will be enabled when the connected API supports it.</p> }
       <div class="photo-manager-list">
         @for (photo of photoDraftImages(); track $index) {
-          <div class="photo-manager-item">
+          <div class="photo-manager-item" [class.archived]="!photo.active">
             <img [src]="photo.src" [alt]="photo.name" />
-            <span>{{ photo.name }}</span>
-            <button class="btn small" [disabled]="!supportsPhotoArchive" (click)="togglePhoto($index)">{{ photo.active ? 'Archive' : 'Restore' }}</button>
-            <button class="btn small danger" [disabled]="!photo.id" (click)="removeDraftPhoto($index)">Remove</button>
-            @if (photo.id) { <button class="btn small danger" (click)="deleteProductPhoto(product, photo)">Delete</button> }
+            <div class="photo-manager-meta"><strong>{{ photo.name }}</strong><span>{{ photo.active ? 'Active photo' : 'Archived photo' }}</span></div>
+            <button type="button" class="btn small" [disabled]="!supportsPhotoArchive || photosSaving()" (click)="togglePhoto($index)">{{ photo.active ? 'Archive' : 'Restore' }}</button>
           </div>
         } @empty {
           <div class="empty">No photos added yet.</div>
         }
       </div>
-      <div class="modal-actions"><button class="btn" (click)="closePhotoManager()">Cancel</button><button class="btn primary" [disabled]="photosSaving()" (click)="savePhotoChanges()">{{ photosSaving() ? 'Saving...' : 'Save photos' }}</button></div>
+      <div class="modal-actions"><button class="btn" [disabled]="photosSaving()" (click)="savePhotoChanges()">{{ photosSaving() ? 'Saving...' : 'Done' }}</button></div>
     </div>
   </div>
 }
@@ -333,9 +333,6 @@
       <div class="notice photo-order-notice">Take pictures for a selected party. These pictures will enter <strong>Picture Orders → Incoming picture requests</strong> and appear in that customer's Orders screen. Admin can review and match them to products.</div>
       <label class="field photo-customer-field"><span>Choose customer / party *</span><select [value]="photoCustomerId()" (change)="photoCustomerId.set(+$any($event.target).value)"><option value="0">Choose customer</option>@for (customer of orderableCustomers(); track customer.id) {<option [value]="customer.id">{{ customer.name }} · {{ customer.code }}</option>}</select></label>
       <section class="photo-capture-panel"><h3>Take or add product pictures</h3><div class="photo-capture-actions"><button type="button" class="btn primary" (click)="cameraInput.click()">📷 Take Photo</button><button type="button" class="btn" (click)="uploadInput.click()">＋ Upload Photos</button></div><input #cameraInput class="photo-file-input" type="file" accept="image/*" capture="environment" (change)="addPhotoOrderFiles($event)" /><input #uploadInput class="photo-file-input" type="file" accept="image/*" multiple (change)="addPhotoOrderFiles($event)" /><small class="muted">Camera opens on supported phones; file picker opens on computers. Up to 12 captioned photos per request.</small></section>
-      <div class="modal-head"><h2>Take Photo Order</h2><button class="icon-btn" (click)="closePhotoOrder()" aria-label="Close">×</button></div>
-      <label class="field"><span>Customer *</span><select [value]="photoCustomerId()" (change)="photoCustomerId.set(+$any($event.target).value)"><option value="0">Choose customer</option>@for (customer of orderableCustomers(); track customer.id) {<option [value]="customer.id">{{ customer.name }} · {{ customer.code }}</option>}</select></label>
-      <div class="field photo-upload"><label for="photo-order-files">Take or upload photos</label><input id="photo-order-files" type="file" accept="image/*" capture="environment" multiple (change)="addPhotoOrderFiles($event)" /><small class="muted">Add up to 12 photos and caption each one.</small></div>
       @if (photoDraft().length) {
         <h3 class="photo-selected-title">{{ photoDraft().length }} photo(s) selected</h3>
         <div class="photo-draft-list">
@@ -348,7 +345,7 @@
         <details class="saved-photo-requests">
           <summary>Saved photo requests on this device ({{ photoRequests().length }})</summary>
           @for (request of photoRequests(); track request.id) {
-            <div class="saved-photo-request"><strong>{{ request.id }} · {{ request.customerName }}</strong><span>{{ request.items.length }} photo(s) · {{ formatPhotoDate(request.createdAt) }}</span></div>
+            <div class="saved-photo-request"><strong>#{{ request.id }} · {{ request.customerName }}</strong><span>{{ request.photos.length }} photo(s) · {{ formatPhotoDate(request.createdAt) }}</span></div>
           }
         </details>
       }

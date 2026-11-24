@@ -1,4 +1,6 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ToastService } from '../../core/services/toast.service';
 
 interface Rule {
   title: string;
@@ -7,12 +9,24 @@ interface Rule {
 
 @Component({
   selector: 'app-settings',
-  imports: [],
+  imports: [ReactiveFormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.scss',
 })
 export class SettingsComponent {
+  private readonly fb = inject(FormBuilder);
+  private readonly toast = inject(ToastService);
+
+  readonly paymentForm = this.fb.nonNullable.group({
+    accountHolder: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(120)]],
+    bankName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(120)]],
+    accountNumber: ['', [Validators.required, Validators.pattern(/^\d{9,18}$/)]],
+    ifsc: ['', [Validators.required, Validators.pattern(/^[A-Z]{4}0[A-Z0-9]{6}$/)]],
+    phoneNumber: ['', [Validators.pattern(/^$|^[6-9]\d{9}$/)]],
+    whatsappNumber: ['', [Validators.pattern(/^$|^[6-9]\d{9}$/)]],
+  });
+
   readonly orderingRules: Rule[] = [
     { title: 'Immediate order confirmation', description: 'Confirm after a successful transactional save; no admin approval queue.' },
     { title: 'No inventory management', description: 'This app does not track stock, deduct inventory, or block orders by stock availability.' },
@@ -37,4 +51,18 @@ export class SettingsComponent {
     { title: 'Backend API', description: 'Authentication, permissions, and shared realtime data.' },
     { title: 'Database & photos', description: 'Central SQL database and object storage.' },
   ];
+
+  normalizeIfsc(): void {
+    const control = this.paymentForm.controls.ifsc;
+    control.setValue(control.value.trim().toUpperCase(), { emitEvent: false });
+  }
+
+  savePaymentDetails(): void {
+    this.paymentForm.markAllAsTouched();
+    if (this.paymentForm.invalid) {
+      this.toast.error('Please correct the highlighted payment details.');
+      return;
+    }
+    this.toast.info('Payment help details API is not connected yet. No data was saved.');
+  }
 }

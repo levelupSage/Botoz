@@ -161,7 +161,13 @@ main {
 }
 
 .breadcrumb {
+  display: block;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
   font-size: 12px;
+  line-height: 1.25;
   color: var(--muted);
 }
 
@@ -169,6 +175,7 @@ main {
   font-weight: 800;
   font-size: 16px;
   margin-top: 3px;
+  line-height: 1.25;
   color: var(--text);
 }
 
@@ -216,6 +223,56 @@ main {
   background: #eadbb8;
   color: #352a17;
   font-weight: 800;
+}
+
+:host-context(:root[data-theme='light']) .avatar {
+  background: #efe0bd;
+  color: #5e461c;
+}
+
+/* Warm light mode: dark navigation with a calm, cream workspace. */
+:host-context(:root[data-theme='light']) aside {
+  color: #f7f2e9;
+}
+
+:host-context(:root[data-theme='light']) .brand-text small,
+:host-context(:root[data-theme='light']) .nav-label,
+:host-context(:root[data-theme='light']) .sidebar-bottom {
+  color: #b9afa1;
+}
+
+:host-context(:root[data-theme='light']) .sidebar-bottom strong {
+  color: #fffaf1;
+}
+
+:host-context(:root[data-theme='light']) .topbar {
+  background: var(--panel);
+  border-bottom-color: var(--line);
+  color: var(--text);
+}
+
+:host-context(:root[data-theme='light']) .breadcrumb {
+  color: var(--muted);
+}
+
+:host-context(:root[data-theme='light']) .top-title {
+  color: var(--text);
+}
+
+:host-context(:root[data-theme='light']) .theme-toggle {
+  border-color: var(--line);
+  color: var(--text);
+  background: var(--panel);
+}
+
+:host-context(:root[data-theme='light']) .theme-toggle:hover {
+  border-color: var(--gold);
+  background: var(--panel2);
+}
+
+:host-context(:root[data-theme='light']) .top-actions .pill.gray {
+  color: #725725;
+  background: #f2e6cb;
 }
 
 @media (max-width: 700px) {
@@ -325,7 +382,9 @@ main {
   right: 20px;
   display: grid;
   gap: 8px;
-  z-index: 30;
+  /* Customer and other dialogs use z-index 1060/1100. Notifications must
+     remain visible while a modal is open. */
+  z-index: 1200;
 }
 
 .toast {

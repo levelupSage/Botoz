@@ -1,7 +1,6 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { UserRole } from '../models';
 import { AuthService } from './auth.service';
-import { CustomerOrderRightsService } from './customer-order-rights.service';
 
 /**
  * UI-level session state derived from the authenticated user: which nav items
@@ -10,7 +9,6 @@ import { CustomerOrderRightsService } from './customer-order-rights.service';
 @Injectable({ providedIn: 'root' })
 export class AppStateService {
   private readonly auth = inject(AuthService);
-  private readonly customerOrderRights = inject(CustomerOrderRightsService);
 
   private readonly menuAliases: Record<string, string[]> = {
     Dashboard: ['dashboard'],
@@ -32,8 +30,10 @@ export class AppStateService {
 
   readonly role = computed<UserRole>(() => this.auth.role() ?? 'Customer');
   readonly isStaff = computed(() => this.role() !== 'Customer');
+  // The backend owns account authorization. Customer-specific order rights will
+  // be added here only when its API exposes an authoritative field/endpoint.
   readonly customerCanOrder = computed(() =>
-    this.role() !== 'Customer' || this.customerOrderRights.canOrder(this.activeCustomerId()),
+    this.role() !== 'Customer' || this.auth.isAuthenticated(),
   );
 
   /**

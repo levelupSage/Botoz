@@ -33,12 +33,25 @@ import {
   ProductSizeGroup,
   Staff,
   Station,
+  PictureOrderRequest,
+  PictureOrderCounts,
+  PictureOrderDecision,
+  BackendUserOption,
   UserRole,
 } from '../models';
 import { DataService } from './data.service';
 import { environment } from '../../../environments/environment';
 
 type Json = Record<string, unknown>;
+const WEEKDAY_BY_API_VALUE: Readonly<Record<string, string>> = {
+  monday: 'Monday',
+  tuesday: 'Tuesday',
+  wednesday: 'Wednesday',
+  thursday: 'Thursday',
+  friday: 'Friday',
+  saturday: 'Saturday',
+  sunday: 'Sunday',
+};
 
 interface ApiPage<T> {
   items: T[];
@@ -486,6 +499,68 @@ export class ApiDataService extends DataService {
     return of('');
   }
 
+  // ---- Persisted baskets ---------------------------------------------
+  getBasket(customerId?: number): Observable<OrderItem[]> {
+    const path = customerId ? `/api/admin/customer-baskets/${customerId}` : '/api/customer/basket';
+    return this.request<Json>(this.http.get(`${this.baseUrl}${path}`)).pipe(
+      map((body) => this.toBasketLines(body)),
+    );
+  }
+
+  saveBasket(lines: OrderItem[], customerId?: number): Observable<OrderItem[]> {
+    const path = customerId ? `/api/admin/customer-baskets/${customerId}` : '/api/customer/basket';
+    return this.request<Json>(this.http.put(`${this.baseUrl}${path}`, {
+      lines: lines.map((item) => this.basketLineRequest(item)),
+    })).pipe(map((body) => this.toBasketLines(body, lines)));
+  }
+
+  // ---- Picture orders -------------------------------------------------
+  createPictureOrder(customerId: number, files: File[], captions: string[]): Observable<PictureOrderRequest> {
+    const form = new FormData();
+    for (const file of files) form.append('files', file, file.name);
+    let params = new HttpParams().set('customerId', customerId);
+    for (const caption of captions) params = params.append('captions', caption);
+    return this.request<Json>(this.http.post(`${this.baseUrl}/api/admin/picture-orders/requests`, form, { params }))
+      .pipe(map((body) => this.toPictureOrder(body)));
+  }
+
+  getPictureOrders(status: 'INCOMING' | 'PENDING' | 'PROCESSED', search = ''): Observable<PictureOrderRequest[]> {
+    return this.paged<Json>('/api/admin/picture-orders/requests', { status, ...(search.trim() ? { search: search.trim() } : {}) })
+      .pipe(map((rows) => rows.map((row) => this.toPictureOrder(row))));
+  }
+
+  getPictureOrderCounts(): Observable<PictureOrderCounts> {
+    return this.request<Json>(this.http.get(`${this.baseUrl}/api/admin/picture-orders/counts`)).pipe(map((body) => ({
+      incoming: this.number(body['incoming']), pending: this.number(body['pending']), processed: this.number(body['processed']),
+    })));
+  }
+
+  reviewPictureOrder(id: number, decisions: PictureOrderDecision[]): Observable<PictureOrderRequest> {
+    return this.request<Json>(this.http.post(`${this.baseUrl}/api/admin/picture-orders/requests/${id}/review`, {
+      decisions: decisions.map((decision) => ({
+        photoId: decision.photoId,
+        action: decision.action,
+        ...(decision.line ? { line: this.orderLineRequest(decision.line) } : {}),
+      })),
+    })).pipe(map((body) => this.toPictureOrder(body)));
+  }
+
+  getPictureOrderBackendUsers(): Observable<BackendUserOption[]> {
+    return this.request<unknown>(this.http.get(`${this.baseUrl}/api/admin/picture-orders/backend-users`)).pipe(
+      map((body) => (Array.isArray(body) ? body : []).map((value) => {
+        const row = this.asJson(value);
+        return { id: this.number(row['id']), fullName: this.text(row['fullName']), loginId: this.text(row['loginId']) };
+      }).filter((user) => user.id > 0)),
+    );
+  }
+
+  assignPictureOrder(id: number, backendUserId: number, lines: OrderItem[]): Observable<PictureOrderRequest> {
+    return this.request<Json>(this.http.post(`${this.baseUrl}/api/admin/picture-orders/requests/${id}/assign`, {
+      backendUserId,
+      lines: lines.map((line) => this.orderLineRequest(line)),
+    })).pipe(map((body) => this.toPictureOrder(body)));
+  }
+
   // ---- API request helpers -------------------------------------------
   private request<T>(request: Observable<unknown>): Observable<T> {
     return request.pipe(
@@ -658,7 +733,7 @@ export class ApiDataService extends DataService {
 
   private customerRequest(customer: Customer, stationId: number): Json {
     const password = customer.loginPassword?.trim();
-    if (!password) throw new Error('Enter a password; the API requires it when saving a customer.');
+    if (!customer.id && !password) throw new Error('Enter a password when creating a customer.');
     const brandDiscounts = Object.entries(customer.brandDiscounts ?? []).flatMap(([name, discountPercent]) => {
       const brandId = this.brandByName.get(name.toLowerCase());
       return brandId && discountPercent > 0 ? [{ brandId, discountPercent, lockSize: false }] : [];
@@ -666,7 +741,7 @@ export class ApiDataService extends DataService {
     return {
       businessName: customer.name,
       loginId: customer.loginId || customer.code,
-      password,
+      ...(password ? { password } : {}),
       stationId,
       priceCategory: customer.category,
       whatsappNumber: customer.whatsapp || customer.phone,
@@ -856,7 +931,9 @@ export class ApiDataService extends DataService {
       station,
       stationId,
       contact: this.text(row['contactPerson']) || fallback?.contact,
-      reminderDay: this.text(row['weeklyReminderDay']) || fallback?.reminderDay,
+      reminderDay: WEEKDAY_BY_API_VALUE[this.text(row['weeklyReminderDay']).toLowerCase()]
+        ?? fallback?.reminderDay
+        ?? 'Tuesday',
       active: typeof row['active'] === 'boolean'
         ? row['active']
         : row['status'] != null
@@ -865,6 +942,67 @@ export class ApiDataService extends DataService {
       overrides: {},
       brandDiscounts,
       loginPassword: '',
+    };
+  }
+
+  private basketLineRequest(item: OrderItem): Json {
+    return {
+      productId: item.productId,
+      orderType: item.mode === 'carton' ? 'CARTON_WISE' : 'SIZE_WISE',
+      ...(item.mode === 'carton' ? { packingGroupId: item.packingGroupId, numberOfCartons: item.cartons } : {}),
+      quantities: Object.fromEntries(item.rows.map((row) => [String(row.size), row.qty])),
+    };
+  }
+
+  private orderLineRequest(item: OrderItem): Json {
+    return { ...this.basketLineRequest(item), adminRatePerPair: item.adminRatePerPair ?? 0 };
+  }
+
+  private toBasketLines(value: unknown, fallback: OrderItem[] = []): OrderItem[] {
+    const body = this.asJson(value);
+    const lines = Array.isArray(body['lines']) ? body['lines'] : [];
+    return lines.map((value, index) => {
+      const row = this.asJson(value);
+      const carton = this.text(row['orderType']).toUpperCase() === 'CARTON_WISE';
+      const sizes = Array.isArray(row['sizes']) ? row['sizes'] : [];
+      const quantities = this.asJson(row['quantities']);
+      const mapped = sizes.map((value) => {
+        const size = this.asJson(value);
+        return { size: this.number(size['size']), qty: this.number(size['quantityPairs'] ?? size['quantity']) };
+      }).filter((line) => line.size > 0);
+      const rows = mapped.length ? mapped : Object.entries(quantities).map(([size, qty]) => ({ size: this.number(size), qty: this.number(qty) }));
+      return {
+        productId: this.number(row['productId']) || fallback[index]?.productId || 0,
+        productName: this.text(row['productName']) || fallback[index]?.productName || '',
+        code: this.text(row['productCode']) || fallback[index]?.code || '',
+        mode: carton ? 'carton' : 'size',
+        total: this.number(row['quantityPairs']) || rows.reduce((total, line) => total + line.qty, 0),
+        rows,
+        ...(carton ? { packingGroupId: this.number(row['packingGroupId']), numberOfCartons: undefined, cartons: this.number(row['numberOfCartons']), packingName: fallback[index]?.packingName } : {}),
+        adminRatePerPair: fallback[index]?.adminRatePerPair ?? 0,
+      } as OrderItem;
+    }).filter((line) => line.productId > 0);
+  }
+
+  private toPictureOrder(value: unknown): PictureOrderRequest {
+    const row = this.asJson(value);
+    const photos = Array.isArray(row['photos']) ? row['photos'] : [];
+    return {
+      id: this.number(row['id']), customerId: this.number(row['customerId']), customerName: this.text(row['customerName']),
+      customerCode: this.text(row['customerCode']), customerLoginId: this.text(row['customerLoginId']) || undefined,
+      status: this.pictureStatus(this.text(row['status'])), createdAt: this.text(row['createdAt']),
+      reviewedAt: this.text(row['reviewedAt']) || undefined,
+      releasedAt: this.text(row['releasedAt'] ?? row['assignedAt']) || undefined,
+      assignedToId: this.number(row['assignedToId'] ?? row['backendUserId']) || undefined,
+      assignedToName: this.text(row['assignedToName'] ?? row['backendUserName']) || undefined,
+      orderId: this.number(row['orderId'] ?? row['createdOrderId']) || undefined,
+      orderNumber: this.text(row['orderNumber'] ?? row['createdOrderNumber']) || undefined,
+      photos: photos.map((value) => {
+        const photo = this.asJson(value);
+        return { id: this.number(photo['id']), imageUrl: this.absoluteUrl(this.text(photo['imageUrl'])), caption: this.text(photo['caption']),
+          status: this.picturePhotoStatus(this.text(photo['status'])), orderId: this.number(photo['orderId']) || undefined,
+          orderNumber: this.text(photo['orderNumber']) || undefined, createdAt: this.text(photo['createdAt']) || undefined };
+      }),
     };
   }
 
@@ -897,14 +1035,18 @@ export class ApiDataService extends DataService {
           fallback?.items[index]?.adminRatePerPair || 0,
       };
     });
-    const rawStatus = (this.text(row['workStatus']) || this.text(row['status'])).toUpperCase();
+    const rawBookingStatus = this.text(row['status']).toUpperCase();
+    const rawWorkStatus = this.text(row['workStatus']).toUpperCase();
     return {
       id: this.text(row['orderNumber']) || fallback?.id || String(this.number(row['id'])),
       apiId: this.number(row['id']) || fallback?.apiId,
       customerId: this.number(customer['id']) || fallback?.customerId || 0,
       customer: this.text(customer['name']) || this.text(customer['businessName']) || fallback?.customer || '',
       date: this.formatDate(this.text(row['createdAt'])) || fallback?.date || '',
-      status: this.orderStatus(rawStatus),
+      status: this.orderStatus(rawWorkStatus || rawBookingStatus),
+      bookingStatus: rawBookingStatus || undefined,
+      workStatus: rawWorkStatus ? this.orderStatus(rawWorkStatus) : undefined,
+      assignedUserId: this.number(row['assignedUserId']) || undefined,
       createdBy: fallback?.createdBy || 'API',
       items: items.length ? items : fallback?.items || [],
     };
@@ -972,6 +1114,21 @@ export class ApiDataService extends DataService {
     if (value.includes('PROCESS')) return 'Processing';
     if (value.includes('CONFIRM') || value.includes('SUBMIT') || value.includes('RECEIVED')) return 'Confirmed';
     return 'Pending';
+  }
+
+  private pictureStatus(value: string): PictureOrderRequest['status'] {
+    switch (value.toUpperCase()) {
+      case 'PENDING': return 'PENDING';
+      case 'PROCESSED': return 'PROCESSED';
+      default: return 'INCOMING';
+    }
+  }
+
+  private picturePhotoStatus(value: string): PictureOrderRequest['photos'][number]['status'] {
+    switch (value.toUpperCase()) {
+      case 'GREEN': case 'RED': case 'PENDING': case 'PROCESSED': return value.toUpperCase() as PictureOrderRequest['photos'][number]['status'];
+      default: return 'INCOMING';
+    }
   }
 
   private formatDate(value: string): string {

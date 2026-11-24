@@ -2,8 +2,8 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
-  effect,
   ElementRef,
+  HostListener,
   inject,
   OnInit,
   signal,
@@ -11,16 +11,17 @@ import {
 } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Customer, PriceTier, Station } from '../../core/models';
+import { Customer, PriceTier, Product, Station } from '../../core/models';
 import { DataService } from '../../core/data/data.service';
 import { AppStateService } from '../../core/services/app-state.service';
 import { BrandService } from '../../core/services/brand.service';
 import { BasketService } from '../../core/services/basket.service';
 import { CatalogService } from '../../core/services/catalog.service';
-import { CustomerOrderRightsService } from '../../core/services/customer-order-rights.service';
 import { ToastService } from '../../core/services/toast.service';
 
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const LOGIN_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{2,79}$/;
+const PASSWORD_PATTERN = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,72}$/;
 const phoneNumberValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
   const value = String(control.value ?? '').trim();
   if (!value) return null;
@@ -45,7 +46,6 @@ const phoneNumberValidator: ValidatorFn = (control: AbstractControl): Validation
 export class CustomersComponent implements OnInit {
   private readonly catalog = inject(CatalogService);
   private readonly brandService = inject(BrandService);
-  private readonly orderRightsService = inject(CustomerOrderRightsService);
   private readonly data = inject(DataService);
   private readonly appState = inject(AppStateService);
   private readonly basket = inject(BasketService);
@@ -53,6 +53,7 @@ export class CustomersComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
   @ViewChild('businessNameInput') private businessNameInput?: ElementRef<HTMLInputElement>;
+  @ViewChild('customerForm') private customerForm?: ElementRef<HTMLFormElement>;
 
   readonly loading = this.catalog.customersLoading;
   readonly error = this.catalog.customersError;
@@ -69,7 +70,6 @@ export class CustomersComponent implements OnInit {
   readonly modalOpen = signal(false);
   readonly saving = signal(false);
   readonly customerSaveError = signal('');
-  readonly orderRights = signal(true);
   readonly loadingDetails = signal(false);
   readonly updatingStatusId = signal<number | null>(null);
   readonly deletingCustomerId = signal<number | null>(null);
@@ -80,8 +80,6 @@ export class CustomersComponent implements OnInit {
   private scrollToOverrides = false;
   readonly supportsProductPriceOverrides = this.data.supportsProductPriceOverrides;
   readonly canDeleteCustomers = computed(() => this.appState.role() === 'Super Admin');
-  readonly customerCanOrder = this.appState.customerCanOrder;
-
   readonly tiers: PriceTier[] = ['A', 'B', 'C'];
   readonly weekdays = WEEKDAYS;
 
@@ -94,29 +92,23 @@ export class CustomersComponent implements OnInit {
 
   readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(120)]],
-    loginId: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(80)]],
+    loginId: ['', [Validators.required, Validators.pattern(LOGIN_ID_PATTERN)]],
     loginPassword: [
       '',
       [
         Validators.required,
-        Validators.pattern(/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,72}$/),
+        Validators.pattern(PASSWORD_PATTERN),
       ],
     ],
     station: ['', [Validators.required]],
-    category: ['A' as PriceTier, [Validators.required]],
+    category: ['', [Validators.required]],
     whatsapp: ['', [Validators.required, Validators.maxLength(10), phoneNumberValidator]],
     phone: ['', [Validators.maxLength(10), phoneNumberValidator]],
     email: ['', [Validators.email]],
-    contact: [''],
-    address: [''],
-    reminderDay: ['Tuesday'],
-    active: [true],
-  });
-  private readonly chooseInitialDiscountBrand = effect(() => {
-    const brands = this.brands();
-    if (!this.selectedDiscountBrand() && brands.length) {
-      this.selectedDiscountBrand.set(brands[0].name);
-    }
+    contact: ['', [Validators.maxLength(120)]],
+    address: ['', [Validators.maxLength(300)]],
+    reminderDay: ['', [Validators.required]],
+    active: ['', [Validators.required]],
   });
 
   /** Per-product override working copy (productId -> price|null). */
@@ -198,29 +190,37 @@ export class CustomersComponent implements OnInit {
     return Object.keys(c.overrides ?? {}).length ? 'Category price + override' : 'Category price';
   }
 
+  productCategoryPrice(product: Product): number | undefined {
+    const category = this.form.controls.category.value;
+    return this.tiers.includes(category as PriceTier)
+      ? product.categoryPrices[category as PriceTier]
+      : undefined;
+  }
+
   openNew(): void {
     if (this.loadingDetails() || this.saving()) return;
     this.refreshStations();
     this.editing.set(null);
-    this.orderRights.set(true);
+    this.customerSaveError.set('');
+    this.setPasswordRequired(true);
     this.generatedId.set(this.nextCustomerId());
     this.form.reset({
       name: '',
       loginId: '',
       loginPassword: '',
-      station: this.stations()[0] ?? '',
-      category: 'A',
+      station: '',
+      category: '',
       whatsapp: '',
       phone: '',
       email: '',
       contact: '',
       address: '',
-      reminderDay: 'Tuesday',
-      active: true,
+      reminderDay: '',
+      active: '',
     });
     this.overrides.set({});
     this.discounts.set({});
-    this.selectedDiscountBrand.set(this.brands()[0]?.name ?? '');
+    this.selectedDiscountBrand.set('');
     this.discountDraft.set('');
     this.stationAddOpen.set(false);
     this.stationDraft.set('');
@@ -247,7 +247,8 @@ export class CustomersComponent implements OnInit {
 
   private populateEdit(customer: Customer): void {
     this.editing.set(customer);
-    this.orderRights.set(this.orderRightsService.canOrder(customer.id));
+    this.customerSaveError.set('');
+    this.setPasswordRequired(false);
     this.generatedId.set(customer.customerId ?? 'CUS-' + String(customer.id).padStart(4, '0'));
     this.form.setValue({
       name: customer.name,
@@ -260,9 +261,11 @@ export class CustomersComponent implements OnInit {
       email: customer.email,
       contact: customer.contact ?? '',
       address: customer.address,
-      reminderDay: customer.reminderDay ?? 'Tuesday',
-      active: customer.active,
+      reminderDay: this.validReminderDay(customer.reminderDay),
+      active: customer.active ? 'ACTIVE' : 'INACTIVE',
     });
+    this.form.markAsPristine();
+    this.form.markAsUntouched();
     const ov: Record<number, number | null> = {};
     for (const [pid, price] of Object.entries(customer.overrides ?? {})) {
       ov[Number(pid)] = price;
@@ -273,7 +276,7 @@ export class CustomersComponent implements OnInit {
       disc[brand] = pct;
     }
     this.discounts.set(disc);
-    this.selectedDiscountBrand.set(this.brands().find((brand) => !(brand.name in disc))?.name ?? this.brands()[0]?.name ?? '');
+    this.selectedDiscountBrand.set('');
     this.discountDraft.set('');
     this.stationAddOpen.set(false);
     this.stationDraft.set('');
@@ -290,10 +293,37 @@ export class CustomersComponent implements OnInit {
   close(): void {
     if (this.saving()) return;
     this.modalOpen.set(false);
+    this.customerSaveError.set('');
+    this.cancelStationCreation();
+  }
+
+  @HostListener('document:keydown.escape', ['$event'])
+  onEscape(event: Event): void {
+    if (!this.modalOpen() || this.saving()) return;
+    event.preventDefault();
+    this.close();
   }
 
   private focusBusinessName(): void {
     requestAnimationFrame(() => this.businessNameInput?.nativeElement.focus());
+  }
+
+  private focusFirstInvalidField(): void {
+    requestAnimationFrame(() =>
+      this.customerForm?.nativeElement.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus(),
+    );
+  }
+
+  private validReminderDay(value?: string): string {
+    const normalized = value?.trim().toLowerCase();
+    return this.weekdays.find((day) => day.toLowerCase() === normalized) ?? 'Tuesday';
+  }
+
+  private setPasswordRequired(required: boolean): void {
+    const validators = [Validators.pattern(PASSWORD_PATTERN)];
+    if (required) validators.unshift(Validators.required);
+    this.form.controls.loginPassword.setValidators(validators);
+    this.form.controls.loginPassword.updateValueAndValidity({ emitEvent: false });
   }
 
   addStation(): void {
@@ -359,10 +389,6 @@ export class CustomersComponent implements OnInit {
     this.brandService.load(true);
   }
 
-  toggleOrderRights(): void {
-    this.orderRights.update((enabled) => !enabled);
-  }
-
   fillPhoneFromWhatsapp(): void {
     const w = this.form.controls.whatsapp.value.trim();
     if (w && !this.form.controls.phone.value.trim()) {
@@ -413,6 +439,7 @@ export class CustomersComponent implements OnInit {
   save(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      this.focusFirstInvalidField();
       return;
     }
     this.customerSaveError.set('');
@@ -426,6 +453,7 @@ export class CustomersComponent implements OnInit {
     if (duplicateLogin) {
       this.form.controls.loginId.setErrors({ ...this.form.controls.loginId.errors, duplicate: true });
       this.form.controls.loginId.markAsTouched();
+      this.focusFirstInvalidField();
       return;
     }
 
@@ -444,21 +472,21 @@ export class CustomersComponent implements OnInit {
 
     const customer: Customer = {
       id: existing?.id ?? 0,
-      name: raw.name.trim(),
+      name: raw.name.trim().replace(/\s+/g, ' '),
       code: loginId,
       customerId: this.generatedId(),
       loginId,
-      loginPassword: raw.loginPassword,
-      station: raw.station,
+      loginPassword: raw.loginPassword.trim() || undefined,
+      station: raw.station.trim(),
       stationId: this.stationIds()[raw.station.toLowerCase()] ?? (existing?.station === raw.station ? existing.stationId : undefined),
       phone: raw.phone.trim() || raw.whatsapp.trim(),
       whatsapp: raw.whatsapp.trim(),
       email: raw.email.trim(),
-      category: raw.category,
-      contact: raw.contact.trim(),
+      category: raw.category as PriceTier,
+      contact: raw.contact.trim().replace(/\s+/g, ' '),
       address: raw.address.trim(),
       reminderDay: raw.reminderDay,
-      active: raw.active,
+      active: raw.active === 'ACTIVE',
       overrides: cleanOverrides,
       brandDiscounts: cleanDiscounts,
     };
@@ -467,7 +495,6 @@ export class CustomersComponent implements OnInit {
     this.catalog.saveCustomer(customer).subscribe({
       next: (saved) => {
         this.saving.set(false);
-        this.orderRightsService.set(saved.id, this.orderRights());
         this.modalOpen.set(false);
         this.refreshStations();
         this.toast.success(existing ? 'Customer updated successfully.' : 'Customer added successfully.');
@@ -475,7 +502,9 @@ export class CustomersComponent implements OnInit {
       error: (err: unknown) => {
         this.saving.set(false);
         const message = err instanceof Error ? err.message : 'Could not save the customer.';
-        const userMessage = /conflict|already exists|duplicate/i.test(message)
+        const userMessage = existing && !raw.loginPassword.trim() && /validation failed/i.test(message)
+          ? 'The connected backend currently requires a password when editing a customer. Backend must make password optional for updates.'
+          : /conflict|already exists|duplicate/i.test(message)
           ? 'Login ID, email, or customer details already exist. Use a unique Login ID/email and check the customer details.'
           : message;
         this.customerSaveError.set(userMessage);
@@ -532,7 +561,6 @@ export class CustomersComponent implements OnInit {
         this.catalog.deleteCustomer(customer.id).subscribe({
           next: () => {
             this.deletingCustomerId.set(null);
-            this.orderRightsService.remove(customer.id);
             this.refreshStations();
             this.toast.success('Customer deleted.');
           },

@@ -1,39 +1,140 @@
 <div class="page-head">
   <div>
     <h1>Picture Orders</h1>
-    <div class="subtitle">Review customer photo requests first. Choose a request to prepare its regular customer order.</div>
+    <div class="subtitle">Live API requests. Review photos, hold unclear work in Pending, then release a regular order to a Backend User.</div>
   </div>
-  <div class="head-actions"><span class="pill gold">{{ newCount() }} awaiting review</span><button class="btn gold" (click)="startPhotoOrder()">＋ Create Photo Order</button></div>
+  <div class="head-actions">
+    <span class="pill gold">{{ newCount() }} awaiting review</span>
+    @if (canManage()) {
+      <button class="btn gold" (click)="startPhotoOrder()"><span class="action-icon" aria-hidden="true">▧</span>Create Photo Order</button>
+    }
+  </div>
 </div>
 
-<div class="toolbar"><input class="search" placeholder="Search request, customer or caption…" [value]="search()" (input)="search.set($any($event.target).value)" /></div>
+<div class="toolbar">
+  <input class="search" placeholder="Search request or customer…" [value]="search()" (input)="search.set($any($event.target).value)" (keyup.enter)="refresh()" />
+  <button class="btn small" (click)="refresh()" [disabled]="loading()">{{ loading() ? 'Loading…' : 'Search' }}</button>
+</div>
 
 <section class="card queue-card">
-  <div class="card-head"><div><h2>Incoming picture requests</h2><div class="muted">Customer uploads are requests, not live staff orders.</div></div><span class="pill blue">{{ incoming().length }} new</span></div>
+  <div class="card-head">
+    <div><h2>Incoming picture requests</h2><div class="muted">Each photo must be reviewed before it can become regular order work.</div></div>
+    <span class="pill blue">{{ newCount() }} incoming</span>
+  </div>
   @if (incoming().length) {
-    <div class="table-wrap"><table><thead><tr><th>REQUEST</th><th>CUSTOMER / DATE</th><th>PHOTOS</th><th>THUMBNAILS · CLICK TO ENLARGE</th><th>REVIEW</th><th></th></tr></thead><tbody>
+    <div class="table-wrap"><table><thead><tr><th>REQUEST</th><th>CUSTOMER / DATE</th><th>PHOTOS</th><th>THUMBNAILS</th><th></th></tr></thead><tbody>
       @for (request of incoming(); track request.id) {
-        <tr><td><strong>{{ request.id }}</strong></td><td><strong>{{ request.customerName }}</strong><div class="muted">{{ formatDate(request.createdAt) }}</div></td><td>{{ request.items.length }}</td><td><div class="thumbs">@for (photo of request.items; track $index) { <button class="thumb" type="button" (click)="openPreview(photo.src)"><img [src]="photo.src" [alt]="photo.caption || photo.name" /></button> }</div></td><td><span class="pill blue">0 / {{ request.items.length }} reviewed</span></td><td><button class="btn small primary" (click)="review(request)">Review pictures</button></td></tr>
+        <tr>
+          <td><strong>#{{ request.id }}</strong><div class="muted">{{ request.customerCode }}</div></td>
+          <td><strong>{{ request.customerName }}</strong><div class="muted">{{ formatDate(request.createdAt) }}</div></td>
+          <td>{{ request.photos.length }}</td>
+          <td><div class="thumbs">@for (photo of request.photos; track photo.id) { <button class="thumb" type="button" (click)="openPreview(photo.imageUrl)"><img [src]="photo.imageUrl" [alt]="photo.caption" /></button> }</div></td>
+          <td class="row-actions"><button class="btn small" (click)="openDetails(request)">Details</button>@if (canManage()) { <button class="btn small primary" (click)="openReview(request)">Review pictures</button> }</td>
+        </tr>
       }
     </tbody></table></div>
-  } @else { <div class="empty">No incoming picture requests.</div> }
+  } @else { <div class="empty">{{ loading() ? 'Loading incoming requests…' : 'No incoming picture requests.' }}</div> }
 </section>
 
 <section class="card queue-card">
-  <div class="card-head"><div><h2>Pending Picture Orders</h2><div class="muted">Reviewed requests stay here until staff starts the regular order workflow.</div></div><span class="pill">{{ pending().length }} pending</span></div>
+  <div class="card-head">
+    <div><h2>Pending Picture Orders</h2><div class="muted">Photos that need fulfilment work stay here until an Admin releases them.</div></div>
+    <span class="pill">{{ reviewedCount() }} pending</span>
+  </div>
   @if (pending().length) {
-    <div class="table-wrap"><table><thead><tr><th>PENDING ORDER</th><th>CUSTOMER / DATE</th><th>PHOTOS</th><th>THUMBNAILS · CLICK TO ENLARGE</th><th>STATUS</th><th></th></tr></thead><tbody>
+    <div class="table-wrap"><table><thead><tr><th>REQUEST</th><th>CUSTOMER / DATE</th><th>PHOTOS</th><th>THUMBNAILS</th><th></th></tr></thead><tbody>
       @for (request of pending(); track request.id) {
-        <tr><td><strong>{{ request.id }}</strong></td><td><strong>{{ request.customerName }}</strong><div class="muted">{{ formatDate(request.createdAt) }}</div></td><td>{{ request.items.length }}</td><td><div class="thumbs">@for (photo of request.items; track $index) { <button class="thumb" type="button" (click)="openPreview(photo.src)"><img [src]="photo.src" [alt]="photo.caption || photo.name" /></button> }</div></td><td><span class="pill gold">Ready for order</span></td><td><button class="btn small primary" (click)="createOrder(request)">Create order</button></td></tr>
+        <tr>
+          <td><strong>#{{ request.id }}</strong><div class="muted">{{ request.customerCode }}</div></td>
+          <td><strong>{{ request.customerName }}</strong><div class="muted">{{ formatDate(request.createdAt) }}</div></td>
+          <td>{{ request.photos.length }}</td>
+          <td><div class="thumbs">@for (photo of request.photos; track photo.id) { <button class="thumb" type="button" (click)="openPreview(photo.imageUrl)"><img [src]="photo.imageUrl" [alt]="photo.caption" /></button> }</div></td>
+          <td class="row-actions"><button class="btn small" (click)="openDetails(request)">Details</button>@if (canManage()) { <button class="btn small primary" (click)="openAssignment(request)">Release to Backend User</button> }</td>
+        </tr>
       }
     </tbody></table></div>
-  } @else { <div class="empty">No pending picture orders. Review an incoming request to place it here.</div> }
+  } @else { <div class="empty">{{ loading() ? 'Loading pending requests…' : 'No pending picture orders.' }}</div> }
 </section>
 
-<details class="processed"><summary>Processed picture requests ({{ doneCount() }})</summary>
-  @if (processed().length) { <div class="processed-list">@for (request of processed(); track request.id) { <div><strong>{{ request.id }}</strong> · {{ request.customerName }} · {{ request.items.length }} photo(s)<button class="btn small danger" (click)="remove(request)">Delete</button></div> }</div> } @else { <p class="muted">No processed picture requests.</p> }
+<details class="processed">
+  <summary>Processed picture requests ({{ doneCount() }})</summary>
+  @if (processed().length) {
+    <div class="processed-list">
+      @for (request of processed(); track request.id) {
+        <div><span><strong>#{{ request.id }}</strong> · {{ request.customerName }} · {{ request.photos.length }} photo(s)</span>@if (request.orderNumber) { <span class="pill gold">Order {{ request.orderNumber }}</span> }<button class="btn small" (click)="openDetails(request)">Details</button></div>
+      }
+    </div>
+  } @else { <p class="muted">No processed picture requests.</p> }
 </details>
 
 @if (previewSrc(); as src) {
   <div class="modal-backdrop" (click)="closePreview()"><div class="preview-modal" (click)="$event.stopPropagation()"><button class="icon-btn" (click)="closePreview()" aria-label="Close">×</button><img [src]="src" alt="Photo order preview" /></div></div>
+}
+
+@if (detailRequest(); as request) {
+  <div class="modal-backdrop" (click)="closeDetails()"><section class="modal detail-modal" (click)="$event.stopPropagation()">
+    <header class="modal-head"><div><h2>Picture Order #{{ request.id }}</h2><div class="muted">{{ request.customerName }} · {{ request.customerCode }}</div></div><button class="icon-btn" (click)="closeDetails()" aria-label="Close">×</button></header>
+    <div class="request-summary"><div><span>Request status</span><strong class="pill">{{ photoStatusLabel(request.status) }}</strong></div><div><span>Created</span><strong>{{ formatDate(request.createdAt) }}</strong></div><div><span>Reviewed</span><strong>{{ request.reviewedAt ? formatDate(request.reviewedAt) : 'Not reviewed' }}</strong></div><div><span>Released to</span><strong>{{ request.assignedToName || 'Not released' }}</strong></div>@if (request.orderNumber || request.orderId) { <div><span>Regular order</span><strong>{{ request.orderNumber || ('#' + request.orderId) }}</strong></div> }</div>
+    <div class="detail-photo-list">
+      @for (photo of request.photos; track photo.id) {
+        <article><button class="thumb large" (click)="openPreview(photo.imageUrl)"><img [src]="photo.imageUrl" [alt]="photo.caption" /></button><div><strong>{{ photo.caption || 'No caption' }}</strong><div class="detail-meta"><span class="pill">{{ photoStatusLabel(photo.status) }}</span>@if (photo.orderNumber || photo.orderId) { <span>Order {{ photo.orderNumber || ('#' + photo.orderId) }}</span> }@if (photo.createdAt) { <span>{{ formatDate(photo.createdAt) }}</span> }</div></div></article>
+      }
+    </div>
+    <footer class="modal-actions"><button class="btn" (click)="closeDetails()">Close</button></footer>
+  </section></div>
+}
+
+@if (reviewRequest(); as request) {
+  <div class="modal-backdrop" (click)="reviewRequest.set(null)"><section class="modal" (click)="$event.stopPropagation()">
+    <header class="modal-head"><div><h2>Review Picture Order #{{ request.id }}</h2><div class="muted">{{ request.customerName }} · {{ request.customerCode }} · choose Green for a valid order line or Red to hold it in Pending.</div></div><button class="icon-btn" (click)="reviewRequest.set(null)" aria-label="Close">×</button></header>
+    <div class="notice">Green lines are validated against the live product and size catalogue. Red photos are moved by the API into Pending Picture Orders.</div>
+    <div class="picture-review-list">
+      @for (photo of request.photos; track photo.id) {
+        <article class="picture-review-item">
+          <button class="thumb large" (click)="openPreview(photo.imageUrl)"><img [src]="photo.imageUrl" [alt]="photo.caption" /></button>
+          <div>
+            <strong>{{ photo.caption || 'No caption' }}</strong>
+            <div class="decision-row">
+              <label><input type="radio" [name]="'decision-'+photo.id" [checked]="decisions()[photo.id] === 'GREEN'" (change)="setDecision(photo.id, 'GREEN')" /> Green · ready for order</label>
+              <label><input type="radio" [name]="'decision-'+photo.id" [checked]="decisions()[photo.id] === 'RED'" (change)="setDecision(photo.id, 'RED')" /> Red · move to Pending</label>
+            </div>
+            @if (decisions()[photo.id] === 'GREEN') {
+              <div class="line-editor">
+                <select [value]="lineDrafts()[photo.id]?.productId ?? 0" (change)="setLineProduct(photo.id, +$any($event.target).value)"><option value="0">Choose product</option>@for (product of products(); track product.id) { <option [value]="product.id">{{ product.name }} · {{ product.code }}</option> }</select>
+                <select [value]="lineDrafts()[photo.id]?.size ?? 0" (change)="setLineValue(photo.id, 'size', +$any($event.target).value)" [disabled]="!lineDrafts()[photo.id]?.productId"><option value="0">Size</option>@for (size of sizesForPhoto(photo.id); track size) { <option [value]="size">{{ size }}</option> }</select>
+                <input type="number" min="1" step="1" placeholder="Pairs" [value]="lineDrafts()[photo.id]?.qty ?? 1" (input)="setLineValue(photo.id, 'qty', +$any($event.target).value)" />
+              </div>
+              @if (!lineIsComplete(photo.id)) { <small class="validation">Choose a product, its available size, and whole pair quantity.</small> }
+            }
+          </div>
+        </article>
+      }
+    </div>
+    <footer class="modal-actions"><button class="btn" (click)="reviewRequest.set(null)">Cancel</button><button class="btn primary" [disabled]="saving()" (click)="submitReview()">{{ saving() ? 'Saving…' : 'Save review' }}</button></footer>
+  </section></div>
+}
+
+@if (assignRequest(); as request) {
+  <div class="modal-backdrop" (click)="assignRequest.set(null)"><section class="modal" (click)="$event.stopPropagation()">
+    <header class="modal-head"><div><h2>Release Picture Order #{{ request.id }}</h2><div class="muted">{{ request.customerName }} · {{ request.customerCode }}</div></div><button class="icon-btn" (click)="assignRequest.set(null)" aria-label="Close">×</button></header>
+    <div class="notice">Release sends this request to the selected Backend User. The API must create/link the final regular order using the same normal-order transaction, so the photo request and order cannot become inconsistent.</div>
+    <label class="field"><span>Backend User *</span><select [value]="assigneeId()" (change)="assigneeId.set(+$any($event.target).value)"><option value="0">Choose active Backend User</option>@for (user of backendUsers(); track user.id) { <option [value]="user.id">{{ user.fullName }} · {{ user.loginId }}</option> }</select></label>
+    <div class="picture-review-list">
+      @for (photo of request.photos; track photo.id) {
+        <article class="picture-review-item">
+          <button class="thumb large" (click)="openPreview(photo.imageUrl)"><img [src]="photo.imageUrl" [alt]="photo.caption" /></button>
+          <div>
+            <strong>{{ photo.caption || 'No caption' }}</strong>
+            <div class="line-editor">
+              <select [value]="lineDrafts()[photo.id]?.productId ?? 0" (change)="setLineProduct(photo.id, +$any($event.target).value)"><option value="0">Choose product</option>@for (product of products(); track product.id) { <option [value]="product.id">{{ product.name }} · {{ product.code }}</option> }</select>
+              <select [value]="lineDrafts()[photo.id]?.size ?? 0" (change)="setLineValue(photo.id, 'size', +$any($event.target).value)" [disabled]="!lineDrafts()[photo.id]?.productId"><option value="0">Size</option>@for (size of sizesForPhoto(photo.id); track size) { <option [value]="size">{{ size }}</option> }</select>
+              <input type="number" min="1" step="1" placeholder="Pairs" [value]="lineDrafts()[photo.id]?.qty ?? 1" (input)="setLineValue(photo.id, 'qty', +$any($event.target).value)" />
+            </div>
+            @if (!lineIsComplete(photo.id)) { <small class="validation">Complete the product, valid size and pair quantity before release.</small> }
+          </div>
+        </article>
+      }
+    </div>
+    <footer class="modal-actions"><button class="btn" (click)="assignRequest.set(null)">Cancel</button><button class="btn primary" [disabled]="saving()" (click)="submitAssignment()">{{ saving() ? 'Releasing…' : 'Release & create regular order' }}</button></footer>
+  </section></div>
 }

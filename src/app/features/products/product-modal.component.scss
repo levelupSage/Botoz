@@ -51,6 +51,20 @@
   grid-column: 1 / -1;
 }
 
+/* Keep a neighbouring field compact when the other column shows a validation error. */
+.field {
+  align-content: start;
+}
+
+/* Prevent browser autofill from introducing the blue Chrome input background. */
+.field input:-webkit-autofill,
+.field input:-webkit-autofill:hover,
+.field input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text);
+  box-shadow: 0 0 0 1000px var(--panel) inset;
+  transition: background-color 9999s ease-out 0s;
+}
+
 .price-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -60,11 +74,43 @@
 .help {
   font-size: 11px;
   color: var(--muted);
+  font-weight: 500;
+  line-height: 1.35;
 }
 
 .err {
-  color: var(--red);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 1px 0 0;
+  color: #ff9292;
   font-size: 11px;
+  font-weight: 700;
+}
+
+.err::before {
+  display: grid;
+  width: 15px;
+  height: 15px;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: #ba5059;
+  content: '!';
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.required {
+  color: #e76c72;
+}
+
+.field input[aria-invalid='true'],
+.field select[aria-invalid='true'] {
+  border-color: #d26d6d;
+  background: #24191c;
+  box-shadow: 0 0 0 3px rgb(210 109 109 / 14%);
 }
 
 /* ---- Photos ---------------------------------------------------------- */
@@ -161,4 +207,15 @@
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--panel2);
+}
+
+:host-context(:root[data-theme='light']) .field input[aria-invalid='true'],
+:host-context(:root[data-theme='light']) .field select[aria-invalid='true'] {
+  border-color: #c65b5b;
+  background: #fff6f4;
+  box-shadow: 0 0 0 3px rgb(198 91 91 / 12%);
+}
+
+:host-context(:root[data-theme='light']) .err {
+  color: #ae3e45;
 }

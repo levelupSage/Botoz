@@ -76,6 +76,17 @@
   box-shadow: 0 0 0 3px rgb(255 133 139 / 15%);
 }
 
+:host-context(:root[data-theme='light']) .status-tab.all {
+  color: #5d4a2d;
+  background: #f4ecdc;
+}
+
+:host-context(:root[data-theme='light']) .status-tab.all.selected {
+  border-color: #bc913f;
+  color: #5d431f;
+  background: #eee1c8;
+}
+
 .search {
   min-width: 180px;
   flex: 1;
@@ -116,22 +127,17 @@ tr:last-child td {
 }
 
 .row-actions {
+<<<<<<< HEAD
   //display: flex;
   flex-wrap: wrap;
   min-width: 360px;
+=======
+  display: flex;
+  flex-wrap: nowrap;
+  min-width: max-content;
+>>>>>>> c1e1cdf28f0d3cba757d7128c957fa4c7d595f7e
   gap: 6px;
-  white-space: normal;
-}
-
-.customer-status-pill {
-  color: #8fd3b4;
-  background: #176b41;
-}
-
-.customer-status-pill.deactivated {
-  border: 1px solid #9c3840;
-  color: #ffb6bd;
-  background: #49232b;
+  white-space: nowrap;
 }
 
 .notice.error {
@@ -236,6 +242,14 @@ tr:last-child td {
   box-shadow: 0 0 0 3px rgb(200 164 93 / 16%);
 }
 
+.modal .field input[aria-invalid='true'],
+.modal .field select[aria-invalid='true'],
+.modal .field textarea[aria-invalid='true'] {
+  border-color: #d26d6d;
+  background: #24191c;
+  box-shadow: 0 0 0 3px rgb(210 109 109 / 14%);
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -247,14 +261,37 @@ tr:last-child td {
 }
 
 .err {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 1px;
   color: #ff9292;
   font-size: 12px;
+  font-weight: 650;
+}
+
+.err::before {
+  display: grid;
+  width: 16px;
+  height: 16px;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: #ba5059;
+  content: '!';
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .field .help {
   margin: 0;
   color: var(--muted);
   line-height: 1.45;
+}
+
+.modal .required {
+  color: #c55353;
 }
 
 /* ---- Overrides ------------------------------------------------------- */
@@ -314,26 +351,13 @@ tr:last-child td {
   background: #1d1f24;
 }
 
-.order-rights-toggle {
-  margin-right: auto;
-  border-color: #138445;
-  color: #fff;
-  background: #15803d;
-  font-weight: 750;
+.modal-actions .btn {
+  min-width: 108px;
+  min-height: 44px;
 }
 
-.order-rights-toggle.enabled:hover:not(:disabled) {
-  border-color: #23a455;
-  background: #169447;
-}
-
-.order-rights-toggle.disabled {
-  border-color: #a52b34;
-  background: #b91c1c;
-}
-
-.order-rights-toggle.disabled:hover:not(:disabled) {
-  background: #d12b35;
+.modal-actions .btn.primary {
+  min-width: 142px;
 }
 
 /* ---- Station picker -------------------------------------------------- */
@@ -485,6 +509,113 @@ tr:last-child td {
   margin-top: 14px;
 }
 
+/* Keep the customer form visually consistent with the shared warm light theme. */
+:host-context(:root[data-theme='light']) .modal {
+  border-color: #e4d9c5;
+  color: #241e16;
+  background: linear-gradient(145deg, #fffdf9 0%, #f8f4ec 100%);
+  box-shadow: 0 28px 88px rgb(64 45 19 / 24%);
+}
+
+:host-context(:root[data-theme='light']) .modal .modal-head,
+:host-context(:root[data-theme='light']) .modal .modal-actions {
+  border-color: #e7ddcb;
+  background: #fffdf9 !important;
+}
+
+:host-context(:root[data-theme='light']) .modal .modal-head {
+  box-shadow: 0 8px 14px rgb(91 67 31 / 6%);
+}
+
+:host-context(:root[data-theme='light']) .modal-head h2,
+:host-context(:root[data-theme='light']) .modal .field label,
+:host-context(:root[data-theme='light']) .modal .discount-field > label,
+:host-context(:root[data-theme='light']) .modal .section h3 {
+  color: #241e16;
+}
+
+:host-context(:root[data-theme='light']) .modal-kicker {
+  color: #8a682c;
+}
+
+:host-context(:root[data-theme='light']) .modal .field input,
+:host-context(:root[data-theme='light']) .modal .field select,
+:host-context(:root[data-theme='light']) .modal .field textarea,
+:host-context(:root[data-theme='light']) .modal .pct input,
+:host-context(:root[data-theme='light']) .modal .override-row input {
+  border-color: #d9ccb6;
+  color: #241e16;
+  background: #fffefa;
+}
+
+:host-context(:root[data-theme='light']) .modal .field input::placeholder,
+:host-context(:root[data-theme='light']) .modal .field textarea::placeholder {
+  color: #938877;
+}
+
+:host-context(:root[data-theme='light']) .modal .field input:focus,
+:host-context(:root[data-theme='light']) .modal .field select:focus,
+:host-context(:root[data-theme='light']) .modal .field textarea:focus,
+:host-context(:root[data-theme='light']) .modal .pct input:focus,
+:host-context(:root[data-theme='light']) .modal .override-row input:focus {
+  border-color: #b78a38;
+  box-shadow: 0 0 0 3px rgb(183 138 56 / 16%);
+}
+
+:host-context(:root[data-theme='light']) .modal .field input[aria-invalid='true'],
+:host-context(:root[data-theme='light']) .modal .field select[aria-invalid='true'],
+:host-context(:root[data-theme='light']) .modal .field textarea[aria-invalid='true'] {
+  border-color: #c65b5b;
+  background: #fff6f4;
+  box-shadow: 0 0 0 3px rgb(198 91 91 / 12%);
+}
+
+:host-context(:root[data-theme='light']) .modal .err {
+  color: #a33e3e;
+}
+
+:host-context(:root[data-theme='light']) .modal .field .help,
+:host-context(:root[data-theme='light']) .modal .help,
+:host-context(:root[data-theme='light']) .modal .pct .suffix {
+  color: #7a7063;
+}
+
+:host-context(:root[data-theme='light']) .modal .icon-btn {
+  border-color: #dfd1bb;
+  color: #5d4a2d;
+  background: #f5eee1;
+}
+
+:host-context(:root[data-theme='light']) .modal .icon-btn:hover:not(:disabled) {
+  border-color: #bc913f;
+  color: #241e16;
+  background: #eee1c8;
+}
+
+:host-context(:root[data-theme='light']) .modal .section,
+:host-context(:root[data-theme='light']) .modal .overrides {
+  border-color: #e7ddcb;
+}
+
+:host-context(:root[data-theme='light']) .modal .chip-row,
+:host-context(:root[data-theme='light']) .modal .override-row,
+:host-context(:root[data-theme='light']) .modal .discount-entry {
+  border-color: #e1d5c1;
+  background: #fffefa;
+}
+
+:host-context(:root[data-theme='light']) .modal .discount-entry strong {
+  color: #8a682c;
+}
+
+:host-context(:root[data-theme='light']) .modal .remove-discount {
+  color: #a03b3b;
+}
+
+:host-context(:root[data-theme='light']) .modal .remove-discount:hover {
+  background: #f9e8e5;
+}
+
 @media (max-width: 700px) {
   .modal-backdrop {
     padding: 10px;
@@ -510,11 +641,6 @@ tr:last-child td {
     padding: 14px 18px 18px;
   }
 
-  .order-rights-toggle {
-    flex: 1 0 100%;
-    margin-right: 0;
-  }
-
   .form-grid {
     grid-template-columns: 1fr;
   }
@@ -538,8 +664,7 @@ tr:last-child td {
   }
 
   .row-actions {
-    flex-wrap: wrap;
-    white-space: normal;
+    min-width: max-content;
   }
 
   .discount-editor {

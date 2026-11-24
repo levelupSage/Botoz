@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, ElementRef, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { DataService } from '../../core/data/data.service';
@@ -7,6 +7,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 
 const STRONG_PASSWORD = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,72}$/;
+const LOGIN_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{2,99}$/;
 
 @Component({
   selector: 'app-team',
@@ -20,6 +21,7 @@ export class TeamComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
+  private readonly host = inject(ElementRef<HTMLElement>);
 
   readonly staff = signal<Staff[]>([]);
   readonly menuOptions = signal<RegistrationMenuOption[]>([]);
@@ -30,6 +32,8 @@ export class TeamComponent implements OnInit {
   readonly error = signal<string | null>(null);
   readonly modalOpen = signal(false);
   readonly editing = signal<Staff | null>(null);
+  readonly showPassword = signal(false);
+  readonly permissionError = signal(false);
   readonly selectedMenuIds = signal<number[]>([]);
   readonly selectedTabIds = signal<number[]>([]);
   readonly orderTabs = computed(() => {
@@ -59,9 +63,9 @@ export class TeamComponent implements OnInit {
 
   readonly form = this.fb.nonNullable.group({
     fullName: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(120)]],
-    loginId: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
+    loginId: ['', [Validators.required, Validators.pattern(LOGIN_ID)]],
     email: ['', [Validators.required, Validators.email, Validators.maxLength(180)]],
-    password: ['', [Validators.maxLength(72)]],
+    password: ['', [Validators.required, Validators.pattern(STRONG_PASSWORD)]],
     role: ['BACKEND_USER' as RegisterableAccountRole, Validators.required],
     active: [true],
   });
@@ -106,7 +110,9 @@ export class TeamComponent implements OnInit {
           .map((menu) => menu.id === orderMenu?.id ? { ...menu, title: 'Orders' } : menu);
         this.menuOptions.set(visibleMenus);
         if (this.modalOpen() && !this.selectedMenuIds().length) {
-          this.applyRoleDefaults(this.form.controls.role.value);
+          const current = this.editing();
+          if (current) this.setEditMenuSelection(current);
+          else this.applyRoleDefaults(this.form.controls.role.value);
         }
       },
       error: (error: unknown) => {
@@ -129,6 +135,9 @@ export class TeamComponent implements OnInit {
     this.form.reset({ fullName: '', loginId: '', email: '', password: '', role, active: true });
     this.selectedMenuIds.set([]);
     this.selectedTabIds.set([]);
+    this.showPassword.set(false);
+    this.permissionError.set(false);
+    this.setPasswordRequired(true);
     this.applyRoleDefaults(role);
     this.modalOpen.set(true);
   }
@@ -159,6 +168,10 @@ export class TeamComponent implements OnInit {
     });
     this.selectedMenuIds.set([]);
     this.selectedTabIds.set([]);
+    this.showPassword.set(false);
+    this.permissionError.set(false);
+    this.setPasswordRequired(false);
+    this.setEditMenuSelection(staff);
     this.modalOpen.set(true);
   }
 
@@ -192,30 +205,36 @@ export class TeamComponent implements OnInit {
 
   showAdminOrderTabs(): boolean {
     const orderMenu = this.menuOptions().find((menu) => menu.title.trim().toLowerCase() === 'orders');
-    return this.form.controls.role.value === 'ADMIN' && !!orderMenu?.tabs.length &&
-      this.selectedMenuIds().includes(orderMenu.id);
+    return this.form.controls.role.value === 'ADMIN' && !!orderMenu?.tabs.length;
+  }
+
+  ordersFeatureSelected(): boolean {
+    const orderMenu = this.menuOptions().find((menu) => menu.title.trim().toLowerCase() === 'orders');
+    return !!orderMenu && this.hasMenu(orderMenu.id);
   }
 
   setStatus(value: string): void {
     this.form.controls.active.setValue(value === 'ACTIVE');
   }
 
+  togglePassword(): void {
+    this.showPassword.update((visible) => !visible);
+  }
+
   submit(): void {
     this.form.markAllAsTouched();
-    if (this.form.invalid) return;
+    this.permissionError.set(false);
+    if (this.form.invalid) {
+      this.focusFirstInvalid();
+      this.toast.error('Please correct the highlighted staff details.');
+      return;
+    }
     const value = this.form.getRawValue();
     const password = value.password;
     const current = this.editing();
 
-    if (!current && !STRONG_PASSWORD.test(password)) {
-      this.toast.error('Password needs 8+ characters with uppercase, lowercase, number and symbol.');
-      return;
-    }
-    if (current && password && !STRONG_PASSWORD.test(password)) {
-      this.toast.error('New password needs 8+ characters with uppercase, lowercase, number and symbol.');
-      return;
-    }
     if (!current && this.selectedMenuIds().length === 0) {
+      this.permissionError.set(true);
       this.toast.error('Select at least one allowed feature for this account.');
       return;
     }
@@ -263,6 +282,43 @@ export class TeamComponent implements OnInit {
   private closeAfterSave(): void {
     this.modalOpen.set(false);
     this.editing.set(null);
+  }
+
+  private setPasswordRequired(required: boolean): void {
+    const control = this.form.controls.password;
+    control.setValidators(required
+      ? [Validators.required, Validators.pattern(STRONG_PASSWORD)]
+      : [Validators.pattern(/^$|(?=.{8,72}$)(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/)]);
+    control.updateValueAndValidity({ emitEvent: false });
+  }
+
+  private setEditMenuSelection(staff: Staff): void {
+    if (!this.menuOptions().length) return;
+    if (staff.role === 'Super Admin') {
+      this.selectedMenuIds.set(this.menuOptions().map((menu) => menu.id));
+      this.selectedTabIds.set(this.orderTabs().map((tab) => tab.id));
+      return;
+    }
+    const allowed = new Set(staff.permissions.map((permission) => this.menuKey(permission)));
+    const selected = this.menuOptions()
+      .filter((menu) => allowed.has(this.menuKey(menu.title)))
+      .map((menu) => menu.id);
+    this.selectedMenuIds.set(selected);
+    const orderMenu = this.menuOptions().find((menu) => menu.title.trim().toLowerCase() === 'orders');
+    this.selectedTabIds.set(staff.role === 'Admin' && orderMenu && selected.includes(orderMenu.id)
+      ? orderMenu.tabs.map((tab) => tab.id)
+      : []);
+  }
+
+  private menuKey(value: string): string {
+    return value.toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  private focusFirstInvalid(): void {
+    requestAnimationFrame(() => {
+      const field = this.host.nativeElement.querySelector('[aria-invalid="true"]') as HTMLElement | null;
+      field?.focus();
+    });
   }
 
   private errorMessage(error: unknown, fallback: string): string {

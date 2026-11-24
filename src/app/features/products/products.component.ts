@@ -8,7 +8,7 @@ import { BrandService } from '../../core/services/brand.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { PackingGroupsService } from '../../core/services/packing-groups.service';
 import { ToastService } from '../../core/services/toast.service';
-import { AdminPhotoOrderService, AdminPhotoOrderLine } from '../../core/services/admin-photo-order.service';
+import { AdminPhotoOrderService } from '../../core/services/admin-photo-order.service';
 import { ProductShowcaseService, ShowcaseBanner } from '../../core/services/product-showcase.service';
 import { activeImageSrc, hasActiveImage, isOrderableFor, money, priceFor } from '../../core/utils/pricing.util';
 import { OrderModalComponent } from './order-modal.component';
@@ -18,7 +18,7 @@ import { BasketReviewModalComponent } from '../basket/basket-review-modal.compon
 type StatusFilter = 'All' | 'Active' | 'Archived' | 'Deactivated';
 type ProductSort = 'Relevance' | 'A–Z' | 'MRP: low to high' | 'MRP: high to low';
 
-interface PhotoDraft extends AdminPhotoOrderLine {}
+interface PhotoDraft { name: string; caption: string; src: string; file: File; }
 
 /**
  * Products catalogue. Behaviour mirrors the prototype:
@@ -101,7 +101,7 @@ export class ProductsComponent implements OnInit {
   readonly photoOrderOpen = signal(false);
   readonly photoCustomerId = signal(0);
   readonly photoDraft = signal<PhotoDraft[]>([]);
-  readonly photoRequests = signal(this.photoOrders.list());
+  readonly photoRequests = signal<{ id: number; customerName: string; photos: unknown[]; createdAt: string }[]>([]);
   readonly priceProduct = signal<Product | null>(null);
   readonly priceTiers: PriceTier[] = ['A', 'B', 'C'];
   readonly priceDraft = signal<Record<PriceTier, number>>({ A: 0, B: 0, C: 0 });
@@ -247,7 +247,9 @@ export class ProductsComponent implements OnInit {
 
   ngOnInit(): void {
     this.catalog.loadProducts();
-    if (this.isCustomer() || this.isStaffOrdering()) this.catalog.loadCustomers();
+    // Admin/Super Admin can open the photo-order modal directly from this page.
+    // Load its customer picker here as well, rather than relying on a prior route.
+    if (this.isCustomer() || this.isStaffOrdering() || this.canTakePhotoOrder()) this.catalog.loadCustomers();
     this.brandService.load();
     const query = this.route.snapshot.queryParamMap;
     const startPhotoOrder = query.get('photoOrder') === '1';
@@ -343,7 +345,7 @@ export class ProductsComponent implements OnInit {
   openPhotoOrder(): void {
     this.photoCustomerId.set(0);
     this.photoDraft.set([]);
-    this.photoRequests.set(this.photoOrders.list());
+    this.photoRequests.set([]);
     this.photoOrderOpen.set(true);
   }
 
@@ -366,7 +368,7 @@ export class ProductsComponent implements OnInit {
       if (!file.type.startsWith('image/') || file.size > 8 * 1024 * 1024) continue;
       try {
         const src = await this.compressImage(file, 1280, 1280, 0.76, false);
-        this.photoDraft.update((items) => [...items, { name: file.name, caption: '', src }]);
+        this.photoDraft.update((items) => [...items, { name: file.name, caption: '', src, file }]);
       } catch {
         this.toast.error(`Could not read ${file.name}.`);
       }
@@ -393,15 +395,15 @@ export class ProductsComponent implements OnInit {
       this.toast.error('Add at least one photo and enter a caption for each photo.');
       return;
     }
-    const id = this.photoOrders.create(customer.id, customer.name, photos.map((photo) => ({ ...photo, caption: photo.caption.trim() })));
-    if (!id) {
-      this.toast.error('Could not save the photo order. Browser storage may be full.');
-      return;
-    }
-    this.photoRequests.set(this.photoOrders.list());
-    this.photoDraft.set([]);
-    this.photoCustomerId.set(0);
-    this.toast.success(`Photo order ${id} saved for ${customer.name}.`);
+    this.photoOrders.create(customer.id, photos.map((photo) => photo.file), photos.map((photo) => photo.caption.trim())).subscribe({
+      next: (request) => {
+        this.photoRequests.set([request]);
+        this.photoDraft.set([]);
+        this.photoCustomerId.set(0);
+        this.toast.success(`Photo order #${request.id} submitted for ${customer.name}.`);
+      },
+      error: (error: unknown) => this.toast.error(error instanceof Error ? error.message : 'Could not submit the photo order.'),
+    });
   }
 
   formatPhotoDate(value: string): string {
@@ -565,21 +567,6 @@ export class ProductsComponent implements OnInit {
     this.photoDraftImages.update((images) => images.map((image, i) =>
       i === index ? { ...image, active: !image.active } : image,
     ));
-  }
-
-  async addProductPhotos(event: Event): Promise<void> {
-    const input = event.target as HTMLInputElement;
-    const files = [...(input.files ?? [])];
-    for (const file of files) {
-      if (!file.type.startsWith('image/')) continue;
-      try {
-        const src = await this.readImageFile(file);
-        this.photoDraftImages.update((images) => [...images, { name: file.name, active: true, src }]);
-      } catch {
-        this.toast.error(`Could not read ${file.name}.`);
-      }
-    }
-    input.value = '';
   }
 
   savePhotoChanges(): void {

@@ -8,32 +8,48 @@
     <form [formGroup]="form" (ngSubmit)="save()" novalidate>
       <div class="form-grid">
         <div class="field">
-          <label for="p-name">Product name *</label>
-          <input id="p-name" formControlName="name" placeholder="Aero Lite Runner" />
+          <label for="p-name">Product name <span class="required" aria-hidden="true">*</span></label>
+          <input id="p-name" formControlName="name" placeholder="Aero Lite Runner" maxlength="120"
+            [attr.aria-invalid]="form.controls.name.touched && form.controls.name.invalid"
+            [attr.aria-describedby]="form.controls.name.touched && form.controls.name.invalid ? 'p-name-help p-name-error' : 'p-name-help'" />
+          <span id="p-name-help" class="help">2–120 characters. Letters, numbers, spaces, and common product punctuation only.</span>
           @if (form.controls.name.touched && form.controls.name.invalid) {
-            <small class="err">Name is required.</small>
+            <small id="p-name-error" class="err">Enter a valid product name.</small>
           }
         </div>
         <div class="field">
-          <label for="p-code">Product code *</label>
-          <input id="p-code" formControlName="code" placeholder="BT-106" />
+          <label for="p-code">Product code <span class="required" aria-hidden="true">*</span></label>
+          <input id="p-code" formControlName="code" placeholder="BT-106" maxlength="50" autocapitalize="characters"
+            (blur)="normalizeCode()" [attr.aria-invalid]="form.controls.code.touched && form.controls.code.invalid"
+            [attr.aria-describedby]="form.controls.code.touched && form.controls.code.invalid ? 'p-code-help p-code-error' : 'p-code-help'" />
+          <span id="p-code-help" class="help">2–50 letters, numbers, dots, underscores, hyphens, or slashes.</span>
           @if (form.controls.code.touched && form.controls.code.invalid) {
-            <small class="err">Code is required.</small>
+            <small id="p-code-error" class="err">{{ form.controls.code.hasError('duplicate') ? 'Product code already exists.' : 'Enter a valid unique product code.' }}</small>
           }
         </div>
         <div class="field">
-          <label for="p-brand">Brand *</label>
-          <select id="p-brand" formControlName="brand">
+          <label for="p-brand">Brand <span class="required" aria-hidden="true">*</span></label>
+          <select id="p-brand" formControlName="brand" [attr.aria-invalid]="form.controls.brand.touched && form.controls.brand.invalid"
+            [attr.aria-describedby]="form.controls.brand.touched && form.controls.brand.invalid ? 'p-brand-error' : null">
+            <option value="" disabled>Select brand</option>
             @for (b of brands(); track b.id) {
               <option [value]="b.name">{{ b.name }}</option>
             }
           </select>
+          @if (!brands().length) {
+            <small class="err">Create a brand before adding a product.</small>
+          } @else if (form.controls.brand.touched && form.controls.brand.invalid) {
+            <small id="p-brand-error" class="err">Select a brand.</small>
+          }
         </div>
         <div class="field">
-          <label for="p-mrp">MRP (₹) *</label>
-          <input id="p-mrp" type="number" min="1" formControlName="mrp" />
+          <label for="p-mrp">MRP (₹) <span class="required" aria-hidden="true">*</span></label>
+          <input id="p-mrp" type="number" min="1" max="10000000" step="1" inputmode="numeric" formControlName="mrp"
+            [attr.aria-invalid]="form.controls.mrp.touched && form.controls.mrp.invalid"
+            [attr.aria-describedby]="form.controls.mrp.touched && form.controls.mrp.invalid ? 'p-mrp-help p-mrp-error' : 'p-mrp-help'" />
+          <span id="p-mrp-help" class="help">Whole rupee amount from ₹1 to ₹1,00,00,000.</span>
           @if (form.controls.mrp.touched && form.controls.mrp.invalid) {
-            <small class="err">Enter a valid MRP.</small>
+            <small id="p-mrp-error" class="err">Enter a whole MRP amount within the allowed range.</small>
           }
         </div>
 
@@ -62,24 +78,30 @@
           <div class="price-grid">
             <div class="field">
               <label for="p-a">Category A</label>
-              <input id="p-a" type="number" min="0" formControlName="priceA" />
+              <input id="p-a" type="number" min="0" max="10000000" step="1" inputmode="numeric" formControlName="priceA"
+                [attr.aria-invalid]="categoryPriceInvalid('priceA')" />
             </div>
             <div class="field">
               <label for="p-b">Category B</label>
-              <input id="p-b" type="number" min="0" formControlName="priceB" />
+              <input id="p-b" type="number" min="0" max="10000000" step="1" inputmode="numeric" formControlName="priceB"
+                [attr.aria-invalid]="categoryPriceInvalid('priceB')" />
             </div>
             <div class="field">
               <label for="p-c">Category C</label>
-              <input id="p-c" type="number" min="0" formControlName="priceC" />
+              <input id="p-c" type="number" min="0" max="10000000" step="1" inputmode="numeric" formControlName="priceC"
+                [attr.aria-invalid]="categoryPriceInvalid('priceC')" />
             </div>
           </div>
-          <span class="help">A blank price means that customer category cannot order the product. Individual customer override takes priority.</span>
+          <span class="help">Use 0 when a category cannot order this product. Individual customer override takes priority.</span>
+          @if (form.touched && form.hasError('categoryPriceExceedsMrp')) {
+            <small class="err">A category display price cannot exceed the MRP.</small>
+          }
         </div>
 
         <div class="field full">
           <label for="p-photo">Product photos</label>
-          <input id="p-photo" type="file" accept="image/*" multiple (change)="onFiles($event)" />
-          <span class="help">In this demo, uploaded images are held in the current session only.</span>
+          <input id="p-photo" type="file" accept="image/jpeg,image/png,image/webp" multiple (change)="onFiles($event)" />
+          <span class="help">JPG, PNG, or WebP only; maximum 8 MB each and {{ images().length }}/12 photos. Selected images upload when you save.</span>
           @if (images().length) {
             <div class="photo-list">
               @for (img of images(); track $index) {
@@ -99,6 +121,9 @@
                     <button type="button" class="btn small" (click)="toggleImage($index)">
                       {{ img.active ? 'Archive' : 'Restore' }}
                     </button>
+                  }
+                  @if (!img.id) {
+                    <button type="button" class="btn small danger" (click)="removeNewImage($index)">Remove</button>
                   }
                 </div>
               }

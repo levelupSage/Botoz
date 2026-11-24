@@ -1,12 +1,3 @@
-/* ==========================================================================
-   BOTOZ — Global theme & design tokens
-   Bootstrap 5 is themed to the BOTOZ gold/dark brand, then our custom tokens
-   and component helpers layer on top.
-   ========================================================================== */
-
-// Bootstrap 5.3's Sass entrypoint still uses internal legacy imports, but Sass
-// treats those as dependency imports. Loading the entrypoint as a module avoids
-// deprecation warnings from this application stylesheet.
 @use 'bootstrap/scss/bootstrap';
 
 :root {
@@ -24,6 +15,9 @@
   /* Brand */
   --gold: #c8a45d;
   --gold2: #e4c77f;
+  --primary-ink: #17140d;
+  --focus-tint: rgb(200 164 93 / 14%);
+  --elevation: 0 12px 30px rgb(0 0 0 / 18%);
   --green: #27835f;
   --red: #bf5454;
   --blue: #5279b8;
@@ -53,19 +47,23 @@
 :root[data-theme='light'] {
   color-scheme: light;
 
-  --bg: #f4f5f7;
-  --panel: #ffffff;
-  --panel2: #eceef2;
-  --text: #20232a;
-  --muted: #626875;
-  --line: #d8dbe2;
-  --gold: #b58a3b;
-  --gold2: #8c6927;
+  /* Warm light workspace: cream surfaces, charcoal navigation and BOTOZ gold. */
+  --bg: #f7f4ee;
+  --panel: #fffdf9;
+  --panel2: #f3eee5;
+  --text: #1c1b19;
+  --muted: #7a7063;
+  --line: #e7ded0;
+  --gold: #bc984f;
+  --gold2: #84652e;
+  --primary-ink: #1a1308;
+  --focus-tint: rgb(188 152 79 / 18%);
+  --elevation: 0 12px 28px rgb(58 43 24 / 8%);
   --green: #27835f;
   --red: #b94242;
-  --blue: #5279b8;
-  --sidebar-bg: #ffffff;
-  --sidebar-line: #dfe1e6;
+  --blue: #6b7786;
+  --sidebar-bg: #171717;
+  --sidebar-line: #292929;
 
   --bs-primary: var(--gold);
   --bs-secondary: var(--panel2);
@@ -97,10 +95,7 @@ body {
   font: 14px/1.45 Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
-button,
-input,
-select,
-textarea {
+button, input, select, textarea {
   font: inherit;
 }
 
@@ -113,9 +108,10 @@ a {
 }
 
 h1 {
-  font-size: 27px;
-  letter-spacing: -0.8px;
-  margin: 0 0 5px;
+  font-size: 27px !important;
+  letter-spacing: -0.8px !important;
+  margin: 0 0 5px !important;
+  font-weight: revert;
 }
 
 h2 {
@@ -149,6 +145,24 @@ h3 {
     box-shadow 0.15s ease;
 }
 
+.btn:focus-visible {
+  box-shadow: 0 0 0 3px var(--focus-tint);
+}
+
+.action-icon {
+  display: inline-grid;
+  width: 1.1em;
+  margin-right: 6px;
+  place-items: center;
+  font-size: 1.08em;
+  line-height: 1;
+  vertical-align: -0.08em;
+}
+
+.btn.small .action-icon {
+  margin-right: 4px;
+}
+
 .btn:hover:not(:disabled) {
   border-color: var(--gold);
   background: var(--panel2);
@@ -158,16 +172,18 @@ h3 {
   transform: translateY(1px);
 }
 
-.btn.primary {
-  background: var(--gold);
+.btn.primary,
+.btn.gold {
+  background: linear-gradient(135deg, var(--gold), color-mix(in srgb, var(--gold) 76%, var(--gold2)));
   border-color: var(--gold);
-  color: #17140d;
+  color: var(--primary-ink);
 }
 
-.btn.primary:hover:not(:disabled) {
+.btn.primary:hover:not(:disabled),
+.btn.gold:hover:not(:disabled) {
   background: var(--gold2);
   border-color: var(--gold2);
-  box-shadow: 0 4px 14px rgba(200, 164, 93, 0.25);
+  box-shadow: 0 4px 14px var(--focus-tint);
 }
 
 .btn.dark {
@@ -211,6 +227,19 @@ h3 {
     border-color 0.15s ease,
     box-shadow 0.15s ease,
     transform 0.15s ease;
+}
+
+:root[data-theme='light'] .card {
+  box-shadow: 0 8px 20px rgb(25 42 58 / 7%);
+}
+
+:root[data-theme='light'] .btn:not(.primary):not(.danger) {
+  background: color-mix(in srgb, var(--panel) 60%, #fff);
+}
+
+:root[data-theme='light'] .btn:not(.primary):not(.danger):hover:not(:disabled) {
+  background: var(--panel2);
+  box-shadow: 0 4px 12px rgb(25 42 58 / 10%);
 }
 
 /* ---- Pills ----------------------------------------------------------- */
@@ -258,7 +287,7 @@ input:focus,
 select:focus,
 textarea:focus {
   border-color: var(--gold);
-  box-shadow: 0 0 0 2px #c5a15a22;
+  box-shadow: 0 0 0 2px var(--focus-tint);
 }
 
 button:focus-visible,
@@ -323,15 +352,26 @@ textarea:focus-visible {
     margin-bottom: 17px;
   }
 
-  .page-head > div { min-width: 0; }
-  .page-head h1 { font-size: clamp(22px, 6vw, 27px); }
-  .page-head > button,
-  .page-head > a.btn { align-self: flex-start; }
+  .page-head>div {
+    min-width: 0;
+  }
+
+  .page-head h1 {
+    font-size: clamp(22px, 6vw, 27px);
+  }
+
+  .page-head>button,
+  .page-head>a.btn {
+    align-self: flex-start;
+  }
 }
 
 @media (max-width: 420px) {
-  .page-head > button,
-  .page-head > a.btn { width: 100%; }
+
+  .page-head>button,
+  .page-head>a.btn {
+    width: 100%;
+  }
 }
 
 .subtitle {
@@ -450,7 +490,7 @@ button.card:hover {
   animation: botoz-fade 0.15s ease;
 }
 
-.modal-backdrop > .modal {
+.modal-backdrop>.modal {
   animation: botoz-rise 0.18s ease;
 }
 
@@ -458,6 +498,7 @@ button.card:hover {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -468,6 +509,7 @@ button.card:hover {
     opacity: 0;
     transform: translateY(8px) scale(0.99);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -521,7 +563,21 @@ button.card:hover {
 
 :root[data-theme='light'] app-shell .menu-choice:has(input:checked) {
   border-color: var(--gold);
-  background: #f8f1e2;
+  background: #f4ead6;
+}
+
+/* Light-mode counterparts for the gold-only prototype details. */
+:root[data-theme='light'] .pill.gold,
+:root[data-theme='light'] app-shell .count-pill,
+:root[data-theme='light'] app-shell .feature-chip.full {
+  color: var(--gold2);
+  background: #f4ead7;
+}
+
+:root[data-theme='light'] .notice:not(.error) {
+  color: #72541d;
+  background: #fbf4e4;
+  border-color: #ead8ac;
 }
 
 :root[data-theme='light'] app-shell .field,
@@ -529,13 +585,40 @@ button.card:hover {
   color: var(--muted);
 }
 
+:root[data-theme='light'] app-shell .nav a {
+  color: #f2eee8;
+}
+
+:root[data-theme='light'] app-shell .ico {
+  color: #dbc182;
+  background: transparent;
+}
+
+:root[data-theme='light'] app-shell .nav a:hover {
+  color: #fffaf1;
+  background: #272727;
+}
+
+:root[data-theme='light'] app-shell .nav a.active,
+:root[data-theme='light'] app-shell .nav a.active:hover {
+  color: #1a1308;
+  background: var(--gold);
+  box-shadow: none;
+}
+
+:root[data-theme='light'] app-shell .nav a.active .ico {
+  color: #1b1710;
+  background: transparent;
+}
+
 /* Respect users who prefer reduced motion. */
 @media (prefers-reduced-motion: reduce) {
+
   *,
   .card,
   .btn,
   .modal-backdrop,
-  .modal-backdrop > .modal {
+  .modal-backdrop>.modal {
     animation: none !important;
     transition: none !important;
   }
@@ -560,7 +643,8 @@ button.card:hover {
   place-items: center;
   overflow-y: auto;
   padding: 16px;
-  background: #0009;
+  background: rgb(6 17 31 / 66%);
+  backdrop-filter: blur(4px);
   opacity: 1;
   z-index: 1060 !important;
 }
@@ -571,7 +655,7 @@ button.card:hover {
  * reset those defaults here. This global selector intentionally outranks the
  * Bootstrap `.modal` rules and works with the component-scoped panel styles.
  */
-.modal-backdrop > .modal {
+.modal-backdrop>.modal {
   display: block !important;
   position: relative;
   inset: auto;
@@ -586,7 +670,7 @@ button.card:hover {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 17px;
-  box-shadow: 0 25px 80px #0008;
+  box-shadow: 0 25px 80px #0008, 0 0 0 1px rgb(255 255 255 / 4%);
 }
 
 .modal-head {
@@ -595,6 +679,8 @@ button.card:hover {
   align-items: center;
   gap: 12px;
   margin-bottom: 17px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
 }
 
 .modal-head h2 {
@@ -612,9 +698,22 @@ button.card:hover {
   color: var(--text);
   background: var(--panel2);
   border: 1px solid var(--line);
-  border-radius: 9px;
+  border-radius: 10px;
+  transition: background .15s ease, border-color .15s ease, transform .15s ease;
 }
 
 .icon-btn:hover {
   border-color: var(--gold);
+  background: var(--focus-tint);
+  transform: rotate(4deg);
+}
+
+.modal-actions {
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+:root[data-theme='light'] .modal-backdrop>.modal {
+  background: linear-gradient(145deg, #f7f9fb, var(--panel));
+  box-shadow: 0 28px 80px rgb(14 38 68 / 42%), 0 0 0 1px rgb(255 255 255 / 45%);
 }
