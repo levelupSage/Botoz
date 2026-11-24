@@ -127,15 +127,9 @@ tr:last-child td {
 }
 
 .row-actions {
-<<<<<<< HEAD
-  //display: flex;
-  flex-wrap: wrap;
-  min-width: 360px;
-=======
   display: flex;
   flex-wrap: nowrap;
   min-width: max-content;
->>>>>>> c1e1cdf28f0d3cba757d7128c957fa4c7d595f7e
   gap: 6px;
   white-space: nowrap;
 }
