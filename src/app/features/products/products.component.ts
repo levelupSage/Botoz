@@ -2,7 +2,6 @@ import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } 
 import { ActivatedRoute, Router } from '@angular/router';
 import { finalize } from 'rxjs';
 import { Customer, Product, ProductImage, PriceTier } from '../../core/models';
-import { DataService } from '../../core/data/data.service';
 import { AppStateService } from '../../core/services/app-state.service';
 import { BrandService } from '../../core/services/brand.service';
 import { CatalogService } from '../../core/services/catalog.service';
@@ -36,7 +35,6 @@ export class ProductsComponent implements OnInit {
   private readonly catalog = inject(CatalogService);
   private readonly packingGroups = inject(PackingGroupsService);
   private readonly brandService = inject(BrandService);
-  private readonly data = inject(DataService);
   private readonly appState = inject(AppStateService);
   private readonly toast = inject(ToastService);
   private readonly showcase = inject(ProductShowcaseService);
@@ -73,6 +71,8 @@ export class ProductsComponent implements OnInit {
 
   /** Product edit/add modal state. undefined = closed, null = add, Product = edit. */
   readonly editProduct = signal<Product | null | undefined>(undefined);
+  readonly deactivateProduct = signal<Product | null>(null);
+  readonly productStatusSaving = signal(false);
 
   readonly isCustomer = computed(() => this.role() === 'Customer');
   readonly customerCanOrder = this.appState.customerCanOrder;
@@ -101,6 +101,9 @@ export class ProductsComponent implements OnInit {
   readonly photoOrderOpen = signal(false);
   readonly photoCustomerId = signal(0);
   readonly photoDraft = signal<PhotoDraft[]>([]);
+  readonly photoOrderSubmitted = signal(false);
+  readonly photoOrderSaving = signal(false);
+  readonly photoFilesLoading = signal(false);
   readonly photoRequests = signal<{ id: number; customerName: string; photos: unknown[]; createdAt: string }[]>([]);
   readonly priceProduct = signal<Product | null>(null);
   readonly priceTiers: PriceTier[] = ['A', 'B', 'C'];
@@ -109,7 +112,8 @@ export class ProductsComponent implements OnInit {
   readonly photoProduct = signal<Product | null>(null);
   readonly photoDraftImages = signal<ProductImage[]>([]);
   readonly photosSaving = signal(false);
-  readonly supportsPhotoArchive = this.data.supportsPhotoArchive;
+  readonly photosLoading = signal(false);
+  readonly photosLoadError = signal(false);
 
   readonly pickerResults = computed(() => {
     const term = this.pickerSearch().trim().toLowerCase();
@@ -346,26 +350,31 @@ export class ProductsComponent implements OnInit {
     this.photoCustomerId.set(0);
     this.photoDraft.set([]);
     this.photoRequests.set([]);
+    this.photoOrderSubmitted.set(false);
+    this.catalog.loadCustomers();
     this.photoOrderOpen.set(true);
   }
 
   closePhotoOrder(): void {
+    if (this.photoOrderSaving() || this.photoFilesLoading()) return;
     this.photoOrderOpen.set(false);
   }
 
   async addPhotoOrderFiles(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
+    if (this.photoFilesLoading() || this.photoOrderSaving()) return;
     const files = [...(input.files ?? [])];
-    const invalidFiles = files.filter((file) => !file.type.startsWith('image/') || file.size > 8 * 1024 * 1024);
+    const invalidFiles = files.filter((file) => !file.type.startsWith('image/') || file.size === 0 || file.size > 8 * 1024 * 1024);
     if (invalidFiles.length) {
       this.toast.error('Some files were skipped. Use images up to 8 MB each.');
     }
     if (files.length > 12 - this.photoDraft().length) {
       this.toast.error('A photo order can include up to 12 photos.');
     }
+    this.photoFilesLoading.set(true);
     for (const file of files) {
       if (this.photoDraft().length >= 12) break;
-      if (!file.type.startsWith('image/') || file.size > 8 * 1024 * 1024) continue;
+      if (!file.type.startsWith('image/') || file.size === 0 || file.size > 8 * 1024 * 1024) continue;
       try {
         const src = await this.compressImage(file, 1280, 1280, 0.76, false);
         this.photoDraft.update((items) => [...items, { name: file.name, caption: '', src, file }]);
@@ -374,6 +383,7 @@ export class ProductsComponent implements OnInit {
       }
     }
     input.value = '';
+    this.photoFilesLoading.set(false);
   }
 
   setPhotoCaption(index: number, caption: string): void {
@@ -385,6 +395,8 @@ export class ProductsComponent implements OnInit {
   }
 
   submitPhotoOrder(): void {
+    if (this.photoOrderSaving() || this.photoFilesLoading()) return;
+    this.photoOrderSubmitted.set(true);
     const customer = this.catalog.customerById(this.photoCustomerId());
     const photos = this.photoDraft();
     if (!customer?.active) {
@@ -395,11 +407,15 @@ export class ProductsComponent implements OnInit {
       this.toast.error('Add at least one photo and enter a caption for each photo.');
       return;
     }
-    this.photoOrders.create(customer.id, photos.map((photo) => photo.file), photos.map((photo) => photo.caption.trim())).subscribe({
+    this.photoOrderSaving.set(true);
+    this.photoOrders.create(customer.id, photos.map((photo) => photo.file), photos.map((photo) => photo.caption.trim())).pipe(
+      finalize(() => this.photoOrderSaving.set(false)),
+    ).subscribe({
       next: (request) => {
         this.photoRequests.set([request]);
         this.photoDraft.set([]);
         this.photoCustomerId.set(0);
+        this.photoOrderSubmitted.set(false);
         this.toast.success(`Photo order #${request.id} submitted for ${customer.name}.`);
       },
       error: (error: unknown) => this.toast.error(error instanceof Error ? error.message : 'Could not submit the photo order.'),
@@ -555,39 +571,26 @@ export class ProductsComponent implements OnInit {
 
   openPhotoManager(product: Product): void {
     this.photoProduct.set(product);
-    this.photoDraftImages.set((product.images ?? []).map((image) => ({ ...image })));
-  }
-
-  closePhotoManager(): void {
-    this.photoProduct.set(null);
-  }
-
-  togglePhoto(index: number): void {
-    if (!this.supportsPhotoArchive) return;
-    this.photoDraftImages.update((images) => images.map((image, i) =>
-      i === index ? { ...image, active: !image.active } : image,
-    ));
-  }
-
-  savePhotoChanges(): void {
-    const product = this.photoProduct();
-    if (!product) return;
-    this.photosSaving.set(true);
-    this.catalog.saveProduct({ ...product, images: this.photoDraftImages() }).subscribe({
-      next: () => {
-        this.photosSaving.set(false);
-        this.closePhotoManager();
-        this.toast.success('Product photos updated successfully.');
+    this.photoDraftImages.set([]);
+    this.photosLoadError.set(false);
+    this.photosLoading.set(true);
+    this.catalog.getProduct(product.id).subscribe({
+      next: (details) => {
+        if (this.photoProduct()?.id !== product.id) return;
+        this.photoProduct.set(details);
+        this.photoDraftImages.set(details.images.map((image) => ({ ...image })));
+        this.photosLoading.set(false);
       },
       error: () => {
-        this.photosSaving.set(false);
-        this.toast.error('Could not save product photos.');
+        if (this.photoProduct()?.id !== product.id) return;
+        this.photosLoading.set(false);
+        this.photosLoadError.set(true);
       },
     });
   }
 
-  removeDraftPhoto(index: number): void {
-    this.photoDraftImages.update((images) => images.filter((_, i) => i !== index));
+  closePhotoManager(): void {
+    this.photoProduct.set(null);
   }
 
   closeEdit(): void {
@@ -607,18 +610,47 @@ export class ProductsComponent implements OnInit {
   }
 
   toggleActive(product: Product): void {
-    this.catalog.setProductActive(product.id, !product.active).subscribe({
-      next: (saved) => this.toast.success(saved.active ? 'Product activated successfully.' : 'Product deactivated successfully.'),
+    if (this.productStatusSaving()) return;
+    if (product.active) {
+      this.deactivateProduct.set(product);
+      return;
+    }
+    this.updateProductActive(product);
+  }
+
+  closeDeactivate(): void {
+    if (!this.productStatusSaving()) this.deactivateProduct.set(null);
+  }
+
+  confirmDeactivate(): void {
+    const product = this.deactivateProduct();
+    if (product && !this.productStatusSaving()) this.updateProductActive(product);
+  }
+
+  private updateProductActive(product: Product): void {
+    this.productStatusSaving.set(true);
+    this.catalog.setProductActive(product.id, !product.active).pipe(
+      finalize(() => this.productStatusSaving.set(false)),
+    ).subscribe({
+      next: (saved) => {
+        this.deactivateProduct.set(null);
+        this.toast.success(saved.active ? 'Product activated successfully.' : 'Product deactivated successfully.');
+      },
       error: () => this.toast.error('Could not update product status.'),
     });
   }
 
   deleteProductPhoto(product: Product, photo: ProductImage): void {
     if (!photo.id || !window.confirm('Delete photo "' + photo.name + '" from ' + product.name + '? This cannot be undone.')) return;
-    this.catalog.deleteProductPhoto(product.id, photo.id).subscribe({
-      next: (saved) => {
-        this.photoProduct.set(saved);
-        this.photoDraftImages.set((saved.images ?? []).map((image) => ({ ...image })));
+    this.photosSaving.set(true);
+    this.catalog.deleteProductPhoto(product.id, photo.id).pipe(
+      finalize(() => this.photosSaving.set(false)),
+    ).subscribe({
+      next: () => {
+        if (this.photoProduct()?.id === product.id) {
+          this.photoDraftImages.update((images) => images.filter((image) => image.id !== photo.id));
+          this.photoProduct.update((current) => current ? { ...current, images: current.images.filter((image) => image.id !== photo.id) } : current);
+        }
         this.toast.success('Product photo deleted successfully.');
       },
       error: () => this.toast.error('Could not delete the product photo.'),

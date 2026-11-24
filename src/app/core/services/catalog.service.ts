@@ -126,9 +126,15 @@ export class CatalogService {
     );
   }
 
-  deleteProductPhoto(productId: number, photoId: number): Observable<Product> {
+  getProduct(id: number): Observable<Product> {
+    return this.data.getProduct(id).pipe(tap((product) => this.mergeInto(this._products, product)));
+  }
+
+  deleteProductPhoto(productId: number, photoId: number): Observable<void> {
     return this.data.deleteProductPhoto(productId, photoId).pipe(
-      tap((saved) => this.mergeInto(this._products, saved)),
+      tap(() => this._products.update((products) => products.map((product) => product.id === productId
+        ? { ...product, images: product.images.filter((image) => image.id !== photoId) }
+        : product))),
     );
   }
 

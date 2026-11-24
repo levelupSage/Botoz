@@ -19,7 +19,7 @@
       <button class="btn" (click)="openPicker()"><span class="action-icon" aria-hidden="true">＋</span>Create order</button>
     }
     @if (canManage() && !isStaffOrdering()) {
-      @if (canTakePhotoOrder()) { <button class="btn" (click)="openPhotoOrder()"><span class="action-icon" aria-hidden="true">▧</span>Take photo order</button> }
+      @if (canTakePhotoOrder()) { <button class="btn" (click)="openPhotoOrder()"><svg class="photo-order-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7h3l1.5-2h7L17 7h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"/><circle cx="12" cy="13" r="3.5"/></svg>Take photo order</button> }
       <button class="btn" (click)="openShowcase()"><span class="action-icon" aria-hidden="true">★</span>Fast-selling &amp; schemes</button>
       @if (canCreateOrders()) { <button class="btn" (click)="openPicker()"><span class="action-icon" aria-hidden="true">＋</span>Create order</button> }
       @if (canManageProducts()) { <button class="btn primary" (click)="openAdd()"><span class="action-icon" aria-hidden="true">＋</span>Add product</button> }
@@ -196,10 +196,10 @@
               @if (canManagePrices()) { <button class="btn small" (click)="openPriceManager(p)">A/B/C prices</button> }
               @if (canManagePhotos()) { <button class="btn small" (click)="openPhotoManager(p)">Photos ({{ photoCount(p) }})</button> }
               @if (canManageProducts()) {
-                <button class="btn small" [class.danger]="!p.archived" (click)="toggleArchive(p)">
+                <button class="btn small info-blue" (click)="toggleArchive(p)">
                   {{ p.archived ? 'Restore' : 'Archive' }}
                 </button>
-                <button class="btn small" [class.danger]="p.active" [disabled]="!!p.archived" (click)="toggleActive(p)">
+                <button class="btn small" [class.danger]="p.active" [disabled]="!!p.archived || productStatusSaving()" (click)="toggleActive(p)">
                   {{ p.active ? 'Deactivate' : 'Activate' }}
                 </button>
               }
@@ -210,6 +210,27 @@
     } @empty {
       <div class="card empty">No products match this filter.</div>
     }
+  </div>
+}
+
+@if (deactivateProduct(); as product) {
+  <div class="modal-backdrop" (click)="closeDeactivate()">
+    <section class="modal deactivate-modal" role="dialog" aria-modal="true" aria-labelledby="deactivate-product-title" aria-describedby="deactivate-product-description" (click)="$event.stopPropagation()" (keydown.escape)="closeDeactivate()">
+      <div class="modal-head">
+        <h2 id="deactivate-product-title">Deactivate product?</h2>
+        <button type="button" class="icon-btn" [disabled]="productStatusSaving()" (click)="closeDeactivate()" aria-label="Close">×</button>
+      </div>
+      <div class="deactivate-warning" id="deactivate-product-description">
+        <strong>Do you really want to deactivate this product?</strong>
+        <p><strong>{{ product.name }} ({{ product.code }})</strong> · {{ product.brand }}</p>
+        <p>This product will no longer be available for new orders while it is deactivated.</p>
+      </div>
+      <p class="deactivate-help">Existing orders, photos, prices, packaging and the separate Archive / Restore setting will be preserved.</p>
+      <div class="modal-actions">
+        <button type="button" class="btn" [disabled]="productStatusSaving()" (click)="closeDeactivate()">Cancel</button>
+        <button type="button" class="btn deactivate-confirm" [disabled]="productStatusSaving()" (click)="confirmDeactivate()">{{ productStatusSaving() ? 'Deactivating...' : 'Yes, deactivate' }}</button>
+      </div>
+    </section>
   </div>
 }
 
@@ -285,20 +306,27 @@
   <div class="modal-backdrop" (click)="closePhotoManager()">
     <div class="modal photo-manager-modal" (click)="$event.stopPropagation()">
       <div class="modal-head"><h2>Manage product photos</h2><button class="icon-btn" (click)="closePhotoManager()" aria-label="Close">×</button></div>
-      <p class="photo-manager-description">{{ product.name }} · If all photos are archived, this item is hidden from the customer catalogue. Historical orders remain intact.</p>
-      @if (!supportsPhotoArchive) { <p class="photo-manager-api-note">Photo archive/restore will be enabled when the connected API supports it.</p> }
+      <p class="photo-manager-description">{{ product.name }} · Manage this product's photos.</p>
       <div class="photo-manager-list">
+        @if (photosLoading()) {
+          <div class="empty">Loading photos...</div>
+        } @else if (photosLoadError()) {
+          <div class="empty">Could not load photos. <button type="button" class="btn small" (click)="openPhotoManager(product)">Retry</button></div>
+        } @else {
         @for (photo of photoDraftImages(); track $index) {
           <div class="photo-manager-item" [class.archived]="!photo.active">
             <img [src]="photo.src" [alt]="photo.name" />
             <div class="photo-manager-meta"><strong>{{ photo.name }}</strong><span>{{ photo.active ? 'Active photo' : 'Archived photo' }}</span></div>
-            <button type="button" class="btn small" [disabled]="!supportsPhotoArchive || photosSaving()" (click)="togglePhoto($index)">{{ photo.active ? 'Archive' : 'Restore' }}</button>
+            <div class="photo-manager-row-actions">
+              <button type="button" class="btn small danger" [disabled]="!photo.id || photosSaving()" (click)="deleteProductPhoto(product, photo)" [title]="!photo.id ? 'Photo ID is unavailable' : ''">Delete</button>
+            </div>
           </div>
         } @empty {
           <div class="empty">No photos added yet.</div>
         }
+        }
       </div>
-      <div class="modal-actions"><button class="btn" [disabled]="photosSaving()" (click)="savePhotoChanges()">{{ photosSaving() ? 'Saving...' : 'Done' }}</button></div>
+      <div class="modal-actions"><button class="btn" [disabled]="photosSaving()" (click)="closePhotoManager()">Done</button></div>
     </div>
   </div>
 }
@@ -329,15 +357,15 @@
 @if (photoOrderOpen()) {
   <div class="modal-backdrop" (click)="closePhotoOrder()">
     <div class="modal photo-order-modal" (click)="$event.stopPropagation()">
-      <div class="photo-order-prototype-head"><h2>Take Photo Order · Admin</h2><button class="icon-btn" (click)="closePhotoOrder()" aria-label="Close">×</button></div>
+      <div class="photo-order-prototype-head"><h2>Take Photo Order · Admin</h2><button class="icon-btn" [disabled]="photoOrderSaving() || photoFilesLoading()" (click)="closePhotoOrder()" aria-label="Close">×</button></div>
       <div class="notice photo-order-notice">Take pictures for a selected party. These pictures will enter <strong>Picture Orders → Incoming picture requests</strong> and appear in that customer's Orders screen. Admin can review and match them to products.</div>
-      <label class="field photo-customer-field"><span>Choose customer / party *</span><select [value]="photoCustomerId()" (change)="photoCustomerId.set(+$any($event.target).value)"><option value="0">Choose customer</option>@for (customer of orderableCustomers(); track customer.id) {<option [value]="customer.id">{{ customer.name }} · {{ customer.code }}</option>}</select></label>
-      <section class="photo-capture-panel"><h3>Take or add product pictures</h3><div class="photo-capture-actions"><button type="button" class="btn primary" (click)="cameraInput.click()">📷 Take Photo</button><button type="button" class="btn" (click)="uploadInput.click()">＋ Upload Photos</button></div><input #cameraInput class="photo-file-input" type="file" accept="image/*" capture="environment" (change)="addPhotoOrderFiles($event)" /><input #uploadInput class="photo-file-input" type="file" accept="image/*" multiple (change)="addPhotoOrderFiles($event)" /><small class="muted">Camera opens on supported phones; file picker opens on computers. Up to 12 captioned photos per request.</small></section>
+      <div class="field photo-customer-field"><label for="photo-order-customer">Choose customer / party <span class="photo-required">*</span></label><select id="photo-order-customer" [value]="photoCustomerId()" [disabled]="photoOrderSaving() || customersLoading()" [attr.aria-invalid]="photoOrderSubmitted() && !photoCustomerId()" (change)="photoCustomerId.set(+$any($event.target).value)"><option value="0">{{ customersLoading() ? 'Loading customers...' : 'Choose customer' }}</option>@for (customer of orderableCustomers(); track customer.id) {<option [value]="customer.id">{{ customer.name }} · {{ customer.code }}</option>}</select>@if (customersError()) { <small class="photo-error">Could not load customers. <button type="button" class="btn small" (click)="retryCustomersLoad()">Retry</button></small> } @else if (photoOrderSubmitted() && !photoCustomerId()) { <small class="photo-error">Choose an active customer.</small> }</div>
+      <section class="photo-capture-panel"><h3>Take or add product pictures</h3><div class="photo-capture-actions"><button type="button" class="btn primary" [disabled]="photoOrderSaving() || photoFilesLoading()" (click)="cameraInput.click()">📷 Take Photo</button><button type="button" class="btn" [disabled]="photoOrderSaving() || photoFilesLoading()" (click)="uploadInput.click()">＋ Upload Photos</button></div><input #cameraInput class="photo-file-input" type="file" accept="image/*" capture="environment" (change)="addPhotoOrderFiles($event)" /><input #uploadInput class="photo-file-input" type="file" accept="image/*" multiple (change)="addPhotoOrderFiles($event)" /><small class="muted">Camera opens on supported phones; file picker opens on computers. Up to 12 photos, maximum 8 MB each.</small>@if (photoFilesLoading()) { <small class="muted">Preparing photos...</small> } @else if (photoOrderSubmitted() && !photoDraft().length) { <small class="photo-error">Add at least one photo.</small> }</section>
       @if (photoDraft().length) {
         <h3 class="photo-selected-title">{{ photoDraft().length }} photo(s) selected</h3>
         <div class="photo-draft-list">
           @for (photo of photoDraft(); track $index) {
-            <div class="photo-draft-item"><img [src]="photo.src" [alt]="photo.caption || photo.name" /><div class="field"><label [attr.for]="'photo-caption-' + $index">Caption *</label><input [id]="'photo-caption-' + $index" [value]="photo.caption" (input)="setPhotoCaption($index, $any($event.target).value)" placeholder="Product name or details" /></div><button class="btn small danger" (click)="removePhotoDraft($index)">Remove</button></div>
+            <div class="photo-draft-item"><img [src]="photo.src" [alt]="photo.caption || photo.name" /><div class="field"><label [attr.for]="'photo-caption-' + $index">Caption <span class="photo-required">*</span></label><input [id]="'photo-caption-' + $index" [value]="photo.caption" [disabled]="photoOrderSaving()" [attr.aria-invalid]="photoOrderSubmitted() && !photo.caption.trim()" (input)="setPhotoCaption($index, $any($event.target).value)" placeholder="Product name or details" />@if (photoOrderSubmitted() && !photo.caption.trim()) { <small class="photo-error">Enter a caption for this photo.</small> }</div><button class="btn small danger" [disabled]="photoOrderSaving() || photoFilesLoading()" (click)="removePhotoDraft($index)">Remove</button></div>
           }
         </div>
       } @else { <div class="empty">No photos yet. Take or upload a product picture above.</div> }
@@ -349,7 +377,7 @@
           }
         </details>
       }
-      <div class="modal-actions"><button class="btn" (click)="closePhotoOrder()">Cancel</button><button class="btn primary" [disabled]="!photoDraft().length || !photoCustomerId()" (click)="submitPhotoOrder()">Send to Photo Orders</button></div>
+      <div class="modal-actions"><button class="btn" [disabled]="photoOrderSaving() || photoFilesLoading()" (click)="closePhotoOrder()">Cancel</button><button class="btn primary" [disabled]="photoOrderSaving() || photoFilesLoading() || customersLoading()" (click)="submitPhotoOrder()">{{ photoOrderSaving() ? 'Sending...' : 'Send to Photo Orders' }}</button></div>
     </div>
   </div>
 }

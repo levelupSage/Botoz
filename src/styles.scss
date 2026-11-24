@@ -21,6 +21,10 @@
   --green: #27835f;
   --red: #bf5454;
   --blue: #5279b8;
+  --button-info-text: #a9ceff;
+  --button-info-border: #426ba5;
+  --button-info-bg: #1c304a;
+  --button-info-hover: #29486c;
 
   // Keep Bootstrap components aligned with the BOTOZ theme.
   --bs-primary: var(--gold);
@@ -62,6 +66,10 @@
   --green: #27835f;
   --red: #b94242;
   --blue: #6b7786;
+  --button-info-text: #174f8a;
+  --button-info-border: #a2c3e8;
+  --button-info-bg: #edf5ff;
+  --button-info-hover: #dcecff;
   --sidebar-bg: #171717;
   --sidebar-line: #292929;
 
@@ -211,6 +219,19 @@ h3 {
   background: rgba(191, 84, 84, 0.12);
 }
 
+/* Reusable blue action, for example: class="btn small info-blue". */
+.btn.info-blue {
+  color: var(--button-info-text);
+  border-color: var(--button-info-border);
+  background: var(--button-info-bg);
+}
+
+.btn.info-blue:hover:not(:disabled) {
+  color: var(--button-info-text);
+  border-color: var(--button-info-border);
+  background: var(--button-info-hover);
+}
+
 .btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
@@ -233,11 +254,11 @@ h3 {
   box-shadow: 0 8px 20px rgb(25 42 58 / 7%);
 }
 
-:root[data-theme='light'] .btn:not(.primary):not(.danger) {
+:root[data-theme='light'] .btn:not(.primary):not(.danger):not(.info-blue) {
   background: color-mix(in srgb, var(--panel) 60%, #fff);
 }
 
-:root[data-theme='light'] .btn:not(.primary):not(.danger):hover:not(:disabled) {
+:root[data-theme='light'] .btn:not(.primary):not(.danger):not(.info-blue):hover:not(:disabled) {
   background: var(--panel2);
   box-shadow: 0 4px 12px rgb(25 42 58 / 10%);
 }

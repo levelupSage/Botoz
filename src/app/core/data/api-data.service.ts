@@ -226,6 +226,12 @@ export class ApiDataService extends DataService {
     );
   }
 
+  getProduct(id: number): Observable<Product> {
+    return this.request<Json>(this.http.get(`${this.baseUrl}/api/admin/products/${id}`)).pipe(
+      map((body) => this.toProduct(body)),
+    );
+  }
+
   getPackingGroups(): Observable<ProductSizeGroup[]> {
     return this.request<unknown>(this.http.get(`${this.baseUrl}/api/admin/packing-groups`)).pipe(
       map((value) => {
@@ -324,10 +330,10 @@ export class ApiDataService extends DataService {
     ).pipe(map((body) => this.toProduct(body)));
   }
 
-  deleteProductPhoto(productId: number, photoId: number): Observable<Product> {
-    return this.request<Json>(
+  deleteProductPhoto(productId: number, photoId: number): Observable<void> {
+    return this.request<unknown>(
       this.http.delete(`${this.baseUrl}/api/admin/products/${productId}/photos/${photoId}`),
-    ).pipe(map((body) => this.toProduct(body)));
+    ).pipe(map(() => undefined));
   }
 
   // ---- Customers ------------------------------------------------------

@@ -50,6 +50,7 @@ export abstract class DataService {
 
   // ---- Products -------------------------------------------------------
   abstract getProducts(): Observable<Product[]>;
+  abstract getProduct(id: number): Observable<Product>;
   abstract getPackingGroups(): Observable<ProductSizeGroup[]>;
   abstract createPackingGroup(name: string, sizes: number[]): Observable<ProductSizeGroup>;
   abstract updatePackingGroup(id: number, name: string, sizes: number[]): Observable<ProductSizeGroup>;
@@ -57,7 +58,7 @@ export abstract class DataService {
   abstract saveProduct(product: Product): Observable<Product>;
   abstract setProductActive(id: number, active: boolean): Observable<Product>;
   abstract setProductArchived(id: number, archived: boolean): Observable<Product>;
-  abstract deleteProductPhoto(productId: number, photoId: number): Observable<Product>;
+  abstract deleteProductPhoto(productId: number, photoId: number): Observable<void>;
 
   // ---- Customers ------------------------------------------------------
   abstract getCustomers(): Observable<Customer[]>;

@@ -1,12 +1,12 @@
 <div class="page-head">
   <div>
     <h1>Picture Orders</h1>
-    <div class="subtitle">Live API requests. Review photos, hold unclear work in Pending, then release a regular order to a Backend User.</div>
+    <div class="subtitle">Review customer photo requests first. Create an order from a photo or move it to Pending Picture Orders for later assignment.</div>
   </div>
   <div class="head-actions">
     <span class="pill gold">{{ newCount() }} awaiting review</span>
     @if (canManage()) {
-      <button class="btn gold" (click)="startPhotoOrder()"><span class="action-icon" aria-hidden="true">▧</span>Create Photo Order</button>
+      <button class="btn gold" (click)="startPhotoOrder()"><svg class="photo-order-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7h3l1.5-2h7L17 7h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"/><circle cx="12" cy="13" r="3.5"/></svg>Create Photo Order</button>
     }
   </div>
 </div>
@@ -16,109 +16,253 @@
   <button class="btn small" (click)="refresh()" [disabled]="loading()">{{ loading() ? 'Loading…' : 'Search' }}</button>
 </div>
 
+@if (loadError()) {
+  <div class="notice error">{{ loadError() }} <button type="button" class="btn small" (click)="refresh()">Retry</button></div>
+}
+
 <section class="card queue-card">
   <div class="card-head">
-    <div><h2>Incoming picture requests</h2><div class="muted">Each photo must be reviewed before it can become regular order work.</div></div>
-    <span class="pill blue">{{ newCount() }} incoming</span>
+    <div><h2>Incoming picture requests</h2><div class="muted">Customer uploads are requests, not live staff orders.</div></div>
+    <span class="pill blue">{{ newCount() }} new</span>
   </div>
   @if (incoming().length) {
-    <div class="table-wrap"><table><thead><tr><th>REQUEST</th><th>CUSTOMER / DATE</th><th>PHOTOS</th><th>THUMBNAILS</th><th></th></tr></thead><tbody>
+    <div class="table-wrap"><table><thead><tr><th>REQUEST</th><th>CUSTOMER / DATE</th><th>PHOTOS</th><th>THUMBNAILS · CLICK TO ENLARGE</th><th>REVIEW</th><th></th></tr></thead><tbody>
       @for (request of incoming(); track request.id) {
         <tr>
           <td><strong>#{{ request.id }}</strong><div class="muted">{{ request.customerCode }}</div></td>
           <td><strong>{{ request.customerName }}</strong><div class="muted">{{ formatDate(request.createdAt) }}</div></td>
           <td>{{ request.photos.length }}</td>
           <td><div class="thumbs">@for (photo of request.photos; track photo.id) { <button class="thumb" type="button" (click)="openPreview(photo.imageUrl)"><img [src]="photo.imageUrl" [alt]="photo.caption" /></button> }</div></td>
+          <td><span class="pill blue">{{ reviewedPhotos(request) }} / {{ request.photos.length }} reviewed</span></td>
           <td class="row-actions"><button class="btn small" (click)="openDetails(request)">Details</button>@if (canManage()) { <button class="btn small primary" (click)="openReview(request)">Review pictures</button> }</td>
         </tr>
       }
     </tbody></table></div>
-  } @else { <div class="empty">{{ loading() ? 'Loading incoming requests…' : 'No incoming picture requests.' }}</div> }
+  } @else { <div class="empty">{{ loading() ? 'Loading incoming requests…' : loadError() ? 'Incoming requests could not be loaded.' : 'No incoming picture requests.' }}</div> }
 </section>
 
 <section class="card queue-card">
   <div class="card-head">
-    <div><h2>Pending Picture Orders</h2><div class="muted">Photos that need fulfilment work stay here until an Admin releases them.</div></div>
-    <span class="pill">{{ reviewedCount() }} pending</span>
+    <div><h2>Pending Picture Orders</h2><div class="muted">Pending pictures stay here until an Admin assigns them to a Backend User and creates an order.</div></div>
+    <span class="pill blue">{{ reviewedCount() }} pending</span>
   </div>
   @if (pending().length) {
-    <div class="table-wrap"><table><thead><tr><th>REQUEST</th><th>CUSTOMER / DATE</th><th>PHOTOS</th><th>THUMBNAILS</th><th></th></tr></thead><tbody>
+    <div class="table-wrap"><table><thead><tr><th>PENDING ORDER</th><th>CUSTOMER / DATE</th><th>PHOTOS</th><th>THUMBNAILS · CLICK TO ENLARGE</th><th>STATUS</th><th>{{ canManage() ? 'ASSIGN TO CREATE ORDER' : 'ACTIONS' }}</th></tr></thead><tbody>
       @for (request of pending(); track request.id) {
         <tr>
           <td><strong>#{{ request.id }}</strong><div class="muted">{{ request.customerCode }}</div></td>
           <td><strong>{{ request.customerName }}</strong><div class="muted">{{ formatDate(request.createdAt) }}</div></td>
           <td>{{ request.photos.length }}</td>
           <td><div class="thumbs">@for (photo of request.photos; track photo.id) { <button class="thumb" type="button" (click)="openPreview(photo.imageUrl)"><img [src]="photo.imageUrl" [alt]="photo.caption" /></button> }</div></td>
-          <td class="row-actions"><button class="btn small" (click)="openDetails(request)">Details</button>@if (canManage()) { <button class="btn small primary" (click)="openAssignment(request)">Release to Backend User</button> }</td>
+          <td><span class="pill blue">{{ photoStatusLabel(request.status) }}</span></td>
+          @if (canManage()) {
+            <td class="pending-assignment">
+              <div class="pending-assignment-controls">
+                <select [attr.aria-label]="'Backend User for picture order ' + request.id" [value]="pendingAssignees()[request.id] ?? 0" [disabled]="usersLoading() || usersError() || saving()" (change)="selectPendingAssignee(request.id, +$any($event.target).value)">
+                  <option value="0">{{ usersLoading() ? 'Loading Backend Users...' : 'Choose Backend User...' }}</option>
+                  @for (user of backendUsers(); track user.id) { <option [value]="user.id">{{ user.fullName }} · {{ user.loginId }}</option> }
+                </select>
+                <button type="button" class="btn small primary" [disabled]="usersLoading() || usersError() || saving() || !pendingAssignees()[request.id]" (click)="openAssignment(request)">Assign</button>
+                <button type="button" class="btn small" (click)="openDetails(request)">Open</button>
+              </div>
+              @if (usersError()) { <small class="validation">Could not load Backend Users. <button type="button" class="btn small" (click)="loadBackendUsers()">Retry</button></small> }
+              @else if (usersLoaded() && !backendUsers().length) { <small class="muted">No Backend Users available.</small> }
+              @else { <small class="muted">Select products, sizes and quantities before assigning.</small> }
+            </td>
+          } @else {
+            <td class="row-actions"><button type="button" class="btn small" (click)="openDetails(request)">Open</button></td>
+          }
         </tr>
       }
     </tbody></table></div>
-  } @else { <div class="empty">{{ loading() ? 'Loading pending requests…' : 'No pending picture orders.' }}</div> }
+  } @else { <div class="empty">{{ loading() ? 'Loading pending requests…' : loadError() ? 'Pending requests could not be loaded.' : 'No pending picture orders.' }}</div> }
 </section>
 
 <details class="processed">
   <summary>Processed picture requests ({{ doneCount() }})</summary>
   @if (processed().length) {
-    <div class="processed-list">
+    <div class="card processed-card"><div class="table-wrap"><table>
+      <thead><tr><th>REQUEST</th><th>CUSTOMER</th><th>PHOTOS</th><th>THUMBNAILS</th><th>RESULT</th><th></th></tr></thead><tbody>
       @for (request of processed(); track request.id) {
-        <div><span><strong>#{{ request.id }}</strong> · {{ request.customerName }} · {{ request.photos.length }} photo(s)</span>@if (request.orderNumber) { <span class="pill gold">Order {{ request.orderNumber }}</span> }<button class="btn small" (click)="openDetails(request)">Details</button></div>
+        <tr>
+          <td><strong>#{{ request.id }}</strong></td>
+          <td>{{ request.customerName }}</td>
+          <td>{{ request.photos.length }}</td>
+          <td><div class="thumbs">@for (photo of request.photos; track photo.id) { <button type="button" class="thumb" (click)="openPreview(photo.imageUrl)" [attr.aria-label]="'Enlarge ' + (photo.caption || 'photo')"><img [src]="photo.imageUrl" [alt]="photo.caption || 'Picture order photo'" /></button> }</div></td>
+          <td><span class="pill gold">{{ photoStatusLabel(request.status) }}</span>@if (request.orderNumber) { <div class="muted">Order {{ request.orderNumber }}</div> }</td>
+          <td class="row-actions"><button type="button" class="btn small" (click)="openDetails(request)">Details</button><button type="button" class="btn small" (click)="processedRequest.set(request)">View request</button></td>
+        </tr>
       }
-    </div>
-  } @else { <p class="muted">No processed picture requests.</p> }
+      </tbody></table></div></div>
+  } @else { <p class="muted">{{ loading() ? 'Loading processed requests…' : loadError() ? 'Processed requests could not be loaded.' : 'No processed picture requests.' }}</p> }
 </details>
+<p class="picture-orders-help muted">Photo requests and regular orders are separate queues. Assigned picture orders create regular orders for Backend Users.</p>
 
 @if (previewSrc(); as src) {
-  <div class="modal-backdrop" (click)="closePreview()"><div class="preview-modal" (click)="$event.stopPropagation()"><button class="icon-btn" (click)="closePreview()" aria-label="Close">×</button><img [src]="src" alt="Photo order preview" /></div></div>
+  <div class="modal-backdrop preview-backdrop" (click)="closePreview()"><div class="preview-modal" (click)="$event.stopPropagation()"><button class="icon-btn" (click)="closePreview()" aria-label="Close">×</button><img [src]="src" alt="Photo order preview" /></div></div>
+}
+
+@if (processedRequest(); as request) {
+  <div class="modal-backdrop" (click)="processedRequest.set(null)"><section class="modal review-modal" role="dialog" aria-modal="true" aria-labelledby="processed-picture-title" (click)="$event.stopPropagation()">
+    <header class="modal-head"><h2 id="processed-picture-title">Photo order review · #{{ request.id }}</h2><button class="icon-btn" (click)="processedRequest.set(null)" aria-label="Close">×</button></header>
+    <div class="review-summary">
+      <div><span>Customer / party</span><strong>{{ request.customerName }}</strong><small>{{ request.customerCode }}</small></div>
+      <div><span>Request status</span><strong><span class="pill gold">{{ photoStatusLabel(request.status) }}</span></strong></div>
+      <div><span>Photo request</span><strong>#{{ request.id }}</strong></div>
+      <div><span>Photos</span><strong>{{ request.photos.length }}</strong></div>
+    </div>
+    <div class="notice review-notice">Review the recorded status for each photo. Select a photo to enlarge it.</div>
+    <div class="review-photo-grid">
+      @for (photo of request.photos; track photo.id) {
+        <article class="review-photo-card">
+          <button type="button" class="review-photo-image" (click)="openPreview(photo.imageUrl)" [attr.aria-label]="'Enlarge ' + (photo.caption || 'photo')"><img [src]="photo.imageUrl" [alt]="photo.caption || 'Picture order photo'" /></button>
+          <div class="review-photo-content">
+            <strong>{{ photo.caption || 'No caption' }}</strong>
+            <div class="review-photo-actions"><span class="pill blue">{{ photoStatusLabel(photo.status) }}</span>
+              @if (photo.orderNumber || photo.orderId) { <span class="pill gold">Order {{ photo.orderNumber || ('#' + photo.orderId) }}</span> }
+              @if (pendingForPhoto(request, photo.id)) { <button type="button" class="btn small" (click)="openPendingFromProcessed(request, photo.id)">View pending</button> }
+            </div>
+          </div>
+        </article>
+      } @empty { <div class="empty">No photos found for this request.</div> }
+    </div>
+    <footer class="modal-actions review-footer"><button type="button" class="btn" (click)="processedRequest.set(null)">Close</button></footer>
+  </section></div>
 }
 
 @if (detailRequest(); as request) {
-  <div class="modal-backdrop" (click)="closeDetails()"><section class="modal detail-modal" (click)="$event.stopPropagation()">
-    <header class="modal-head"><div><h2>Picture Order #{{ request.id }}</h2><div class="muted">{{ request.customerName }} · {{ request.customerCode }}</div></div><button class="icon-btn" (click)="closeDetails()" aria-label="Close">×</button></header>
-    <div class="request-summary"><div><span>Request status</span><strong class="pill">{{ photoStatusLabel(request.status) }}</strong></div><div><span>Created</span><strong>{{ formatDate(request.createdAt) }}</strong></div><div><span>Reviewed</span><strong>{{ request.reviewedAt ? formatDate(request.reviewedAt) : 'Not reviewed' }}</strong></div><div><span>Released to</span><strong>{{ request.assignedToName || 'Not released' }}</strong></div>@if (request.orderNumber || request.orderId) { <div><span>Regular order</span><strong>{{ request.orderNumber || ('#' + request.orderId) }}</strong></div> }</div>
+  <div class="modal-backdrop" (click)="closeDetails()"><section class="modal detail-modal" [class.pending-detail-modal]="request.status === 'PENDING'" role="dialog" aria-modal="true" aria-labelledby="picture-detail-title" (click)="$event.stopPropagation()" (keydown.escape)="closeDetails()">
+    <header class="modal-head"><div><h2 id="picture-detail-title">{{ request.status === 'PENDING' ? 'Pending picture order ·' : 'Picture Order' }} #{{ request.id }}</h2>@if (request.status !== 'PENDING') { <div class="muted">{{ request.customerName }} · {{ request.customerCode }}</div> }</div><button type="button" class="icon-btn" (click)="closeDetails()" aria-label="Close">×</button></header>
+    @if (request.status === 'PENDING') {
+      <div class="review-summary pending-detail-summary">
+        <div><span>Customer</span><strong>{{ request.customerName }}</strong><small>{{ request.customerCode }}</small></div>
+        <div><span>Status</span><strong><span class="pill blue">{{ photoStatusLabel(request.status) }}</span></strong></div>
+        <div><span>Date</span><strong>{{ formatDate(request.createdAt) }}</strong></div>
+        <div><span>Assigned to</span><strong>{{ request.assignedToName || (request.assignedToId ? 'User #' + request.assignedToId : 'Unassigned') }}</strong></div>
+      </div>
+      <div class="notice pending-detail-notice">Click any picture to enlarge it. Each photo and its caption is a separate work line.</div>
+    } @else {
+      <div class="request-summary"><div><span>Request status</span><strong class="pill">{{ photoStatusLabel(request.status) }}</strong></div><div><span>Created</span><strong>{{ formatDate(request.createdAt) }}</strong></div><div><span>Reviewed</span><strong>{{ request.reviewedAt ? formatDate(request.reviewedAt) : 'Not reviewed' }}</strong></div><div><span>Released to</span><strong>{{ request.assignedToName || 'Not released' }}</strong></div>@if (request.orderNumber || request.orderId) { <div><span>Regular order</span><strong>{{ request.orderNumber || ('#' + request.orderId) }}</strong></div> }</div>
+    }
     <div class="detail-photo-list">
       @for (photo of request.photos; track photo.id) {
-        <article><button class="thumb large" (click)="openPreview(photo.imageUrl)"><img [src]="photo.imageUrl" [alt]="photo.caption" /></button><div><strong>{{ photo.caption || 'No caption' }}</strong><div class="detail-meta"><span class="pill">{{ photoStatusLabel(photo.status) }}</span>@if (photo.orderNumber || photo.orderId) { <span>Order {{ photo.orderNumber || ('#' + photo.orderId) }}</span> }@if (photo.createdAt) { <span>{{ formatDate(photo.createdAt) }}</span> }</div></div></article>
-      }
+        <article><button type="button" class="thumb large" (click)="openPreview(photo.imageUrl)" [attr.aria-label]="'Enlarge ' + (photo.caption || 'photo')"><img [src]="photo.imageUrl" [alt]="photo.caption || 'Picture order photo'" /></button><div><strong>{{ photo.caption || 'No caption' }}</strong><div class="detail-meta"><span class="pill">{{ photoStatusLabel(photo.status) }}</span>@if (photo.orderNumber || photo.orderId) { <span>Order {{ photo.orderNumber || ('#' + photo.orderId) }}</span> }@if (photo.createdAt) { <span>{{ formatDate(photo.createdAt) }}</span> }</div></div></article>
+      } @empty { <div class="empty">No photos found for this request.</div> }
     </div>
-    <footer class="modal-actions"><button class="btn" (click)="closeDetails()">Close</button></footer>
+    <footer class="modal-actions detail-footer"><button type="button" class="btn" (click)="closeDetails()">Close</button></footer>
   </section></div>
 }
 
 @if (reviewRequest(); as request) {
-  <div class="modal-backdrop" (click)="reviewRequest.set(null)"><section class="modal" (click)="$event.stopPropagation()">
-    <header class="modal-head"><div><h2>Review Picture Order #{{ request.id }}</h2><div class="muted">{{ request.customerName }} · {{ request.customerCode }} · choose Green for a valid order line or Red to hold it in Pending.</div></div><button class="icon-btn" (click)="reviewRequest.set(null)" aria-label="Close">×</button></header>
-    <div class="notice">Green lines are validated against the live product and size catalogue. Red photos are moved by the API into Pending Picture Orders.</div>
-    <div class="picture-review-list">
+  @if (!composerPhoto()) {
+  <div class="modal-backdrop" (click)="!saving() && reviewRequest.set(null)"><section class="modal review-modal" role="dialog" aria-modal="true" aria-labelledby="review-picture-title" (click)="$event.stopPropagation()">
+    <header class="modal-head"><h2 id="review-picture-title">Photo order review · #{{ request.id }}</h2><button class="icon-btn" [disabled]="saving()" (click)="reviewRequest.set(null)" aria-label="Close">×</button></header>
+    <div class="review-summary">
+      <div><span>Customer / party</span><strong>{{ request.customerName }}</strong><small>{{ request.customerCode }}</small></div>
+      <div><span>Request status</span><strong><span class="pill blue">{{ photoStatusLabel(request.status) }}</span></strong></div>
+      <div><span>Photo request</span><strong>#{{ request.id }}</strong></div>
+      <div><span>Decisions</span><strong>{{ reviewDecisionCount() }} / {{ request.photos.length }}</strong></div>
+    </div>
+    <div class="notice review-notice">Choose an action for every photo. Create order lets you select a product, size and quantity; Pending order holds that photo for later. Select Save review to submit your choices.</div>
+    <div class="review-photo-grid">
       @for (photo of request.photos; track photo.id) {
-        <article class="picture-review-item">
-          <button class="thumb large" (click)="openPreview(photo.imageUrl)"><img [src]="photo.imageUrl" [alt]="photo.caption" /></button>
-          <div>
+        <article class="review-photo-card">
+          <button type="button" class="review-photo-image" (click)="openPreview(photo.imageUrl)" [attr.aria-label]="'Enlarge ' + (photo.caption || 'photo')"><img [src]="photo.imageUrl" [alt]="photo.caption || 'Picture order photo'" /></button>
+          <div class="review-photo-content">
             <strong>{{ photo.caption || 'No caption' }}</strong>
-            <div class="decision-row">
-              <label><input type="radio" [name]="'decision-'+photo.id" [checked]="decisions()[photo.id] === 'GREEN'" (change)="setDecision(photo.id, 'GREEN')" /> Green · ready for order</label>
-              <label><input type="radio" [name]="'decision-'+photo.id" [checked]="decisions()[photo.id] === 'RED'" (change)="setDecision(photo.id, 'RED')" /> Red · move to Pending</label>
+            <div class="review-photo-actions" role="group" [attr.aria-label]="'Action for ' + (photo.caption || 'photo')">
+              <button type="button" class="btn small primary" [attr.aria-pressed]="decisions()[photo.id] === 'GREEN'" [disabled]="saving()" (click)="openPhotoComposer(photo.id)">{{ photoDraftLines()[photo.id] ? 'Edit product' : 'Create order' }}</button>
+              <button type="button" class="btn small" [class.info-blue]="decisions()[photo.id] === 'RED'" [attr.aria-pressed]="decisions()[photo.id] === 'RED'" [disabled]="saving()" (click)="setDecision(photo.id, 'RED')">Pending order</button>
             </div>
+            @if (reviewSubmitted() && !decisions()[photo.id]) { <small class="validation">Choose an action for this photo.</small> }
             @if (decisions()[photo.id] === 'GREEN') {
-              <div class="line-editor">
-                <select [value]="lineDrafts()[photo.id]?.productId ?? 0" (change)="setLineProduct(photo.id, +$any($event.target).value)"><option value="0">Choose product</option>@for (product of products(); track product.id) { <option [value]="product.id">{{ product.name }} · {{ product.code }}</option> }</select>
-                <select [value]="lineDrafts()[photo.id]?.size ?? 0" (change)="setLineValue(photo.id, 'size', +$any($event.target).value)" [disabled]="!lineDrafts()[photo.id]?.productId"><option value="0">Size</option>@for (size of sizesForPhoto(photo.id); track size) { <option [value]="size">{{ size }}</option> }</select>
-                <input type="number" min="1" step="1" placeholder="Pairs" [value]="lineDrafts()[photo.id]?.qty ?? 1" (input)="setLineValue(photo.id, 'qty', +$any($event.target).value)" />
-              </div>
-              @if (!lineIsComplete(photo.id)) { <small class="validation">Choose a product, its available size, and whole pair quantity.</small> }
+              @if (photoDraftLines()[photo.id]; as line) { <p class="muted photo-draft-summary">{{ line.productName }} · {{ line.total }} pairs · {{ line.mode === 'carton' ? 'Carton-wise' : 'Size-wise' }}</p> }
             }
           </div>
         </article>
       }
     </div>
-    <footer class="modal-actions"><button class="btn" (click)="reviewRequest.set(null)">Cancel</button><button class="btn primary" [disabled]="saving()" (click)="submitReview()">{{ saving() ? 'Saving…' : 'Save review' }}</button></footer>
+    <footer class="modal-actions review-footer"><button class="btn" [disabled]="saving()" (click)="reviewRequest.set(null)">Close</button><button class="btn primary" [disabled]="saving()" (click)="submitReview()">{{ saving() ? 'Saving…' : 'Save review' }}</button></footer>
+  </section></div>
+  }
+}
+
+@if (reviewRequest(); as request) {
+  @if (composerPhoto(); as photo) {
+    <div class="modal-backdrop" (click)="closePhotoComposer()"><section class="modal photo-composer" role="dialog" aria-modal="true" aria-labelledby="composer-title" (click)="$event.stopPropagation()">
+      <header class="modal-head"><h2 id="composer-title">Select product · #{{ request.id }}</h2><button type="button" class="icon-btn" [disabled]="saving()" (click)="closePhotoComposer()" aria-label="Close">×</button></header>
+      <div class="review-summary">
+        <div><span>Party</span><strong>{{ request.customerName }}</strong></div><div><span>Photo request</span><strong>#{{ request.id }}</strong></div>
+        <div><span>Photo</span><strong>{{ composerPhotoIndex() }} of {{ request.photos.length }}</strong></div><div><span>Party category</span><strong>{{ composerCustomer()?.category || 'Unavailable' }}</strong></div>
+      </div>
+      <div class="composer-photo"><img [src]="photo.imageUrl" [alt]="photo.caption || 'Picture order photo'" /><strong>{{ photo.caption || 'Product photo' }}</strong></div>
+      <section class="composer-section">
+        <h3>Search catalogue</h3><p class="muted">Select a product to enter sizes or cartons.</p>
+        <input type="search" aria-label="Search products" placeholder="Search product, article code or brand…" [value]="composerSearch()" (input)="composerSearch.set($any($event.target).value)" />
+        @if (customersLoading() || productsLoading()) { <p class="muted">Loading customer and catalogue…</p> }
+        @else if (customersError() || !composerCustomer()) { <p class="validation">Customer details are unavailable. <button type="button" class="btn small" (click)="retryComposerCustomers()">Retry</button></p> }
+        @else if (productsError()) { <p class="validation">Could not load the product catalogue. <button type="button" class="btn small" (click)="retryComposerProducts()">Retry</button></p> }
+        @else { <div class="composer-products">
+          @for (product of composerResults(); track product.id) {
+            <button type="button" class="composer-product" [class.selected]="composerProduct()?.id === product.id" [disabled]="composerProductLoading() || saving()" (click)="selectComposerProduct(product)">
+              @if (activeImageSrc(product); as src) { <img [src]="src" [alt]="product.name" /> } @else { <span class="composer-product-placeholder">No photo</span> }
+              <span><strong>{{ product.name }}</strong><small>{{ product.code }} · {{ product.brand }}</small><small>MRP {{ money(product.mrp) }} @if (composerCustomer()) { · Party price {{ money(priceFor(product, composerCustomer())) }} }</small></span><span aria-hidden="true">›</span>
+            </button>
+          } @empty { <div class="empty">No matching products available for this customer.</div> }
+        </div> }
+        @if (composerProductLoading()) { <p class="muted">Loading product sizes and packing…</p> }
+        @if (composerProductError()) { <p class="validation">{{ composerProductError() }}</p> }
+      </section>
+      @if (composerProduct(); as product) {
+        <section class="composer-section composer-editor">
+          <h3>Choose sizes · {{ product.name }}</h3><p class="muted">{{ product.code }} · MRP {{ money(product.mrp) }} · Customer display price {{ money(priceFor(product, composerCustomer())) }}</p>
+          <div class="composer-mode"><button type="button" class="btn small" [class.primary]="composerMode() === 'size'" (click)="composerMode.set('size'); composerError.set('')">Size-wise</button><button type="button" class="btn small" [class.primary]="composerMode() === 'carton'" [disabled]="!composerPackings().length" (click)="composerMode.set('carton'); composerError.set('')">Carton-wise</button></div>
+          @if (composerMode() === 'size') {
+            @if (composerSizes().length) {
+              <div class="composer-size-groups"><strong>{{ composerSizeGroups().length ? 'Choose size group' : 'Size filter' }}</strong><div class="composer-mode"><button type="button" class="btn small" [class.primary]="composerSizeGroupId() === 'all'" (click)="composerSizeGroupId.set('all')">All sizes</button>@for (group of composerSizeGroups(); track group.id) { <button type="button" class="btn small" [class.primary]="composerSizeGroupId() === group.id" (click)="composerSizeGroupId.set(group.id)">{{ group.name }}</button> }</div><small class="muted">Only quantities for the selected group are added.</small></div>
+              <div class="composer-sizes">@for (size of composerVisibleSizes(); track size) { <label>Size {{ size }}<input type="number" min="0" step="1" [attr.aria-label]="'Pairs for size ' + size" [value]="composerQuantities()[size] ?? 0" (input)="setComposerQuantity(size, $any($event.target).value)" /></label> }</div>
+            } @else { <p class="muted">No sizes are assigned to this product. Assign a size group in Packaging before ordering.</p> }
+          } @else {
+            <div class="composer-cartons"><label> Packing template <select [value]="composerPackingId()" (change)="composerPackingId.set(+$any($event.target).value)">@for (packing of composerPackings(); track packing.id) { <option [value]="packing.id">{{ packing.name }}</option> }</select></label><label>Number of cartons <input type="number" min="1" max="100000" step="1" [value]="composerCartons()" (input)="composerCartons.set(+$any($event.target).value)" /></label></div>
+            @if (composerPacking(); as packing) { <p class="muted">@for (row of packing.rows; track row.size) { Size {{ row.size }}: {{ row.pairs }} pairs/carton · } </p> }
+          }
+          <div class="notice composer-quantity-notice">Choose actual quantities. There is no monetary subtotal in customer order review.</div>
+          <div class="composer-admin-rate"><label for="photo-admin-rate">Admin rate (₹ per pair)<input id="photo-admin-rate" type="number" min="0" step="0.01" [value]="composerAdminRate() || ''" placeholder="Enter rate" (input)="composerAdminRate.set($any($event.target).value === '' ? 0 : +$any($event.target).value)" /></label><div><strong>Internal rate only</strong><small>Saved with this order line and visible to Admin and Super Admin.</small></div></div>
+          @if (composerError()) { <p class="validation">{{ composerError() }}</p> }
+          <div class="composer-actions"><button type="button" class="btn primary" (click)="saveComposerLine()">Add product</button></div>
+        </section>
+      }
+      @if (photoDraftLines()[photo.id]; as line) {
+        <section class="composer-section">
+          <div class="composer-section-head"><h3>Selected product</h3><span class="pill gold">1 line</span></div>
+          <div class="composer-line-wrap"><table class="composer-line-table"><thead><tr><th>PRODUCT</th><th>TYPE</th><th>SIZE / PACKING</th><th>PAIRS</th><th></th></tr></thead><tbody><tr>
+            <td><strong>{{ line.productName }}</strong><div class="muted">{{ line.code }}</div></td>
+            <td>{{ line.mode === 'carton' ? 'Carton-wise' : 'Size-wise' }}@if (line.mode === 'carton') { <div class="muted">{{ line.cartons }} carton(s) · {{ line.packingName }}</div> }</td>
+            <td>@for (row of line.rows; track row.size; let last = $last) { {{ row.size }}: {{ row.qty }}{{ last ? '' : ' · ' }} }</td>
+            <td>{{ line.total }}</td><td><button type="button" class="btn small danger" [disabled]="saving()" (click)="removeComposerLine()">Remove</button></td>
+          </tr></tbody></table></div>
+        </section>
+      } @else { <div class="empty">No product selected for this photo yet.</div> }
+      <section class="composer-section"><h3>Photo decisions <span class="pill gold">{{ reviewDecisionCount() }} / {{ request.photos.length }} selected</span></h3><div class="composer-progress">@for (item of request.photos; track item.id; let index = $index) { <span class="pill" [class.gold]="item.id === photo.id" [class.blue]="decisions()[item.id]">Photo {{ index + 1 }}: {{ decisions()[item.id] === 'RED' ? 'Pending' : photoDraftLines()[item.id] ? 'Product selected' : 'Not selected' }}</span> }</div><small class="muted">Select one product per photo. Choices are submitted when you save the review.</small></section>
+      <footer class="modal-actions review-footer"><button type="button" class="btn" [disabled]="saving()" (click)="closePhotoComposer()">Close</button><button type="button" class="btn primary" [disabled]="saving() || composerProductLoading() || !!composerProduct() || decisions()[photo.id] !== 'GREEN' || !photoDraftLines()[photo.id]" (click)="finishPhotoSelection()">{{ saving() ? 'Creating order…' : reviewDecisionCount() === request.photos.length ? 'Done · Create order' : 'Done · Continue review' }}</button></footer>
+    </section></div>
+  }
+}
+
+@if (reviewResult(); as result) {
+  <div class="modal-backdrop" (click)="reviewResult.set(null)"><section class="modal review-result" role="dialog" aria-modal="true" aria-labelledby="review-result-title" (click)="$event.stopPropagation()">
+    <header class="modal-head"><h2 id="review-result-title">{{ result.orderIds.length ? 'Photo order created' : 'Photo review submitted' }}</h2><button type="button" class="icon-btn" (click)="reviewResult.set(null)" aria-label="Close">×</button></header>
+    <div class="review-result-content"><div class="review-success-mark">✓</div><strong>{{ result.orderIds.length ? 'Order created from photo review' : 'Your photo decisions were submitted' }}</strong><p class="muted">{{ result.customer }} · Picture request #{{ result.requestId }}</p>@for (id of result.orderIds; track id) { <p class="review-order-id">Order #{{ id }}</p> }<div class="notice">{{ result.orderIds.length ? 'The order details are available in Orders.' : 'Check the request status in Picture Orders.' }}</div></div>
+    <footer class="modal-actions review-footer"><button type="button" class="btn" (click)="reviewResult.set(null)">Done</button>@if (result.orderIds.length) { <button type="button" class="btn primary" (click)="reviewResult.set(null); openOrders()">Open Orders</button> }</footer>
   </section></div>
 }
 
 @if (assignRequest(); as request) {
-  <div class="modal-backdrop" (click)="assignRequest.set(null)"><section class="modal" (click)="$event.stopPropagation()">
-    <header class="modal-head"><div><h2>Release Picture Order #{{ request.id }}</h2><div class="muted">{{ request.customerName }} · {{ request.customerCode }}</div></div><button class="icon-btn" (click)="assignRequest.set(null)" aria-label="Close">×</button></header>
+  <div class="modal-backdrop" (click)="!saving() && assignRequest.set(null)"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="release-picture-title" (click)="$event.stopPropagation()">
+    <header class="modal-head"><div><h2 id="release-picture-title">Release Picture Order #{{ request.id }}</h2><div class="muted">{{ request.customerName }} · {{ request.customerCode }}</div></div><button class="icon-btn" [disabled]="saving()" (click)="assignRequest.set(null)" aria-label="Close">×</button></header>
     <div class="notice">Release sends this request to the selected Backend User. The API must create/link the final regular order using the same normal-order transaction, so the photo request and order cannot become inconsistent.</div>
-    <label class="field"><span>Backend User *</span><select [value]="assigneeId()" (change)="assigneeId.set(+$any($event.target).value)"><option value="0">Choose active Backend User</option>@for (user of backendUsers(); track user.id) { <option [value]="user.id">{{ user.fullName }} · {{ user.loginId }}</option> }</select></label>
+    <label class="field"><span>Backend User *</span><select [value]="assigneeId()" [disabled]="usersLoading() || saving()" (change)="assigneeId.set(+$any($event.target).value)"><option value="0">{{ usersLoading() ? 'Loading Backend Users...' : 'Choose active Backend User' }}</option>@for (user of backendUsers(); track user.id) { <option [value]="user.id">{{ user.fullName }} · {{ user.loginId }}</option> }</select></label>
+    @if (usersError()) { <small class="validation">Could not load Backend Users. <button type="button" class="btn small" (click)="loadBackendUsers()">Retry</button></small> } @else if (assignmentSubmitted() && !assigneeId()) { <small class="validation">Choose a Backend User.</small> }
     <div class="picture-review-list">
       @for (photo of request.photos; track photo.id) {
         <article class="picture-review-item">
@@ -130,11 +274,11 @@
               <select [value]="lineDrafts()[photo.id]?.size ?? 0" (change)="setLineValue(photo.id, 'size', +$any($event.target).value)" [disabled]="!lineDrafts()[photo.id]?.productId"><option value="0">Size</option>@for (size of sizesForPhoto(photo.id); track size) { <option [value]="size">{{ size }}</option> }</select>
               <input type="number" min="1" step="1" placeholder="Pairs" [value]="lineDrafts()[photo.id]?.qty ?? 1" (input)="setLineValue(photo.id, 'qty', +$any($event.target).value)" />
             </div>
-            @if (!lineIsComplete(photo.id)) { <small class="validation">Complete the product, valid size and pair quantity before release.</small> }
+            @if (assignmentSubmitted() && !lineIsComplete(photo.id)) { <small class="validation">Complete the product, valid size and pair quantity before release.</small> }
           </div>
         </article>
       }
     </div>
-    <footer class="modal-actions"><button class="btn" (click)="assignRequest.set(null)">Cancel</button><button class="btn primary" [disabled]="saving()" (click)="submitAssignment()">{{ saving() ? 'Releasing…' : 'Release & create regular order' }}</button></footer>
+    <footer class="modal-actions"><button class="btn" [disabled]="saving()" (click)="assignRequest.set(null)">Cancel</button><button class="btn primary" [disabled]="saving() || usersLoading()" (click)="submitAssignment()">{{ saving() ? 'Releasing…' : 'Release & create regular order' }}</button></footer>
   </section></div>
 }
